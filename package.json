@@ -1,0 +1,27 @@
+{
+  "name": "kish-mandhi-billing",
+  "version": "1.0.0",
+  "description": "Desktop Billing and Restaurant Management System for Kish Mandhi",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "keywords": [
+    "electron",
+    "billing",
+    "pos",
+    "restaurant",
+    "mandhi",
+    "mysql"
+  ],
+  "author": "Kish Mandhi POS",
+  "license": "ISC",
+  "dependencies": {
+    "chart.js": "^4.4.1",
+    "mysql2": "^3.9.2"
+  },
+  "devDependencies": {
+    "electron": "^28.2.0"
+  }
+}

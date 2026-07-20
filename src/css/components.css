@@ -1,0 +1,878 @@
+/* ==========================================================================
+   KISH MANDHI RESTAURANT BILLING SOFTWARE - COMPONENT STYLES
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   DASHBOARD COMPONENTS
+   -------------------------------------------------------------------------- */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-gold);
+}
+
+.metric-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+
+.metric-card.gold::after { background-color: var(--primary-gold); }
+.metric-card.amber::after { background-color: var(--primary-amber); }
+.metric-card.red::after { background-color: var(--accent-red); }
+.metric-card.green::after { background-color: var(--accent-green); }
+
+.metric-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background-color: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  color: var(--primary-gold);
+}
+
+.metric-data .label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-data h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 2px 0;
+  color: var(--text-main);
+}
+
+.trend {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.trend.positive { color: var(--accent-green); }
+.trend.negative { color: var(--accent-red); }
+.trend.neutral { color: var(--text-muted); }
+
+/* Dashboard Charts */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.chart-box {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.chart-header {
+  margin-bottom: 1rem;
+}
+.chart-header h4 {
+  font-size: 1rem;
+  color: var(--primary-gold);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chart-container {
+  position: relative;
+  height: 240px;
+}
+
+/* Data Tables */
+.table-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.table-header h4 {
+  font-size: 1rem;
+  color: var(--primary-gold);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.view-all-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary-gold);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.data-table th {
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-card);
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.data-table tr:hover {
+  background-color: var(--bg-card);
+}
+
+.loading-td {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   BILLING POS SECTION
+   -------------------------------------------------------------------------- */
+.pos-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 1.5rem;
+  height: calc(100vh - 120px);
+}
+
+.pos-catalog {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.catalog-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.search-bar {
+  position: relative;
+  width: 100%;
+}
+.search-bar i {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+.search-bar input {
+  width: 100%;
+  padding: 0.85rem 1rem 0.85rem 2.8rem;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  outline: none;
+}
+.search-bar input:focus {
+  border-color: var(--primary-gold);
+}
+
+.category-tabs {
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding-bottom: 0.3rem;
+}
+
+.cat-tab {
+  padding: 0.55rem 1.1rem;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-muted);
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cat-tab.active, .cat-tab:hover {
+  background: var(--primary-gradient);
+  color: #12141a;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.menu-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1rem;
+  padding-right: 0.3rem;
+}
+
+.menu-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.menu-card:hover {
+  border-color: var(--border-gold);
+  transform: translateY(-2px);
+}
+
+.menu-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.menu-card h5 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.portion-options {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+}
+
+.portion-btn {
+  flex: 1;
+  padding: 0.4rem 0.2rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 0.72rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.portion-btn:hover {
+  background-color: var(--primary-gold);
+  color: #12141a;
+  font-weight: 700;
+}
+
+/* POS CART PANEL */
+.pos-cart-panel {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.25rem;
+}
+
+.cart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cart-header h3 {
+  font-size: 1.1rem;
+  color: var(--primary-gold);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clear-cart-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: var(--font-family);
+}
+
+.order-meta-controls {
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-group {
+  display: flex;
+  background-color: var(--bg-dark);
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.type-btn {
+  flex: 1;
+  padding: 0.45rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.type-btn.active {
+  background: var(--bg-card);
+  color: var(--primary-gold);
+  font-weight: 600;
+}
+
+.table-select-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.table-select-wrapper select {
+  padding: 0.4rem 0.6rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-family: var(--font-family);
+  outline: none;
+}
+
+.cart-items-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  margin: 0.5rem 0;
+  padding: 0.5rem 0;
+}
+
+.cart-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-card);
+  padding: 0.65rem;
+  border-radius: 8px;
+}
+
+.item-details {
+  display: flex;
+  flex-direction: column;
+}
+.item-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.item-variant {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.qty-btn {
+  width: 24px;
+  height: 24px;
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.item-qty {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+.item-price {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary-gold);
+}
+
+.empty-cart-msg {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.empty-cart-msg i {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.3;
+}
+
+/* CART SUMMARY & CHECKOUT */
+.cart-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.summary-row.discount input {
+  width: 70px;
+  padding: 2px 5px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--accent-green);
+  text-align: right;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.summary-row.grand-total {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--primary-gold);
+  border-top: 1px dashed var(--border-color);
+  padding-top: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.payment-methods label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+  display: block;
+}
+
+.pay-btn-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.pay-btn {
+  flex: 1;
+  padding: 0.4rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+
+.pay-btn.active {
+  border-color: var(--primary-gold);
+  color: var(--primary-gold);
+  background-color: rgba(229, 169, 60, 0.1);
+}
+
+.checkout-btn {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--primary-gradient);
+  border: none;
+  border-radius: 10px;
+  color: #12141a;
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 15px var(--gold-glow);
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   KITCHEN TOKENS SECTION
+   -------------------------------------------------------------------------- */
+.tokens-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.token-filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-tab {
+  padding: 0.5rem 1rem;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+}
+
+.filter-tab.active {
+  background-color: var(--bg-card);
+  color: var(--primary-gold);
+  border-color: var(--border-gold);
+  font-weight: 600;
+}
+
+.refresh-btn {
+  padding: 0.5rem 1rem;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+
+.tokens-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.token-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+}
+
+.token-card.Pending { border-left: 5px solid var(--accent-orange); }
+.token-card.Cooking { border-left: 5px solid var(--accent-blue); }
+.token-card.Ready { border-left: 5px solid var(--accent-green); }
+.token-card.Completed { border-left: 5px solid var(--text-muted); opacity: 0.6; }
+
+.token-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.token-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--primary-gold);
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-badge.Pending { background-color: rgba(230, 126, 34, 0.2); color: var(--accent-orange); }
+.status-badge.Cooking { background-color: rgba(52, 152, 219, 0.2); color: var(--accent-blue); }
+.status-badge.Ready { background-color: rgba(46, 204, 113, 0.2); color: var(--accent-green); }
+.status-badge.Completed { background-color: rgba(148, 153, 166, 0.2); color: var(--text-muted); }
+
+.token-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 1rem;
+}
+
+.token-items {
+  background-color: var(--bg-card);
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.token-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.token-btn {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font-family);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.token-btn.cook { background-color: var(--accent-blue); color: white; }
+.token-btn.ready { background-color: var(--accent-green); color: white; }
+.token-btn.done { background-color: var(--bg-card); color: var(--text-muted); }
+
+
+/* --------------------------------------------------------------------------
+   EXPENSES SECTION
+   -------------------------------------------------------------------------- */
+.expenses-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1.5rem;
+}
+
+.expense-form-card, .expense-ledger-card, .db-settings-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.expense-form-card h3, .ledger-header h3 {
+  font-size: 1.1rem;
+  color: var(--primary-gold);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.form-group input, .form-group select {
+  padding: 0.7rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--primary-gold);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-family);
+}
+.gold-btn {
+  background: var(--primary-gradient);
+  color: #12141a;
+}
+
+/* --------------------------------------------------------------------------
+   DATABASE SETTINGS SECTION
+   -------------------------------------------------------------------------- */
+.db-settings-card {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.db-card-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.db-card-header i {
+  font-size: 2.5rem;
+  color: var(--primary-gold);
+}
+
+.db-form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  flex: 1;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+}
+.btn.primary { background: var(--primary-gradient); color: #12141a; }
+.btn.secondary { background-color: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color); }
+
+.db-feedback-box {
+  margin-top: 1.25rem;
+  padding: 0.85rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+.db-feedback-box.success { background-color: rgba(46, 204, 113, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+.db-feedback-box.error { background-color: rgba(231, 76, 60, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
+
+/* --------------------------------------------------------------------------
+   PRINTABLE RECEIPT MODAL
+   -------------------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.hidden { display: none; }
+
+.modal-card {
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-gold);
+  border-radius: 14px;
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 90%;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.receipt-paper-wrapper {
+  background-color: #fcfbfa;
+  color: #111;
+  padding: 1.25rem;
+  border-radius: 8px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.82rem;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.receipt-paper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kish Mandhi - Desktop Billing Software</title>
+  
+  <!-- Font Awesome Icons & Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js for Dashboard Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Application Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body class="dark-theme">
+  <div class="app-container">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <div class="brand-logo">
+          <i class="fa-solid fa-crown"></i>
+        </div>
+        <div class="brand-info">
+          <h1>KISH MANDHI</h1>
+          <span class="brand-tagline">Arabic Grill & Dining</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-target="dashboard-section" id="nav-dashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-target="billing-section" id="nav-billing">
+          <i class="fa-solid fa-cash-register"></i>
+          <span>Billing POS</span>
+        </button>
+        <button class="nav-item" data-target="tokens-section" id="nav-tokens">
+          <i class="fa-solid fa-ticket"></i>
+          <span>Tokens</span>
+        </button>
+        <button class="nav-item" data-target="expenses-section" id="nav-expenses">
+          <i class="fa-solid fa-wallet"></i>
+          <span>Expenses</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="nav-item db-status-btn" data-target="db-settings-section" id="db-status-indicator">
+          <i class="fa-solid fa-database"></i>
+          <span id="db-status-text">MySQL Checking...</span>
+          <span class="status-dot warning" id="db-status-dot"></span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="main-content">
+      
+      <!-- TOP APP BAR -->
+      <header class="top-bar">
+        <div class="top-left">
+          <h2 id="page-title">Dashboard Overview</h2>
+          <span class="current-date" id="live-datetime">Loading clock...</span>
+        </div>
+
+        <div class="top-right">
+          <button class="quick-action-btn primary" id="quick-new-bill">
+            <i class="fa-solid fa-plus"></i> New Bill
+          </button>
+          <div class="user-profile">
+            <div class="avatar"><i class="fa-solid fa-user-shield"></i></div>
+            <div class="user-details">
+              <span class="user-name">Cashier Desk #1</span>
+              <span class="user-role">Kish Mandhi Outlet</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- SECTIONS WRAPPER -->
+      <div class="sections-container">
+
+        <!-- ==================== 1. DASHBOARD SECTION ==================== -->
+        <section id="dashboard-section" class="app-section active">
+          <!-- Metric Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card gold">
+              <div class="metric-icon"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+              <div class="metric-data">
+                <span class="label">Today's Total Sales</span>
+                <h3 id="dash-total-sales">₹0.00</h3>
+                <span class="trend positive"><i class="fa-solid fa-arrow-trend-up"></i> Live Revenue</span>
+              </div>
+            </div>
+
+            <div class="metric-card amber">
+              <div class="metric-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+              <div class="metric-data">
+                <span class="label">Total Orders</span>
+                <h3 id="dash-total-orders">0</h3>
+                <span class="trend neutral"><i class="fa-solid fa-utensils"></i> Dine-In & Takeaway</span>
+              </div>
+            </div>
+
+            <div class="metric-card red">
+              <div class="metric-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+              <div class="metric-data">
+                <span class="label">Total Expenses</span>
+                <h3 id="dash-total-expenses">₹0.00</h3>
+                <span class="trend negative"><i class="fa-solid fa-arrow-trend-down"></i> Supplies & Operational</span>
+              </div>
+            </div>
+
+            <div class="metric-card green">
+              <div class="metric-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+              <div class="metric-data">
+                <span class="label">Net Profit</span>
+                <h3 id="dash-net-profit">₹0.00</h3>
+                <span class="trend positive"><i class="fa-solid fa-chart-line"></i> Sales minus Expenses</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="charts-grid">
+            <div class="chart-box">
+              <div class="chart-header">
+                <h4><i class="fa-solid fa-chart-column"></i> Revenue & Expenses Trend</h4>
+              </div>
+              <div class="chart-container">
+                <canvas id="revenueChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-box">
+              <div class="chart-header">
+                <h4><i class="fa-solid fa-fire-flame-curved"></i> Top Selling Items</h4>
+              </div>
+              <div class="chart-container">
+                <canvas id="topItemsChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Orders Table -->
+          <div class="table-card">
+            <div class="table-header">
+              <h4><i class="fa-solid fa-clock-rotate-left"></i> Recent Completed Bills</h4>
+              <button class="view-all-btn" id="btn-goto-billing">Go to POS <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Bill #</th>
+                    <th>Token</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-orders-tbody">
+                  <tr><td colspan="6" class="loading-td">Loading recent transactions...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ==================== 2. BILLING POS SECTION ==================== -->
+        <section id="billing-section" class="app-section">
+          <div class="pos-layout">
+            
+            <!-- POS Left: Menu Catalog -->
+            <div class="pos-catalog">
+              
+              <!-- Catalog Bar: Search & Categories -->
+              <div class="catalog-header">
+                <div style="display:flex; gap:0.75rem; align-items:center;">
+                  <div class="search-bar" style="flex:1;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="pos-search-input" placeholder="Search Mandhi, Alfaham, Beverages...">
+                  </div>
+                  <button class="add-dish-btn" id="btn-open-add-dish-modal" style="padding:0.8rem 1rem; background:var(--primary-gradient); border:none; border-radius:10px; color:#12141a; font-weight:700; font-size:0.85rem; cursor:pointer; font-family:var(--font-family); white-space:nowrap;">
+                    <i class="fa-solid fa-plus-circle"></i> Add Dish
+                  </button>
+                </div>
+
+                <div class="category-tabs" id="pos-category-tabs">
+                  <button class="cat-tab active" data-cat="all">All Items</button>
+                  <button class="cat-tab" data-cat="1">Mandhi Special</button>
+                  <button class="cat-tab" data-cat="2">Alfaham & Grill</button>
+                  <button class="cat-tab" data-cat="3">Starters & Sides</button>
+                  <button class="cat-tab" data-cat="4">Beverages</button>
+                  <button class="cat-tab" data-cat="5">Desserts</button>
+                </div>
+              </div>
+
+              <!-- Menu Grid -->
+              <div class="menu-grid" id="pos-menu-grid">
+                <!-- Dynamically populated menu cards -->
+              </div>
+            </div>
+
+            <!-- POS Right: Cart & Order Billing -->
+            <div class="pos-cart-panel">
+              <div class="cart-header">
+                <h3><i class="fa-solid fa-cart-shopping"></i> Current Order</h3>
+                <button class="clear-cart-btn" id="btn-clear-cart" title="Clear Cart"><i class="fa-solid fa-trash-can"></i> Clear</button>
+              </div>
+
+              <!-- Import Active Token bar -->
+              <div class="import-token-bar" style="margin-top:0.75rem; padding:0.5rem 0.75rem; background:var(--bg-card); border:1px solid var(--border-gold); border-radius:8px; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                <span style="font-size:0.8rem; font-weight:600; color:var(--primary-gold); white-space:nowrap;"><i class="fa-solid fa-file-import"></i> Token:</span>
+                <select id="pos-import-token-select" style="flex:1; padding:0.35rem; background:var(--bg-dark); border:1px solid var(--border-color); border-radius:6px; color:var(--text-main); font-size:0.8rem; outline:none;">
+                  <option value="">Select Active Token...</option>
+                </select>
+                <button id="btn-load-selected-token" style="padding:0.35rem 0.6rem; background:var(--primary-gradient); border:none; border-radius:6px; color:#12141a; font-weight:700; font-size:0.75rem; cursor:pointer;">Load</button>
+              </div>
+
+              <!-- Order Type Selection -->
+              <div class="order-meta-controls">
+                <div class="btn-group order-type-group" style="width:100%;">
+                  <button class="type-btn active" data-type="Dine-In"><i class="fa-solid fa-utensils"></i> Dine-In</button>
+                  <button class="type-btn" data-type="Takeaway"><i class="fa-solid fa-bag-shopping"></i> Takeaway</button>
+                </div>
+              </div>
+
+              <!-- Cart Items List -->
+              <div class="cart-items-wrapper">
+                <ul class="cart-list" id="pos-cart-list">
+                  <li class="empty-cart-msg">
+                    <i class="fa-solid fa-utensils"></i>
+                    <p>No items added yet.<br>Click menu dishes to start billing.</p>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Calculations & Payment Summary -->
+              <div class="cart-summary font-outfit">
+                <div class="summary-row">
+                  <span>Subtotal</span>
+                  <span id="cart-subtotal">₹0.00</span>
+                </div>
+
+                <div class="summary-row">
+                  <span>GST Tax (5%)</span>
+                  <span id="cart-tax">₹0.00</span>
+                </div>
+
+                <div class="summary-row discount">
+                  <span>Discount (₹)</span>
+                  <input type="number" id="cart-discount-input" value="0" min="0" step="5">
+                </div>
+
+                <div class="summary-row grand-total">
+                  <span>Grand Total</span>
+                  <span id="cart-grand-total">₹0.00</span>
+                </div>
+
+                <!-- Payment Method Select -->
+                <div class="payment-methods">
+                  <label>Payment Method</label>
+                  <div class="pay-btn-group">
+                    <button class="pay-btn active" data-mode="Cash"><i class="fa-solid fa-money-bill-wave"></i> Cash</button>
+                    <button class="pay-btn" data-mode="UPI"><i class="fa-solid fa-qrcode"></i> UPI / GPay</button>
+                    <button class="pay-btn" data-mode="Card"><i class="fa-solid fa-credit-card"></i> Card</button>
+                  </div>
+                </div>
+
+                <!-- Checkout Button -->
+                <button class="checkout-btn" id="btn-complete-order">
+                  <i class="fa-solid fa-print"></i> COMPLETE ORDER & PRINT BILL
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ==================== 3. KITCHEN TOKENS SECTION ==================== -->
+        <section id="tokens-section" class="app-section">
+          <div class="pos-layout">
+            
+            <!-- Token POS Left: Menu Catalog -->
+            <div class="pos-catalog">
+              
+              <!-- Catalog Bar: Search & Categories -->
+              <div class="catalog-header">
+                <div class="search-bar">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="token-search-input" placeholder="Search Mandhi, Alfaham, Beverages for Token...">
+                </div>
+
+                <div class="category-tabs" id="token-category-tabs">
+                  <button class="cat-tab active" data-cat="all">All Items</button>
+                  <button class="cat-tab" data-cat="1">Mandhi Special</button>
+                  <button class="cat-tab" data-cat="2">Alfaham & Grill</button>
+                  <button class="cat-tab" data-cat="3">Starters & Sides</button>
+                  <button class="cat-tab" data-cat="4">Beverages</button>
+                  <button class="cat-tab" data-cat="5">Desserts</button>
+                </div>
+              </div>
+
+              <!-- Menu Grid (No prices shown) -->
+              <div class="menu-grid" id="token-menu-grid">
+                <!-- Dynamically populated menu cards -->
+              </div>
+            </div>
+
+            <!-- Token POS Right: Token Cart Panel -->
+            <div class="pos-cart-panel">
+              <div class="cart-header">
+                <h3><i class="fa-solid fa-ticket"></i> New Token Order</h3>
+                <button class="clear-cart-btn" id="btn-clear-token-cart" title="Clear Token Items"><i class="fa-solid fa-trash-can"></i> Clear</button>
+              </div>
+
+              <!-- Order Type Selection -->
+              <div class="order-meta-controls">
+                <div class="btn-group token-order-type-group" style="width:100%;">
+                  <button class="token-type-btn active" data-type="Dine-In"><i class="fa-solid fa-utensils"></i> Dine-In</button>
+                  <button class="token-type-btn" data-type="Takeaway"><i class="fa-solid fa-bag-shopping"></i> Takeaway</button>
+                </div>
+              </div>
+
+              <!-- Token Cart Items List -->
+              <div class="cart-items-wrapper">
+                <ul class="cart-list" id="token-cart-list">
+                  <li class="empty-cart-msg">
+                    <i class="fa-solid fa-ticket"></i>
+                    <p>No items added.<br>Click menu dishes to build token.</p>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Summary & Print Token Button (No prices) -->
+              <div class="cart-summary font-outfit">
+                <div class="summary-row" style="font-size:1rem; font-weight:700; color:var(--primary-gold);">
+                  <span>Total Items</span>
+                  <span id="token-total-items-qty">0 Pcs</span>
+                </div>
+
+                <button class="checkout-btn" id="btn-print-token-direct" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); color:white;">
+                  <i class="fa-solid fa-print"></i> PRINT TOKEN RECEIPT
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+
+        <!-- ==================== 4. EXPENSES SECTION ==================== -->
+        <section id="expenses-section" class="app-section">
+          <div class="expenses-layout">
+            
+            <!-- Left: Add Expense Form -->
+            <div class="expense-form-card">
+              <h3><i class="fa-solid fa-plus-circle"></i> Log New Expense</h3>
+              <form id="add-expense-form">
+                <div class="form-group">
+                  <label>Category</label>
+                  <select id="exp-category" required>
+                    <option value="Raw Material">Raw Material (Chicken, Meat, Rice, Spices)</option>
+                    <option value="Utilities">Utilities (Gas, Electricity, Water)</option>
+                    <option value="Staff Salary">Staff Salary & Daily Wages</option>
+                    <option value="Maintenance">Maintenance & Repairs</option>
+                    <option value="Packaging">Packaging Supplies & Boxes</option>
+                    <option value="Misc">Miscellaneous</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>Description / Vendor</label>
+                  <input type="text" id="exp-description" placeholder="e.g., Basmati Rice 50kg bag from Malabar Traders" required>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="exp-amount" min="1" step="1" placeholder="0.00" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="exp-date" required>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Paid To</label>
+                    <input type="text" id="exp-paid-to" placeholder="Vendor / Person Name">
+                  </div>
+                  <div class="form-group">
+                    <label>Payment Mode</label>
+                    <select id="exp-pay-mode">
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI / Bank Transfer</option>
+                      <option value="Card">Credit/Debit Card</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button type="submit" class="submit-btn gold-btn">
+                  <i class="fa-solid fa-check"></i> Save Expense Record
+                </button>
+              </form>
+            </div>
+
+            <!-- Right: Expenses Ledger Table -->
+            <div class="expense-ledger-card">
+              <div class="ledger-header">
+                <h3><i class="fa-solid fa-list-check"></i> Expense History</h3>
+                <div class="total-expense-badge">
+                  Total Logged: <strong id="ledger-total-amount">₹0.00</strong>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Description</th>
+                      <th>Paid To</th>
+                      <th>Mode</th>
+                      <th>Amount</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="expenses-tbody">
+                    <tr><td colspan="7" class="loading-td">Loading expense entries...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+
+        <!-- ==================== 5. DATABASE SETTINGS SECTION ==================== -->
+        <section id="db-settings-section" class="app-section">
+          <div class="db-settings-card">
+            <div class="db-card-header">
+              <i class="fa-solid fa-database"></i>
+              <div>
+                <h3>MySQL Database Connection Setup</h3>
+                <p>Configure MySQL server credentials to automatically sync orders, bills, tokens & expenses.</p>
+              </div>
+            </div>
+
+            <form id="db-config-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Database Host</label>
+                  <input type="text" id="db-host" value="localhost" placeholder="localhost or IP" required>
+                </div>
+                <div class="form-group">
+                  <label>Port</label>
+                  <input type="number" id="db-port" value="3306" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>User Name</label>
+                  <input type="text" id="db-user" value="root" required>
+                </div>
+                <div class="form-group">
+                  <label>Password</label>
+                  <input type="password" id="db-password" placeholder="Leave empty if none">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Database Name</label>
+                <input type="text" id="db-name" value="kish_mandhi" required>
+              </div>
+
+              <div class="db-form-actions">
+                <button type="button" class="btn secondary" id="btn-test-db">
+                  <i class="fa-solid fa-plug"></i> Test Connection
+                </button>
+                <button type="submit" class="btn primary">
+                  <i class="fa-solid fa-floppy-disk"></i> Save & Initialize Database
+                </button>
+              </div>
+            </form>
+
+            <div class="db-feedback-box hidden" id="db-feedback"></div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+  </div>
+
+
+  <!-- Thermal Bill Printable Receipt Modal Preview -->
+  <div class="modal-overlay hidden" id="receipt-modal">
+    <div class="modal-card receipt-modal-card">
+      <div class="modal-header">
+        <h4><i class="fa-solid fa-receipt"></i> Printable Receipt Preview</h4>
+        <button class="close-modal-btn" id="btn-close-receipt"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div class="receipt-paper-wrapper">
+        <div class="receipt-paper" id="receipt-paper-content">
+          <!-- Receipt slip rendered via JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn secondary" id="btn-close-receipt-2">Close</button>
+        <button class="btn secondary" id="btn-print-kot-action" style="background:#e67e22; color:white; border:none;">
+          <i class="fa-solid fa-fire"></i> Print KOT Slip
+        </button>
+        <button class="btn primary" id="btn-print-receipt-action">
+          <i class="fa-solid fa-print"></i> Print Customer Bill
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Token Slip Modal Preview -->
+  <div class="modal-overlay hidden" id="token-modal">
+    <div class="modal-card receipt-modal-card">
+      <div class="modal-header">
+        <h4><i class="fa-solid fa-ticket"></i> Token Slip Preview</h4>
+        <button class="close-modal-btn" id="btn-close-token-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div class="receipt-paper-wrapper">
+        <div class="receipt-paper" id="token-paper-content">
+          <!-- Token slip preview rendered via JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn secondary" id="btn-close-token-modal-2">Close</button>
+        <button class="btn secondary" id="btn-send-token-to-billing" style="background:#2ecc71; color:#12141a; border:none; font-weight:700;">
+          <i class="fa-solid fa-cart-arrow-down"></i> Send to Billing
+        </button>
+        <button class="btn primary" id="btn-print-token-action" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); color:white;">
+          <i class="fa-solid fa-print"></i> Print Token Slip
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Dish Modal -->
+  <div class="modal-overlay hidden" id="add-dish-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4><i class="fa-solid fa-utensils"></i> Add New Dish / Menu Item</h4>
+        <button class="close-modal-btn" id="btn-close-dish-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="add-dish-form">
+        <div class="form-group">
+          <label>Dish Name</label>
+          <input type="text" id="dish-name" placeholder="e.g., Alfaham Mandhi" required>
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <select id="dish-category" required>
+            <option value="1">Mandhi Special</option>
+            <option value="2">Alfaham & Grill</option>
+            <option value="3">Starters & Sides</option>
+            <option value="4">Beverages</option>
+            <option value="5">Desserts</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quarter Price (₹)</label>
+            <input type="number" id="dish-price-qtr" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Half Price (₹)</label>
+            <input type="number" id="dish-price-half" min="0" placeholder="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Full Price (₹)</label>
+          <input type="number" id="dish-price-full" min="0" placeholder="0" required>
+        </div>
+
+        <div class="modal-footer" style="padding-top:1rem; margin-top:1rem; border-top:1px solid var(--border-color); display:flex; gap:0.75rem;">
+          <button type="button" class="btn secondary" id="btn-close-dish-modal-2">Cancel</button>
+          <button type="submit" class="btn primary">
+            <i class="fa-solid fa-check"></i> Save Dish to Menu
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Application Renderer Scripts -->
+  <script src="js/db-settings.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/billing.js"></script>
+  <script src="js/tokens.js"></script>
+  <script src="js/expenses.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
