@@ -1,27 +1,32 @@
 {
   "name": "kish-mandhi-billing",
-  "version": "1.0.0",
-  "description": "Desktop Billing and Restaurant Management System for Kish Mandhi",
+  "private": true,
+  "version": "2.0.0",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron ."
+    "dev": "vite",
+    "build": "vite build",
+    "start": "npx vite build && electron ."
   },
-  "keywords": [
-    "electron",
-    "billing",
-    "pos",
-    "restaurant",
-    "mandhi",
-    "mysql"
-  ],
-  "author": "Kish Mandhi POS",
-  "license": "ISC",
   "dependencies": {
-    "chart.js": "^4.4.1",
-    "mysql2": "^3.9.2"
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.330.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.12.0",
+    "tailwind-merge": "^2.2.1",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
-    "electron": "^28.2.0"
+    "@types/node": "^20.11.19",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "electron": "^28.2.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0"
   }
 }
