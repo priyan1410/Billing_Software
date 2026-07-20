@@ -10,75 +10,72 @@ export const ExpensesView: React.FC = () => {
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [paidTo, setPaidTo] = useState('');
   const [paymentMode, setPaymentMode] = useState('Cash');
+  const [saving, setSaving] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
 
   useEffect(() => {
     loadExpenses();
   }, []);
 
   const loadExpenses = async () => {
-    if ((window as any).electronAPI) {
-      const res = await (window as any).electronAPI.getExpenses();
-      if (res.success) setExpenses(res.data);
-    } else {
-      setExpenses([
-        { id: 1, category: 'Raw Material', description: 'Basmati Rice & Premium Arabic Spices', amount: 4500, expenseDate: new Date().toISOString().split('T')[0], paidTo: 'Malabar Traders', paymentMode: 'UPI' },
-        { id: 2, category: 'Raw Material', description: 'Fresh Farm Chicken & Mutton Raan', amount: 8200, expenseDate: new Date().toISOString().split('T')[0], paidTo: 'City Poultry & Meats', paymentMode: 'Cash' },
-        { id: 3, category: 'Utilities', description: 'Cooking Gas Cylinders (Commercial)', amount: 3600, expenseDate: new Date().toISOString().split('T')[0], paidTo: 'Indane Gas Agency', paymentMode: 'Card' }
-      ]);
+    try {
+      if ((window as any).electronAPI) {
+        const res = await (window as any).electronAPI.getExpenses();
+        if (res && res.success && Array.isArray(res.data)) {
+          setExpenses(res.data);
+        }
+      }
+    } catch (err: any) {
+      console.error('loadExpenses error:', err.message);
     }
   };
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || !amount) {
-      alert('Please fill description and amount.');
+      setErrMsg('Please fill in description and amount.');
       return;
     }
+    setErrMsg('');
+    setSaving(true);
 
-    const payload = {
-      category,
-      description,
-      amount: Number(amount),
-      expense_date: expenseDate,
-      paid_to: paidTo,
-      payment_mode: paymentMode
-    };
+    try {
+      const payload = {
+        category,
+        description,
+        amount: Number(amount),
+        expense_date: expenseDate,
+        paid_to: paidTo,
+        payment_mode: paymentMode
+      };
 
-    if ((window as any).electronAPI) {
-      const res = await (window as any).electronAPI.addExpense(payload);
-      if (res.success) {
-        setDescription('');
-        setAmount('');
-        setPaidTo('');
-        loadExpenses();
+      if ((window as any).electronAPI) {
+        const res = await (window as any).electronAPI.addExpense(payload);
+        if (res && res.success) {
+          setDescription('');
+          setAmount('');
+          setPaidTo('');
+          await loadExpenses();
+        } else {
+          setErrMsg(res?.message || 'Failed to save expense. Please try again.');
+        }
       }
-    } else {
-      setExpenses([
-        {
-          id: expenses.length + 1,
-          category,
-          description,
-          amount: Number(amount),
-          expenseDate,
-          paidTo,
-          paymentMode: paymentMode as any
-        },
-        ...expenses
-      ]);
-      setDescription('');
-      setAmount('');
-      setPaidTo('');
+    } catch (err: any) {
+      setErrMsg('Error saving expense: ' + err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDeleteExpense = async (id: number) => {
     if (!confirm('Are you sure you want to delete this expense entry?')) return;
-
-    if ((window as any).electronAPI) {
-      const res = await (window as any).electronAPI.deleteExpense(id);
-      if (res.success) loadExpenses();
-    } else {
-      setExpenses(expenses.filter((e) => e.id !== id));
+    try {
+      if ((window as any).electronAPI) {
+        const res = await (window as any).electronAPI.deleteExpense(id);
+        if (res && res.success) await loadExpenses();
+      }
+    } catch (err: any) {
+      console.error('deleteExpense error:', err.message);
     }
   };
 
@@ -170,11 +167,16 @@ export const ExpensesView: React.FC = () => {
             </div>
           </div>
 
+          {errMsg && (
+            <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">{errMsg}</p>
+          )}
+
           <button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 font-extrabold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:scale-[1.02] transition-transform mt-2"
+            disabled={saving}
+            className="w-full py-3 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 font-extrabold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:scale-[1.02] transition-transform mt-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
           >
-            <Plus className="w-4 h-4" /> Save Expense Entry
+            <Plus className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Expense Entry'}
           </button>
         </form>
       </div>
@@ -210,7 +212,9 @@ export const ExpensesView: React.FC = () => {
                   </td>
                   <td className="p-3 font-semibold text-white">{exp.description}</td>
                   <td className="p-3 text-olive-300">{exp.paidTo || '-'}</td>
-                  <td className="p-3 text-olive-300">{exp.expenseDate}</td>
+                  <td className="p-3 text-olive-300">
+                    {typeof exp.expenseDate === 'string' ? exp.expenseDate : exp.expenseDate ? new Date(exp.expenseDate).toISOString().split('T')[0] : '-'}
+                  </td>
                   <td className="p-3 font-bold text-rose-400">₹{Number(exp.amount).toFixed(2)}</td>
                   <td className="p-3">
                     <button

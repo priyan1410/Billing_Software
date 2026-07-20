@@ -17,21 +17,18 @@ export const DbSettingsView: React.FC = () => {
   }, [activeTab]);
 
   const loadAllData = async () => {
-    if ((window as any).electronAPI) {
-      const itemsRes = await (window as any).electronAPI.getMenuItems('all');
-      const ordersRes = await (window as any).electronAPI.getOrders();
-      const expRes = await (window as any).electronAPI.getExpenses();
+    try {
+      if ((window as any).electronAPI) {
+        const itemsRes = await (window as any).electronAPI.getMenuItems('all');
+        const ordersRes = await (window as any).electronAPI.getOrders();
+        const expRes = await (window as any).electronAPI.getExpenses();
 
-      if (itemsRes.success) setMenuItems(itemsRes.data);
-      if (ordersRes.success) setOrders(ordersRes.data);
-      if (expRes.success) setExpenses(expRes.data);
-    } else {
-      setMenuItems([
-        { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
-        { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
-        { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
-        { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true }
-      ]);
+        if (itemsRes && itemsRes.success && Array.isArray(itemsRes.data)) setMenuItems(itemsRes.data);
+        if (ordersRes && ordersRes.success && Array.isArray(ordersRes.data)) setOrders(ordersRes.data);
+        if (expRes && expRes.success && Array.isArray(expRes.data)) setExpenses(expRes.data);
+      }
+    } catch (err: any) {
+      console.error('loadAllData error:', err.message);
     }
   };
 
@@ -422,9 +419,9 @@ export const DbSettingsView: React.FC = () => {
                       <td className="py-3 px-3 font-bold text-white">{o.orderNumber}</td>
                       <td className="py-3 px-3 font-extrabold text-amber-500">#{o.tokenNumber}</td>
                       <td className="py-3 px-3 font-semibold text-olive-300">{o.orderType}</td>
-                      <td className="py-3 px-3">₹{o.subtotal.toFixed(2)}</td>
-                      <td className="py-3 px-3">₹{o.taxAmount.toFixed(2)}</td>
-                      <td className="py-3 px-3 font-extrabold text-gold-400">₹{o.grandTotal.toFixed(2)}</td>
+                      <td className="py-3 px-3">₹{Number(o.subtotal || 0).toFixed(2)}</td>
+                      <td className="py-3 px-3">₹{Number(o.taxAmount || 0).toFixed(2)}</td>
+                      <td className="py-3 px-3 font-extrabold text-gold-400">₹{Number(o.grandTotal || 0).toFixed(2)}</td>
                       <td className="py-3 px-3 font-bold text-emerald-400">{o.paymentMode}</td>
                     </tr>
                   ))
@@ -466,8 +463,10 @@ export const DbSettingsView: React.FC = () => {
                   <tr key={exp.id} className="hover:bg-olive-800/40">
                     <td className="py-3 px-3 font-bold text-white">{exp.category}</td>
                     <td className="py-3 px-3 text-olive-300">{exp.description}</td>
-                    <td className="py-3 px-3 font-bold text-rose-400">₹{exp.amount.toFixed(2)}</td>
-                    <td className="py-3 px-3 font-mono text-olive-300">{exp.expenseDate}</td>
+                    <td className="py-3 px-3 font-bold text-rose-400">₹{Number(exp.amount || 0).toFixed(2)}</td>
+                    <td className="py-3 px-3 font-mono text-olive-300">
+                      {typeof exp.expenseDate === 'string' ? exp.expenseDate : exp.expenseDate ? new Date(exp.expenseDate).toISOString().split('T')[0] : '-'}
+                    </td>
                     <td className="py-3 px-3 text-right">
                       <button onClick={() => handleDeleteExpense(exp.id)} className="p-1.5 bg-olive-800 text-rose-400 border border-rose-500/30 rounded hover:bg-rose-600 hover:text-white transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />

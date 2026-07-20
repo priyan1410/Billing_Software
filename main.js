@@ -1,29 +1,10 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const { query, testConnection, saveConfig, loadConfig, dbConfig } = require('./db/connection');
+const { initializeDatabase } = require('./db/schema');
 
-const db = {
-  categories: [
-    { id: 1, name: 'Mandhi Special', icon: 'utensils' },
-    { id: 2, name: 'Alfaham & Grill', icon: 'fire' },
-    { id: 3, name: 'Starters & Sides', icon: 'drumstick-bite' },
-    { id: 4, name: 'Beverages', icon: 'glass-martini-alt' },
-    { id: 5, name: 'Desserts', icon: 'ice-cream' }
-  ],
-  menuItems: [
-    { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
-    { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
-    { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
-    { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
-    { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
-    { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
-    { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
-    { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
-    { id: 9, categoryId: 4, name: 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
-    { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
-  ],
-  orders: [],
-  expenses: []
-};
+// Fix GPU rendering on Windows
+app.disableHardwareAcceleration();
 
 let mainWindow;
 
@@ -34,6 +15,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 720,
     title: 'Kish Mandhi - Desktop Billing Software',
+    backgroundColor: '#090a0f',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -49,18 +31,26 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, 'index.html'));
   }
-}
 
-const { initializeDatabase } = require('./db/schema');
+  // Auto-reload if renderer crashes
+  mainWindow.webContents.on('render-process-gone', (event, details) => {
+    console.error('Renderer crash:', details.reason);
+    if (details.reason !== 'clean-exit') {
+      mainWindow.reload();
+    }
+  });
+}
 
 app.whenReady().then(async () => {
   try {
     const dbInit = await initializeDatabase();
     if (dbInit && dbInit.success) {
       console.log('✓ MySQL Live Database connected & initialized: kish_mandhi');
+    } else {
+      console.log('⚠ MySQL init:', dbInit && dbInit.message);
     }
   } catch (err) {
-    console.log('MySQL init status:', err.message);
+    console.log('MySQL init error:', err.message);
   }
   createWindow();
 });
@@ -69,118 +59,264 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// IPC Handlers
+// ─────────────────────────────────────────────────────────────
+// MENU CATEGORIES
+// ─────────────────────────────────────────────────────────────
 ipcMain.handle('menu:getCategories', async () => {
-  return { success: true, data: db.categories };
+  const result = await query('SELECT * FROM categories ORDER BY id ASC');
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: result.data.map(r => ({
+    id: r.id, name: r.name, icon: r.icon
+  })) };
 });
 
+// ─────────────────────────────────────────────────────────────
+// MENU ITEMS
+// ─────────────────────────────────────────────────────────────
 ipcMain.handle('menu:getItems', async (evt, categoryId) => {
-  let filtered = db.menuItems.filter(i => i.isAvailable);
+  let sql = 'SELECT * FROM menu_items WHERE is_available = 1';
+  const params = [];
   if (categoryId && categoryId !== 'all') {
-    filtered = filtered.filter(i => String(i.categoryId) === String(categoryId));
+    sql += ' AND category_id = ?';
+    params.push(categoryId);
   }
-  return { success: true, data: filtered };
+  sql += ' ORDER BY id ASC';
+  const result = await query(sql, params);
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: result.data.map(r => ({
+    id: r.id,
+    categoryId: r.category_id,
+    name: r.name,
+    priceQuarter: Number(r.price_quarter),
+    priceHalf: Number(r.price_half),
+    priceFull: Number(r.price_full),
+    isAvailable: !!r.is_available
+  })) };
 });
 
 ipcMain.handle('menu:saveItem', async (evt, itemData) => {
-  const newItem = {
-    id: db.menuItems.length + 1,
-    categoryId: Number(itemData.category_id || itemData.categoryId),
-    name: itemData.name,
-    priceQuarter: Number(itemData.price_quarter || itemData.priceQuarter || 0),
-    priceHalf: Number(itemData.price_half || itemData.priceHalf || 0),
-    priceFull: Number(itemData.price_full || itemData.priceFull || 0),
-    isAvailable: true
-  };
-  db.menuItems.push(newItem);
-  return { success: true, data: newItem };
+  const result = await query(
+    'INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available) VALUES (?, ?, ?, ?, ?, 1)',
+    [
+      Number(itemData.category_id || itemData.categoryId),
+      itemData.name,
+      Number(itemData.price_quarter || itemData.priceQuarter || 0),
+      Number(itemData.price_half   || itemData.priceHalf   || 0),
+      Number(itemData.price_full   || itemData.priceFull   || 0)
+    ]
+  );
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: { id: result.data.insertId, ...itemData } };
 });
 
 ipcMain.handle('menu:updateItem', async (evt, itemData) => {
-  const target = db.menuItems.find(i => Number(i.id) === Number(itemData.id));
-  if (target) {
-    target.name = itemData.name;
-    target.categoryId = Number(itemData.category_id || itemData.categoryId);
-    target.priceQuarter = Number(itemData.price_quarter || itemData.priceQuarter || 0);
-    target.priceHalf = Number(itemData.price_half || itemData.priceHalf || 0);
-    target.priceFull = Number(itemData.price_full || itemData.priceFull || 0);
-  }
+  const result = await query(
+    'UPDATE menu_items SET name = ?, category_id = ?, price_quarter = ?, price_half = ?, price_full = ? WHERE id = ?',
+    [
+      itemData.name,
+      Number(itemData.category_id || itemData.categoryId),
+      Number(itemData.price_quarter || itemData.priceQuarter || 0),
+      Number(itemData.price_half   || itemData.priceHalf   || 0),
+      Number(itemData.price_full   || itemData.priceFull   || 0),
+      Number(itemData.id)
+    ]
+  );
+  if (!result.success) return { success: false, message: result.error };
   return { success: true };
 });
 
 ipcMain.handle('menu:deleteItem', async (evt, id) => {
-  db.menuItems = db.menuItems.filter(i => Number(i.id) !== Number(id));
+  const result = await query('DELETE FROM menu_items WHERE id = ?', [Number(id)]);
+  if (!result.success) return { success: false, message: result.error };
   return { success: true };
 });
 
+// ─────────────────────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────────────────────
 ipcMain.handle('orders:create', async (evt, orderData) => {
-  const timestamp = Date.now().toString().slice(-4);
+  const timestamp = Date.now().toString().slice(-6);
   const tokenNumber = Math.floor(100 + Math.random() * 900);
   const orderNumber = `KM-${timestamp}`;
 
-  const newOrder = {
-    id: db.orders.length + 101,
-    orderNumber,
-    tokenNumber,
-    orderType: orderData.order_type || orderData.orderType || 'Dine-In',
-    subtotal: orderData.subtotal,
-    taxAmount: orderData.tax_amount || orderData.taxAmount,
-    discountAmount: orderData.discount_amount || orderData.discountAmount,
-    grandTotal: orderData.grand_total || orderData.grandTotal,
-    paymentMode: orderData.payment_mode || orderData.paymentMode || 'Cash',
-    createdAt: new Date().toISOString()
-  };
+  const insertOrder = await query(
+    `INSERT INTO orders (order_number, token_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+    [
+      orderNumber,
+      tokenNumber,
+      orderData.order_type || orderData.orderType || 'Dine-In',
+      Number(orderData.subtotal || 0),
+      Number(orderData.tax_amount || orderData.taxAmount || 0),
+      Number(orderData.discount_amount || orderData.discountAmount || 0),
+      Number(orderData.grand_total || orderData.grandTotal || 0),
+      orderData.payment_mode || orderData.paymentMode || 'Cash'
+    ]
+  );
 
-  db.orders.unshift(newOrder);
-  return { success: true, data: newOrder };
+  if (!insertOrder.success) return { success: false, message: insertOrder.error };
+  const orderId = insertOrder.data.insertId;
+
+  // Insert order items
+  if (orderData.items && Array.isArray(orderData.items)) {
+    for (const item of orderData.items) {
+      await query(
+        'INSERT INTO order_items (order_id, item_name, variant, unit_price, quantity, total_price) VALUES (?, ?, ?, ?, ?, ?)',
+        [orderId, item.name, item.variant || 'Full', Number(item.unitPrice || item.price || 0), Number(item.quantity || 1), Number(item.totalPrice || 0)]
+      );
+    }
+  }
+
+  return { success: true, data: { id: orderId, orderNumber, tokenNumber } };
 });
 
 ipcMain.handle('orders:getAll', async () => {
-  return { success: true, data: db.orders };
+  const result = await query('SELECT * FROM orders ORDER BY created_at DESC');
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: result.data.map(r => ({
+    id: r.id,
+    orderNumber: r.order_number,
+    tokenNumber: r.token_number,
+    orderType: r.order_type,
+    subtotal: Number(r.subtotal),
+    taxAmount: Number(r.tax_amount),
+    discountAmount: Number(r.discount_amount),
+    grandTotal: Number(r.grand_total),
+    paymentMode: r.payment_mode,
+    status: r.status,
+    createdAt: r.created_at
+  })) };
 });
 
+// ─────────────────────────────────────────────────────────────
+// DASHBOARD STATS (live from MySQL)
+// ─────────────────────────────────────────────────────────────
 ipcMain.handle('dashboard:getStats', async () => {
-  const totalRevenue = db.orders.reduce((sum, o) => sum + Number(o.grandTotal || 0), 0);
-  const totalOrdersCount = db.orders.length;
-  const totalExpenseSum = db.expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  const revResult = await query(`SELECT COALESCE(SUM(grand_total), 0) AS total FROM orders`);
+  const cntResult = await query(`SELECT COUNT(*) AS cnt FROM orders`);
+  const expResult = await query(`SELECT COALESCE(SUM(amount), 0) AS total FROM expenses`);
+  const recentResult = await query(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 5`);
+
+  const totalRevenue = revResult.success ? Number(revResult.data[0].total) : 0;
+  const totalOrdersCount = cntResult.success ? Number(cntResult.data[0].cnt) : 0;
+  const totalExpenseSum = expResult.success ? Number(expResult.data[0].total) : 0;
   const netProfit = totalRevenue - totalExpenseSum;
 
-  return {
-    success: true,
-    data: {
-      totalRevenue,
-      totalOrdersCount,
-      totalExpenseSum,
-      netProfit,
-      recentOrders: db.orders.slice(0, 5)
-    }
-  };
+  const recentOrders = recentResult.success ? recentResult.data.map(r => ({
+    id: r.id,
+    orderNumber: r.order_number,
+    tokenNumber: r.token_number,
+    orderType: r.order_type,
+    grandTotal: Number(r.grand_total),
+    paymentMode: r.payment_mode,
+    createdAt: r.created_at
+  })) : [];
+
+  return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders } };
 });
 
+// ─────────────────────────────────────────────────────────────
+// EXPENSES
+// ─────────────────────────────────────────────────────────────
 ipcMain.handle('expenses:getAll', async () => {
-  return { success: true, data: db.expenses };
+  const result = await query('SELECT * FROM expenses ORDER BY created_at DESC');
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: result.data.map(r => ({
+    id: r.id,
+    category: r.category,
+    description: r.description,
+    amount: Number(r.amount),
+    expenseDate: r.expense_date,
+    paidTo: r.paid_to,
+    paymentMode: r.payment_mode,
+    createdAt: r.created_at
+  })) };
 });
 
 ipcMain.handle('expenses:add', async (evt, expData) => {
-  const newExp = {
-    id: db.expenses.length + 1,
-    category: expData.category,
-    description: expData.description,
-    amount: Number(expData.amount),
-    expenseDate: expData.expense_date || expData.expenseDate,
-    paidTo: expData.paid_to || expData.paidTo || '',
-    paymentMode: expData.payment_mode || expData.paymentMode || 'Cash',
-    createdAt: new Date().toISOString()
-  };
-  db.expenses.unshift(newExp);
-  return { success: true, data: newExp };
+  const result = await query(
+    'INSERT INTO expenses (category, description, amount, expense_date, paid_to, payment_mode) VALUES (?, ?, ?, ?, ?, ?)',
+    [
+      expData.category,
+      expData.description,
+      Number(expData.amount),
+      expData.expense_date || expData.expenseDate,
+      expData.paid_to || expData.paidTo || '',
+      expData.payment_mode || expData.paymentMode || 'Cash'
+    ]
+  );
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: { id: result.data.insertId } };
 });
 
 ipcMain.handle('expenses:delete', async (evt, id) => {
-  db.expenses = db.expenses.filter(e => Number(e.id) !== Number(id));
+  const result = await query('DELETE FROM expenses WHERE id = ?', [Number(id)]);
+  if (!result.success) return { success: false, message: result.error };
   return { success: true };
 });
 
+// ─────────────────────────────────────────────────────────────
+// DATABASE CONTROLLER ACTIONS
+// ─────────────────────────────────────────────────────────────
+ipcMain.handle('db:clearOrders', async () => {
+  await query('DELETE FROM order_items');
+  await query('DELETE FROM orders');
+  return { success: true };
+});
+
+ipcMain.handle('db:clearExpenses', async () => {
+  await query('DELETE FROM expenses');
+  return { success: true };
+});
+
+ipcMain.handle('db:resetDefaults', async () => {
+  await query('DELETE FROM order_items');
+  await query('DELETE FROM orders');
+  await query('DELETE FROM expenses');
+  return { success: true };
+});
+
+ipcMain.handle('db:getTableData', async (evt, tableName) => {
+  const allowed = ['menu_items', 'orders', 'expenses', 'categories', 'order_items'];
+  if (!allowed.includes(tableName)) return { success: false, message: 'Table not allowed' };
+  const result = await query(`SELECT * FROM \`${tableName}\` ORDER BY id DESC`);
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: result.data };
+});
+
+ipcMain.handle('db:importBackup', async (evt, backupData) => {
+  try {
+    if (backupData.menuItems && Array.isArray(backupData.menuItems)) {
+      await query('DELETE FROM menu_items');
+      for (const item of backupData.menuItems) {
+        await query(
+          'INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available) VALUES (?, ?, ?, ?, ?, ?)',
+          [item.categoryId || item.category_id, item.name, item.priceQuarter || 0, item.priceHalf || 0, item.priceFull || 0, 1]
+        );
+      }
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:testConnection', async () => {
+  return await testConnection();
+});
+
+ipcMain.handle('db:getConfig', async () => {
+  const cfg = loadConfig();
+  return { success: true, data: { host: cfg.host, port: cfg.port, user: cfg.user, database: cfg.database } };
+});
+
+ipcMain.handle('db:saveConfig', async (evt, config) => {
+  return saveConfig(config);
+});
+
+// ─────────────────────────────────────────────────────────────
+// PRINT RECEIPT
+// ─────────────────────────────────────────────────────────────
 ipcMain.handle('receipt:print', async (evt, receiptHtml) => {
   try {
     const printWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false } });
@@ -194,46 +330,4 @@ ipcMain.handle('receipt:print', async (evt, receiptHtml) => {
   } catch (err) {
     return { success: false, message: err.message };
   }
-});
-
-// Database Controller Actions
-ipcMain.handle('db:clearOrders', async () => {
-  db.orders = [];
-  return { success: true };
-});
-
-ipcMain.handle('db:clearExpenses', async () => {
-  db.expenses = [];
-  return { success: true };
-});
-
-ipcMain.handle('db:resetDefaults', async () => {
-  db.orders = [];
-  db.expenses = [];
-  db.menuItems = [
-    { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
-    { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
-    { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
-    { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
-    { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
-    { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
-    { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
-    { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
-    { id: 9, categoryId: 4, name: 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
-    { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
-  ];
-  return { success: true };
-});
-
-ipcMain.handle('db:importBackup', async (evt, backupData) => {
-  if (backupData.menuItems && Array.isArray(backupData.menuItems)) {
-    db.menuItems = backupData.menuItems;
-  }
-  if (backupData.orders && Array.isArray(backupData.orders)) {
-    db.orders = backupData.orders;
-  }
-  if (backupData.expenses && Array.isArray(backupData.expenses)) {
-    db.expenses = backupData.expenses;
-  }
-  return { success: true };
 });

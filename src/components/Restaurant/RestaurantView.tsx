@@ -37,39 +37,47 @@ export const RestaurantView: React.FC = () => {
   }, []);
 
   const loadDishes = async () => {
-    if ((window as any).electronAPI) {
-      const res = await (window as any).electronAPI.getMenuItems('all');
-      if (res.success) setDishes(res.data);
-    } else {
-      setDishes([
-        { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
-        { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
-        { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
-        { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
-        { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
-        { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
-        { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
-        { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true }
-      ]);
+    try {
+      if ((window as any).electronAPI) {
+        const res = await (window as any).electronAPI.getMenuItems('all');
+        if (res && res.success && Array.isArray(res.data)) setDishes(res.data);
+      } else {
+        setDishes([
+          { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
+          { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
+          { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
+          { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
+          { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
+          { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
+          { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
+          { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true }
+        ]);
+      }
+    } catch (err: any) {
+      console.error('loadDishes error:', err.message);
     }
   };
 
   const loadFinancials = async () => {
-    if ((window as any).electronAPI) {
-      const ordersRes = await (window as any).electronAPI.getOrders();
-      const expRes = await (window as any).electronAPI.getExpenses();
-      if (ordersRes.success) setAllOrders(ordersRes.data);
-      if (expRes.success) setAllExpenses(expRes.data);
-    } else {
-      setAllOrders([
-        { grandTotal: 829.5, createdAt: new Date().toISOString() },
-        { grandTotal: 421, createdAt: new Date().toISOString() }
-      ]);
-      setAllExpenses([
-        { amount: 4500, expenseDate: new Date().toISOString().split('T')[0] },
-        { amount: 8200, expenseDate: new Date().toISOString().split('T')[0] },
-        { amount: 3600, expenseDate: new Date().toISOString().split('T')[0] }
-      ]);
+    try {
+      if ((window as any).electronAPI) {
+        const ordersRes = await (window as any).electronAPI.getOrders();
+        const expRes = await (window as any).electronAPI.getExpenses();
+        if (ordersRes && ordersRes.success && Array.isArray(ordersRes.data)) setAllOrders(ordersRes.data);
+        if (expRes && expRes.success && Array.isArray(expRes.data)) setAllExpenses(expRes.data);
+      } else {
+        setAllOrders([
+          { grandTotal: 829.5, createdAt: new Date().toISOString() },
+          { grandTotal: 421, createdAt: new Date().toISOString() }
+        ]);
+        setAllExpenses([
+          { amount: 4500, expenseDate: new Date().toISOString().split('T')[0] },
+          { amount: 8200, expenseDate: new Date().toISOString().split('T')[0] },
+          { amount: 3600, expenseDate: new Date().toISOString().split('T')[0] }
+        ]);
+      }
+    } catch (err: any) {
+      console.error('loadFinancials error:', err.message);
     }
   };
 
@@ -170,25 +178,32 @@ export const RestaurantView: React.FC = () => {
 
   // Timeline Filter Math
   const filterItemByPeriod = (item: any, dateKey: string) => {
+    const rawVal = item ? item[dateKey] : null;
+    let valStr = '';
+    if (rawVal) {
+      if (typeof rawVal === 'string') valStr = rawVal;
+      else if (rawVal instanceof Date) valStr = rawVal.toISOString();
+      else valStr = String(rawVal);
+    }
     const todayStr = new Date().toISOString().split('T')[0];
     if (period === 'all') return true;
 
     if (period === 'today') {
-      return (item[dateKey] || '').split('T')[0] === todayStr;
+      return valStr.split('T')[0] === todayStr;
     }
     if (period === 'week') {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      return new Date(item[dateKey] || Date.now()) >= sevenDaysAgo;
+      return new Date(rawVal || Date.now()) >= sevenDaysAgo;
     }
     if (period === 'month') {
-      return (item[dateKey] || '').substring(0, 7) === todayStr.substring(0, 7);
+      return valStr.substring(0, 7) === todayStr.substring(0, 7);
     }
     if (period === 'year') {
-      return (item[dateKey] || '').substring(0, 4) === todayStr.substring(0, 4);
+      return valStr.substring(0, 4) === todayStr.substring(0, 4);
     }
     if (period === 'custom') {
       if (!startDate || !endDate) return true;
-      const d = (item[dateKey] || '').split('T')[0];
+      const d = valStr.split('T')[0];
       return d >= startDate && d <= endDate;
     }
     return true;
