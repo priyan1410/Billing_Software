@@ -9,6 +9,7 @@
     "start": "npx vite build && electron ."
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.330.0",
     "mysql2": "^3.9.1",

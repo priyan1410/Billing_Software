@@ -195,15 +195,19 @@ export const TokensView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pr-1">
+        {/* Dishes Rows */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
           {filteredDishes.map((dish) => (
-            <div key={dish.id} className="bg-olive-900 border border-gold-500/20 rounded-xl p-4 flex flex-col justify-between hover:border-gold-500/50 transition-all">
-              <h5 className="font-semibold text-sm text-white mb-2">{dish.name}</h5>
-              <div className="flex gap-1.5 mt-auto">
+            <div
+              key={dish.id}
+              className="bg-olive-900 border border-gold-500/20 rounded-xl px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 hover:border-gold-500/50 transition-all"
+            >
+              <h5 className="font-semibold text-sm text-white">{dish.name}</h5>
+              <div className="flex gap-2 items-center shrink-0 w-full sm:w-auto">
                 {dish.priceQuarter > 0 && (
                   <button
                     onClick={() => addToTokenCart(dish, 'Quarter')}
-                    className="flex-1 py-1.5 px-1 bg-olive-800 border border-gold-500/20 rounded-md text-[11px] font-medium text-white hover:bg-gold-500 hover:text-olive-950 transition-all"
+                    className="flex-1 sm:flex-initial py-1.5 px-3 bg-olive-800 border border-gold-500/20 rounded-lg text-xs font-medium text-white hover:bg-gold-500 hover:text-olive-950 transition-all whitespace-nowrap"
                   >
                     Quarter
                   </button>
@@ -211,7 +215,7 @@ export const TokensView: React.FC = () => {
                 {dish.priceHalf > 0 && (
                   <button
                     onClick={() => addToTokenCart(dish, 'Half')}
-                    className="flex-1 py-1.5 px-1 bg-olive-800 border border-gold-500/20 rounded-md text-[11px] font-medium text-white hover:bg-gold-500 hover:text-olive-950 transition-all"
+                    className="flex-1 sm:flex-initial py-1.5 px-3 bg-olive-800 border border-gold-500/20 rounded-lg text-xs font-medium text-white hover:bg-gold-500 hover:text-olive-950 transition-all whitespace-nowrap"
                   >
                     Half
                   </button>
@@ -219,7 +223,7 @@ export const TokensView: React.FC = () => {
                 {dish.priceFull > 0 && (
                   <button
                     onClick={() => addToTokenCart(dish, 'Full')}
-                    className="flex-1 py-1.5 px-1 bg-olive-800 border border-gold-500/20 rounded-md text-[11px] font-medium text-white hover:bg-gold-500 hover:text-olive-950 transition-all"
+                    className="flex-1 sm:flex-initial py-1.5 px-3 bg-olive-800 border border-gold-500/20 rounded-lg text-xs font-medium text-white hover:bg-gold-500 hover:text-olive-950 transition-all whitespace-nowrap"
                   >
                     Full
                   </button>
