@@ -8,24 +8,24 @@ export default {
     extend: {
       colors: {
         olive: {
-          950: '#0d130e',
-          900: '#141f16',
-          800: '#1b291d',
-          700: '#243627',
-          600: '#2d4432',
-          500: '#4d642d',
-          400: '#556b2f',
-          300: '#6b8e23',
+          950: '#090a0f',
+          900: '#11131a',
+          800: '#171a24',
+          700: '#1f2330',
+          600: '#282d3d',
+          500: '#d4af37',
+          400: '#e5b842',
+          300: '#8e96a8',
         },
         gold: {
           500: '#d4af37',
           400: '#e5b842',
           300: '#f3e5ab',
-          dark: '#aa7c11',
+          dark: '#b89228',
         }
       },
       fontFamily: {
-        heading: ['Playfair Display', 'serif'],
+        heading: ['Outfit', 'sans-serif'],
         sans: ['Outfit', 'sans-serif'],
       }
     },

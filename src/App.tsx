@@ -6,6 +6,7 @@ import { BillingView } from './components/Billing/BillingView';
 import { TokensView } from './components/Tokens/TokensView';
 import { ExpensesView } from './components/Expenses/ExpensesView';
 import { RestaurantView } from './components/Restaurant/RestaurantView';
+import { DbSettingsView } from './components/Database/DbSettingsView';
 import { useAppStore } from './store/useAppStore';
 
 export const App: React.FC = () => {
@@ -22,17 +23,7 @@ export const App: React.FC = () => {
           {activeSection === 'tokens' && <TokensView />}
           {activeSection === 'expenses' && <ExpensesView />}
           {activeSection === 'restaurant' && <RestaurantView />}
-          {activeSection === 'db-settings' && (
-            <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6 space-y-4 max-w-xl">
-              <h3 className="text-base font-bold text-gold-500">Embedded SQLite Database Manager</h3>
-              <p className="text-xs text-olive-300">
-                Kish Mandhi desktop app is powered by embedded SQLite database with zero installation required! All database files are stored locally in your Application Data folder.
-              </p>
-              <div className="p-3 bg-olive-800 rounded-xl border border-emerald-500/30 text-emerald-400 text-xs font-bold">
-                ✓ Local SQLite Database Initialized & Connected
-              </div>
-            </div>
-          )}
+          {activeSection === 'db-settings' && <DbSettingsView />}
         </main>
       </div>
     </div>

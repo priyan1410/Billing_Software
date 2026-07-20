@@ -1,13 +1,18 @@
-const mysql = require('mysql2/promise');
+let mysql = null;
+try {
+  mysql = require('mysql2/promise');
+} catch (e) {
+  // Gracefully fallback to local storage if mysql2 is not loaded
+}
 const fs = require('fs');
 const path = require('path');
 
-// Default Configuration
+// Configuration
 let dbConfig = {
   host: 'localhost',
   port: 3306,
   user: 'root',
-  password: '',
+  password: 'Suriy@24',
   database: 'kish_mandhi',
   connectTimeout: 5000
 };
@@ -121,6 +126,7 @@ function loadConfig() {
   } catch (err) {
     console.error('Error loading config:', err.message);
   }
+  dbConfig.password = 'Suriy@24';
   return dbConfig;
 }
 

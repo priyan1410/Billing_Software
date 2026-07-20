@@ -10,8 +10,8 @@
 
 body {
   margin: 0;
-  background-color: #0d130e;
-  color: #f4f6f3;
+  background-color: #090a0f;
+  color: #f4f6f8;
   font-family: 'Outfit', sans-serif;
   overflow: hidden;
   height: 100vh;
@@ -30,5 +30,15 @@ body {
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #d4af37;
+  background: rgba(212, 175, 55, 0.5);
+}
+
+/* Hide number input spinners (up and down arrows) */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
 }

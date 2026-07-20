@@ -1,23 +1,24 @@
 const { query, testConnection, dbConfig } = require('./connection');
-const mysql = require('mysql2/promise');
+let mysql = null;
+try {
+  mysql = require('mysql2/promise');
+} catch (e) {
+  // Gracefully fallback
+}
 
 async function initializeDatabase() {
-  const connStatus = await testConnection();
-  if (!connStatus.success) {
-    console.log('MySQL not reachable yet. Skipping automatic DB migration.');
-    return { success: false, message: connStatus.message };
-  }
+  if (!mysql) return { success: false, message: 'mysql2 module not present' };
 
   try {
-    // 1. Ensure database exists
+    // 1. Connect to MySQL server root to ensure database kish_mandhi exists
     const conn = await mysql.createConnection({
-      host: dbConfig.host,
-      port: Number(dbConfig.port),
-      user: dbConfig.user,
-      password: dbConfig.password
+      host: dbConfig.host || 'localhost',
+      port: Number(dbConfig.port || 3306),
+      user: dbConfig.user || 'root',
+      password: 'Suriy@24'
     });
     
-    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\`;`);
+    await conn.query(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database || 'kish_mandhi'}\`;`);
     await conn.end();
 
     // 2. Create tables

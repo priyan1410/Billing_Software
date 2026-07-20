@@ -19,5 +19,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteExpense: (id: number) => ipcRenderer.invoke('expenses:delete', id),
 
   // Thermal Receipt Printing
-  printReceipt: (receiptHtml: string) => ipcRenderer.invoke('receipt:print', receiptHtml)
+  printReceipt: (receiptHtml: string) => ipcRenderer.invoke('receipt:print', receiptHtml),
+
+  // Database Management
+  clearOrders: () => ipcRenderer.invoke('db:clearOrders'),
+  clearExpenses: () => ipcRenderer.invoke('db:clearExpenses'),
+  resetDefaults: () => ipcRenderer.invoke('db:resetDefaults'),
+  importBackup: (backupData: any) => ipcRenderer.invoke('db:importBackup', backupData)
 });

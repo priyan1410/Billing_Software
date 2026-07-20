@@ -6,14 +6,11 @@ import { useAppStore } from '../../store/useAppStore';
 export const DashboardView: React.FC = () => {
   const { setActiveSection } = useAppStore();
   const [stats, setStats] = useState({
-    totalRevenue: 2040,
-    totalOrdersCount: 3,
-    totalExpenseSum: 16300,
-    netProfit: -14260,
-    recentOrders: [
-      { id: 101, orderNumber: 'KM-1001', tokenNumber: 101, orderType: 'Dine-In', grandTotal: 829.5, paymentMode: 'UPI', createdAt: new Date().toISOString() },
-      { id: 102, orderNumber: 'KM-1002', tokenNumber: 102, orderType: 'Takeaway', grandTotal: 421, paymentMode: 'Cash', createdAt: new Date().toISOString() }
-    ]
+    totalRevenue: 0,
+    totalOrdersCount: 0,
+    totalExpenseSum: 0,
+    netProfit: 0,
+    recentOrders: [] as any[]
   });
 
   useEffect(() => {

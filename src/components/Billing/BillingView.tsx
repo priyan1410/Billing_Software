@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Trash2, Printer, FileCheck, Utensils, ShoppingBag, CreditCard, QrCode, Banknote } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Printer, FileCheck, Utensils, ShoppingBag, CreditCard, QrCode, Banknote, X } from 'lucide-react';
 import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
 import { Dish, PortionVariant } from '../../types';
@@ -25,16 +25,16 @@ export const BillingView: React.FC = () => {
       if (res.success) setDishes(res.data);
     } else {
       setDishes([
-        { id: 1, categoryId: 1, name: 'Special Chicken Mandhi', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
-        { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
-        { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
-        { id: 4, categoryId: 2, name: 'Peri Peri Alfaham', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
-        { id: 5, categoryId: 2, name: 'Honey Chili Alfaham', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
-        { id: 6, categoryId: 3, name: 'Kubboos (2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
-        { id: 7, categoryId: 3, name: 'Special Garlic Sauce', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
-        { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
-        { id: 9, categoryId: 4, name: 'Avocado Milkshake', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
-        { id: 10, categoryId: 5, name: 'Turkish Kunafa with Ice Cream', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
+        { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
+        { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
+        { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
+        { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
+        { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
+        { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
+        { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
+        { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
+        { id: 9, categoryId: 4, name: 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
+        { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
       ]);
     }
   };
@@ -147,6 +147,7 @@ export const BillingView: React.FC = () => {
           </table>
           <div style="border-top:1px dashed #444; padding-top:6px;">
             <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>₹${receiptData.subtotal.toFixed(2)}</span></div>
+            ${receiptData.discount > 0 ? `<div style="display:flex; justify-content:space-between; color:#b91c1c;"><span>Discount:</span><span>-₹${receiptData.discount.toFixed(2)}</span></div>` : ''}
             <div style="display:flex; justify-content:space-between;"><span>GST (5%):</span><span>₹${receiptData.tax.toFixed(2)}</span></div>
             <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-top:4px;"><span>GRAND TOTAL:</span><span>₹${receiptData.grandTotal.toFixed(2)}</span></div>
           </div>
@@ -369,9 +370,18 @@ export const BillingView: React.FC = () => {
       {showReceiptModal && receiptData && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[380px] space-y-4">
-            <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
-              <Printer className="w-5 h-5" /> Printable Receipt Preview
-            </h4>
+            <div className="flex justify-between items-center pb-2 border-b border-gold-500/20">
+              <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
+                <Printer className="w-5 h-5" /> Printable Receipt Preview
+              </h4>
+              <button
+                onClick={() => setShowReceiptModal(false)}
+                className="text-olive-300 hover:text-white p-1 rounded-lg hover:bg-olive-800 transition-colors"
+                title="Close Receipt View"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div className="bg-[#fcfbfa] text-black font-mono p-4 rounded-lg text-xs space-y-2 max-h-80 overflow-y-auto">
               <div className="text-center border-b border-dashed border-black pb-2">
@@ -389,6 +399,13 @@ export const BillingView: React.FC = () => {
                     <span>₹{i.totalPrice.toFixed(2)}</span>
                   </div>
                 ))}
+              </div>
+              <div className="pt-1 space-y-0.5 border-b border-black pb-1">
+                <div className="flex justify-between"><span>Subtotal:</span><span>₹{receiptData.subtotal.toFixed(2)}</span></div>
+                {receiptData.discount > 0 && (
+                  <div className="flex justify-between text-rose-700 font-bold"><span>Discount:</span><span>-₹{receiptData.discount.toFixed(2)}</span></div>
+                )}
+                <div className="flex justify-between"><span>GST (5%):</span><span>₹{receiptData.tax.toFixed(2)}</span></div>
               </div>
               <div className="flex justify-between font-bold text-sm pt-1">
                 <span>GRAND TOTAL</span>
