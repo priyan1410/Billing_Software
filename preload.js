@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('api', {
   getCategories: () => ipcRenderer.invoke('menu:getCategories'),
   getMenuItems: (categoryId) => ipcRenderer.invoke('menu:getItems', categoryId),
   saveMenuItem: (itemData) => ipcRenderer.invoke('menu:saveItem', itemData),
+  updateMenuItem: (itemData) => ipcRenderer.invoke('menu:updateItem', itemData),
+  deleteMenuItem: (id) => ipcRenderer.invoke('menu:deleteItem', id),
 
   // Orders & Billing
   createOrder: (orderData) => ipcRenderer.invoke('orders:create', orderData),

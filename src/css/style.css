@@ -4,36 +4,38 @@
    ========================================================================== */
 
 :root {
-  /* Color Palette */
-  --bg-dark: #0f1115;
-  --bg-panel: #161920;
-  --bg-card: #1e222b;
-  --bg-card-hover: #262b36;
-  --bg-input: #12141a;
+  /* Classic Royal Olive Green & Metallic Gold Palette */
+  --bg-dark: #0d130e;
+  --bg-panel: #141f16;
+  --bg-card: #1b291d;
+  --bg-card-hover: #243627;
+  --bg-input: #0f1810;
 
-  /* Accent Colors (Gold / Amber / Charcoal) */
-  --primary-gold: #e5a93c;
-  --primary-amber: #d9822b;
-  --primary-gradient: linear-gradient(135deg, #e5a93c 0%, #c8761d 100%);
-  --gold-glow: rgba(229, 169, 60, 0.25);
-  
+  /* Metallic Gold & Olive Accents */
+  --primary-gold: #d4af37;
+  --primary-amber: #e5b842;
+  --primary-gradient: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%);
+  --gold-glow: rgba(212, 175, 55, 0.28);
+  --primary-olive: #556b2f;
+  --olive-gradient: linear-gradient(135deg, #2b3d2d 0%, #152217 100%);
+
   /* Status & Action Colors */
-  --accent-green: #2ecc71;
-  --accent-blue: #3498db;
-  --accent-purple: #9b59b6;
-  --accent-red: #e74c3c;
-  --accent-orange: #e67e22;
+  --accent-green: #38b000;
+  --accent-blue: #3a86ff;
+  --accent-purple: #9d4edd;
+  --accent-red: #d90429;
+  --accent-orange: #f77f00;
 
   /* Typography Colors */
-  --text-main: #f5f6f8;
-  --text-muted: #9499a6;
-  --text-dark: #12141a;
+  --text-main: #f4f6f3;
+  --text-muted: #9aab9c;
+  --text-dark: #0a110b;
 
   /* Borders & Shadows */
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-gold: rgba(229, 169, 60, 0.3);
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --border-color: rgba(212, 175, 55, 0.15);
+  --border-gold: rgba(212, 175, 55, 0.4);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
 
   /* Fonts */
   --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;

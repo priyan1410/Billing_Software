@@ -67,7 +67,7 @@ const Dashboard = {
           datasets: [{
             label: 'Amount (₹)',
             data: [sales, expenses, sales - expenses],
-            backgroundColor: ['#e5a93c', '#e74c3c', '#2ecc71'],
+            backgroundColor: ['#d4af37', '#d90429', '#38b000'],
             borderRadius: 8
           }]
         },
@@ -79,12 +79,12 @@ const Dashboard = {
           },
           scales: {
             y: {
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { color: '#9499a6' }
+              grid: { color: 'rgba(212,175,55,0.08)' },
+              ticks: { color: '#9aab9c' }
             },
             x: {
               grid: { display: false },
-              ticks: { color: '#f5f6f8', font: { weight: 'bold' } }
+              ticks: { color: '#f4f6f3', font: { weight: 'bold' } }
             }
           }
         }
@@ -101,7 +101,7 @@ const Dashboard = {
           labels: ['Special Chicken Mandhi', 'Mutton Raan Mandhi', 'Peri Peri Alfaham', 'Kunafa Dessert'],
           datasets: [{
             data: [45, 25, 20, 10],
-            backgroundColor: ['#e5a93c', '#d9822b', '#e67e22', '#9b59b6'],
+            backgroundColor: ['#d4af37', '#6b8e23', '#556b2f', '#38b000'],
             borderWidth: 0
           }]
         },
@@ -111,7 +111,7 @@ const Dashboard = {
           plugins: {
             legend: {
               position: 'bottom',
-              labels: { color: '#9499a6', font: { size: 11 } }
+              labels: { color: '#9aab9c', font: { size: 11 } }
             }
           }
         }

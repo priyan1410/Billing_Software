@@ -65,6 +65,7 @@ function switchSection(targetSectionId) {
     'billing-section': 'Billing & Point of Sale (POS)',
     'tokens-section': 'Token Generator & Printer',
     'expenses-section': 'Expense Tracker & Daily Ledger',
+    'restaurant-section': 'Restaurant Hub & Financial Analysis',
     'db-settings-section': 'Database Connection Settings'
   };
 
@@ -82,6 +83,8 @@ function switchSection(targetSectionId) {
     window.Tokens.initCatalog();
   } else if (targetSectionId === 'expenses-section' && window.Expenses) {
     window.Expenses.loadExpenses();
+  } else if (targetSectionId === 'restaurant-section' && window.Restaurant) {
+    window.Restaurant.loadData();
   } else if (targetSectionId === 'db-settings-section' && window.DbSettings) {
     window.DbSettings.loadCurrentConfig();
   }

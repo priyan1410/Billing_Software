@@ -113,6 +113,33 @@ ipcMain.handle('menu:saveItem', async (evt, itemData) => {
   return { success: true, data: newItem, isMock: true };
 });
 
+ipcMain.handle('menu:deleteItem', async (evt, id) => {
+  const res = await query('DELETE FROM menu_items WHERE id = ?', [id]);
+  if (res.success) return { success: true };
+
+  mockStore.menu_items = mockStore.menu_items.filter(i => String(i.id) !== String(id));
+  return { success: true, isMock: true };
+});
+
+ipcMain.handle('menu:updateItem', async (evt, itemData) => {
+  const { id, category_id, name, price_quarter, price_half, price_full } = itemData;
+  const res = await query(
+    `UPDATE menu_items SET category_id = ?, name = ?, price_quarter = ?, price_half = ?, price_full = ? WHERE id = ?`,
+    [category_id, name, price_quarter || 0, price_half || 0, price_full || 0, id]
+  );
+  if (res.success) return { success: true };
+
+  const target = mockStore.menu_items.find(i => String(i.id) === String(id));
+  if (target) {
+    target.category_id = Number(category_id);
+    target.name = name;
+    target.price_quarter = Number(price_quarter || 0);
+    target.price_half = Number(price_half || 0);
+    target.price_full = Number(price_full || 0);
+  }
+  return { success: true, isMock: true };
+});
+
 // ==========================================
 // IPC Handlers: Billing & Orders
 // ==========================================

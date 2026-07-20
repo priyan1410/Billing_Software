@@ -50,6 +50,10 @@
           <i class="fa-solid fa-wallet"></i>
           <span>Expenses</span>
         </button>
+        <button class="nav-item" data-target="restaurant-section" id="nav-restaurant">
+          <i class="fa-solid fa-store"></i>
+          <span>Restaurant</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -186,14 +190,9 @@
               
               <!-- Catalog Bar: Search & Categories -->
               <div class="catalog-header">
-                <div style="display:flex; gap:0.75rem; align-items:center;">
-                  <div class="search-bar" style="flex:1;">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="pos-search-input" placeholder="Search Mandhi, Alfaham, Beverages...">
-                  </div>
-                  <button class="add-dish-btn" id="btn-open-add-dish-modal" style="padding:0.8rem 1rem; background:var(--primary-gradient); border:none; border-radius:10px; color:#12141a; font-weight:700; font-size:0.85rem; cursor:pointer; font-family:var(--font-family); white-space:nowrap;">
-                    <i class="fa-solid fa-plus-circle"></i> Add Dish
-                  </button>
+                <div class="search-bar">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="pos-search-input" placeholder="Search Mandhi, Alfaham, Beverages...">
                 </div>
 
                 <div class="category-tabs" id="pos-category-tabs">
@@ -450,7 +449,170 @@
         </section>
 
 
-        <!-- ==================== 5. DATABASE SETTINGS SECTION ==================== -->
+        <!-- ==================== 5. RESTAURANT HUB SECTION ==================== -->
+        <section id="restaurant-section" class="app-section">
+          
+          <!-- Sub Navigation Bar -->
+          <div class="tokens-header-bar" style="margin-bottom:1.25rem;">
+            <div class="token-filter-tabs" id="rest-subnav-tabs">
+              <button class="filter-tab active" data-tab="dishes-tab"><i class="fa-solid fa-utensils"></i> Dishes & Menu</button>
+              <button class="filter-tab" data-tab="pnl-tab"><i class="fa-solid fa-chart-line"></i> Profit & Loss Statement</button>
+              <button class="filter-tab" data-tab="about-tab"><i class="fa-solid fa-store"></i> About Kish Mandhi</button>
+            </div>
+          </div>
+
+          <!-- TAB 1: DISHES MANAGEMENT -->
+          <div id="dishes-tab" class="rest-subtab-content active">
+            <div class="table-card">
+              <div class="table-header">
+                <div>
+                  <h4><i class="fa-solid fa-utensils"></i> Kish Mandhi Menu Dishes</h4>
+                  <span style="font-size:0.82rem; color:var(--text-muted);">Manage dishes, portion sizes & pricing</span>
+                </div>
+                <button class="quick-action-btn primary" id="btn-open-add-dish-modal" style="font-size:0.85rem; padding:0.55rem 1rem;">
+                  <i class="fa-solid fa-plus"></i> Add New Dish
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Dish Name</th>
+                      <th>Category</th>
+                      <th>Quarter (₹)</th>
+                      <th>Half (₹)</th>
+                      <th>Full (₹)</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dishes-catalog-tbody">
+                    <tr><td colspan="7" class="loading-td">Loading menu dishes...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: PROFIT & LOSS STATEMENT -->
+          <div id="pnl-tab" class="rest-subtab-content hidden">
+
+            <!-- Timeline Period Selector -->
+            <div class="period-filter-bar" style="margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; background:var(--bg-panel); padding:0.75rem 1rem; border-radius:12px; border:1px solid var(--border-color); flex-wrap:wrap; gap:0.75rem;">
+              <div class="btn-group pnl-period-group" id="pnl-period-buttons">
+                <button class="filter-tab active" data-period="today">Today</button>
+                <button class="filter-tab" data-period="week">This Week</button>
+                <button class="filter-tab" data-period="month">This Month</button>
+                <button class="filter-tab" data-period="year">This Year</button>
+                <button class="filter-tab" data-period="all">All Time</button>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem;">
+                <label style="color:var(--text-muted);"><i class="fa-solid fa-calendar"></i> Custom Range:</label>
+                <input type="date" id="pnl-start-date" style="padding:0.35rem 0.6rem; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main); border-radius:6px; font-size:0.8rem;">
+                <span style="color:var(--text-muted);">to</span>
+                <input type="date" id="pnl-end-date" style="padding:0.35rem 0.6rem; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-main); border-radius:6px; font-size:0.8rem;">
+                <button id="btn-apply-pnl-date" style="padding:0.35rem 0.75rem; background:var(--primary-gradient); border:none; border-radius:6px; color:#12141a; font-weight:700; font-size:0.8rem; cursor:pointer;">Apply</button>
+              </div>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric-card gold">
+                <div class="metric-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                <div class="metric-data">
+                  <span class="label">Gross Sales Income</span>
+                  <h3 id="pnl-gross-revenue">₹0.00</h3>
+                  <span class="trend positive">Total Billing</span>
+                </div>
+              </div>
+              <div class="metric-card red">
+                <div class="metric-icon"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                <div class="metric-data">
+                  <span class="label">Total Operating Expenses</span>
+                  <h3 id="pnl-total-expenses">₹0.00</h3>
+                  <span class="trend negative">Raw Material & Overhead</span>
+                </div>
+              </div>
+              <div class="metric-card green">
+                <div class="metric-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+                <div class="metric-data">
+                  <span class="label">Net Profit / Loss</span>
+                  <h3 id="pnl-net-profit">₹0.00</h3>
+                  <span class="trend positive">Bottom Line</span>
+                </div>
+              </div>
+              <div class="metric-card amber">
+                <div class="metric-icon"><i class="fa-solid fa-percent"></i></div>
+                <div class="metric-data">
+                  <span class="label">Net Profit Margin</span>
+                  <h3 id="pnl-profit-margin">0%</h3>
+                  <span class="trend neutral">Profitability Rate</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-card">
+              <div class="table-header">
+                <h4><i class="fa-solid fa-file-invoice-dollar"></i> Financial Performance Breakdown</h4>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Financial Component</th>
+                      <th>Category Type</th>
+                      <th>Total Amount (₹)</th>
+                      <th>Share (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pnl-breakdown-tbody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: ABOUT RESTAURANT -->
+          <div id="about-tab" class="rest-subtab-content hidden">
+            <div class="db-settings-card" style="max-width:700px; margin:0;">
+              <div class="db-card-header">
+                <i class="fa-solid fa-crown" style="color:var(--primary-gold); font-size:3rem;"></i>
+                <div>
+                  <h2 style="color:var(--primary-gold); font-family:var(--font-heading); font-size:1.8rem; margin-bottom:0.2rem;">KISH MANDHI</h2>
+                  <p style="color:var(--text-muted); font-size:0.9rem;">Authentic Arabian Grill & Mandhi Restaurant</p>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; font-size:0.9rem;">
+                <div style="background:var(--bg-card); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
+                  <span style="color:var(--text-muted); font-size:0.78rem; text-transform:uppercase;">Outlet Branch</span>
+                  <p style="font-weight:700; color:var(--text-main); margin-top:4px;">Main Outlet - Central Dining</p>
+                </div>
+                <div style="background:var(--bg-card); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
+                  <span style="color:var(--text-muted); font-size:0.78rem; text-transform:uppercase;">Cuisine Specialty</span>
+                  <p style="font-weight:700; color:var(--text-main); margin-top:4px;">Yemeni Mandhi, Alfaham & Arabian Desserts</p>
+                </div>
+                <div style="background:var(--bg-card); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
+                  <span style="color:var(--text-muted); font-size:0.78rem; text-transform:uppercase;">Contact Phone</span>
+                  <p style="font-weight:700; color:var(--text-main); margin-top:4px;">+91 98765 43210</p>
+                </div>
+                <div style="background:var(--bg-card); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
+                  <span style="color:var(--text-muted); font-size:0.78rem; text-transform:uppercase;">GSTIN Tax Code</span>
+                  <p style="font-weight:700; color:var(--text-main); margin-top:4px;">32AAAAA0000A1Z5 (GST 5%)</p>
+                </div>
+              </div>
+
+              <div style="margin-top:1.5rem; background:var(--bg-card); padding:1rem; border-radius:10px; border:1px solid var(--border-color);">
+                <span style="color:var(--text-muted); font-size:0.78rem; text-transform:uppercase;">Address</span>
+                <p style="font-weight:600; color:var(--text-main); margin-top:4px;">Kish Mandhi Arabic Restaurant, Food Street Highway Hub, Kerala, India</p>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+
+        <!-- ==================== 6. DATABASE SETTINGS SECTION ==================== -->
         <section id="db-settings-section" class="app-section">
           <div class="db-settings-card">
             <div class="db-card-header">
@@ -612,12 +774,66 @@
     </div>
   </div>
 
+  <!-- Edit Dish Modal -->
+  <div class="modal-overlay hidden" id="edit-dish-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h4><i class="fa-solid fa-pen-to-square"></i> Edit Dish Prices & Details</h4>
+        <button class="close-modal-btn" id="btn-close-edit-dish-modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="edit-dish-form">
+        <input type="hidden" id="edit-dish-id">
+
+        <div class="form-group">
+          <label>Dish Name</label>
+          <input type="text" id="edit-dish-name" required>
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <select id="edit-dish-category" required>
+            <option value="1">Mandhi Special</option>
+            <option value="2">Alfaham & Grill</option>
+            <option value="3">Starters & Sides</option>
+            <option value="4">Beverages</option>
+            <option value="5">Desserts</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quarter Price (₹)</label>
+            <input type="number" id="edit-dish-price-qtr" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Half Price (₹)</label>
+            <input type="number" id="edit-dish-price-half" min="0" placeholder="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Full Price (₹)</label>
+          <input type="number" id="edit-dish-price-full" min="0" placeholder="0" required>
+        </div>
+
+        <div class="modal-footer" style="padding-top:1rem; margin-top:1rem; border-top:1px solid var(--border-color); display:flex; gap:0.75rem;">
+          <button type="button" class="btn secondary" id="btn-close-edit-dish-modal-2">Cancel</button>
+          <button type="submit" class="btn primary">
+            <i class="fa-solid fa-floppy-disk"></i> Update Dish Prices
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Application Renderer Scripts -->
   <script src="js/db-settings.js"></script>
   <script src="js/dashboard.js"></script>
   <script src="js/billing.js"></script>
   <script src="js/tokens.js"></script>
   <script src="js/expenses.js"></script>
+  <script src="js/restaurant.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -876,3 +876,17 @@
   flex-direction: column;
   gap: 0.5rem;
 }
+
+/* Restaurant Hub Subtabs */
+.rest-subtab-content {
+  display: none;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.rest-subtab-content.active {
+  display: block;
+}
+
+.rest-subtab-content.hidden {
+  display: none;
+}
