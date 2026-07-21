@@ -55,15 +55,28 @@ const ConfirmOrderModal: React.FC<{
   const invoiceTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
   const storeName = String(restaurantDetails?.companyName || 'KISH MANDHI');
+  const tagline = String(restaurantDetails?.tagline || '');
   const address = String(restaurantDetails?.address || '');
   const rawPhone = String(restaurantDetails?.phone || '');
   const phone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
-  const rawGst = String(restaurantDetails?.gstNumber || '');
-  const gstin = rawGst ? (rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`) : '';
-  const printShowLogo = restaurantDetails?.printShowLogo ?? true;
+  const rawGst = String(restaurantDetails?.gstNumber || restaurantDetails?.gstNo || '');
+  const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
+  const rawFssai = String(restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo || '');
+  const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
+
+  let taxGstFssaiLine = '';
+  if (restaurantDetails?.printShowGst ?? true) {
+    if (gstVal && fssaiVal) {
+      taxGstFssaiLine = `GSTIN: ${gstVal}  |  FSSAI: ${fssaiVal}`;
+    } else if (gstVal) {
+      taxGstFssaiLine = `GSTIN: ${gstVal}`;
+    } else if (fssaiVal) {
+      taxGstFssaiLine = `FSSAI: ${fssaiVal}`;
+    }
+  }
+
   const printShowAddress = restaurantDetails?.printShowAddress ?? true;
   const printShowPhone = restaurantDetails?.printShowPhone ?? true;
-  const printShowGst = restaurantDetails?.printShowGst ?? true;
   const printShowHeaderNote = restaurantDetails?.printShowHeaderNote ?? true;
   const printShowTime = restaurantDetails?.printShowTime ?? true;
   const printShowTaxBreakdown = restaurantDetails?.printShowTaxBreakdown ?? true;
@@ -99,36 +112,17 @@ const ConfirmOrderModal: React.FC<{
 
         {/* Paper Preview */}
         <div className="flex-1 overflow-y-auto p-6 bg-slate-950/80 flex justify-center">
-          <div className="w-full max-w-[370px] bg-white text-black font-mono shadow-2xl p-6 relative rounded-t-sm select-text border border-slate-300 text-left">
+          <div className="w-full max-w-[370px] bg-white text-black font-mono shadow-2xl p-6 rounded-sm select-text border border-slate-300 text-left h-fit mb-4">
 
-            {/* Receipt Header SVG Illustration */}
-            {printShowLogo && (
-              <div className="flex justify-center mb-1">
-                <svg viewBox="0 0 300 60" className="w-48 h-10 text-black">
-                  <circle cx="75" cy="42" r="2.5" fill="#000" />
-                  <path d="M 95 36 C 103 26, 115 30, 123 37" fill="none" stroke="#000" strokeWidth="1.2" />
-                  <circle cx="225" cy="42" r="2.5" fill="#000" />
-                  <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" strokeWidth="1.2" />
-                  <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000" />
-                  <circle cx="106" cy="6" r="2" fill="#000" />
-                  <circle cx="120" cy="4" r="2" fill="#000" />
-                  <circle cx="134" cy="6" r="2" fill="#000" />
-                  <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000" />
-                  <path d="M 106 30 L 132 56" stroke="#000" strokeWidth="3" strokeLinecap="round" />
-                  <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" />
-                  <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-            )}
-
-            {/* Restaurant Title */}
+            {/* Restaurant Title & Tagline */}
             <div className="text-center">
               <h2 className="text-xl font-extrabold tracking-tight uppercase leading-tight font-sans text-black">
                 {storeName}
               </h2>
+              {tagline && <p className="text-[11px] text-slate-800 font-semibold tracking-wide mt-0.5">{tagline}</p>}
               {printShowAddress && address && <p className="text-[11px] text-slate-900 font-medium mt-0.5">{address}</p>}
               {printShowPhone && phone && <p className="text-[11px] text-slate-900 font-medium">{phone}</p>}
-              {printShowGst && gstin && <p className="text-[11px] text-slate-900 font-medium">{gstin}</p>}
+              {taxGstFssaiLine && <p className="text-[11px] text-slate-900 font-medium">{taxGstFssaiLine}</p>}
               {printShowHeaderNote && restaurantDetails?.headerNote && (
                 <p className="text-[10px] text-slate-700 italic font-semibold mt-1">{restaurantDetails.headerNote}</p>
               )}
@@ -259,16 +253,6 @@ const ConfirmOrderModal: React.FC<{
                 </div>
               </div>
             )}
-
-            {/* Sawtooth Jagged Bottom */}
-            <div
-              className="absolute -bottom-3 left-0 w-full h-3"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10' width='20' height='10'%3E%3Cpolygon points='0,0 10,10 20,0' fill='%23ffffff'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'repeat-x',
-                backgroundSize: '15px 10px'
-              }}
-            />
           </div>
         </div>
 
@@ -461,20 +445,34 @@ export const BillingView: React.FC = () => {
 
     const rd = restaurantDetails;
     const rName = String(rd?.companyName || 'KISH MANDHI');
+    const rTagline = String(rd?.tagline || '');
     const rAddr = String(rd?.address || '');
     const rawPhone = String(rd?.phone || '');
     const rPhone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
-    const rawGst = String(rd?.gstNumber || '');
-    const rGst = rawGst ? (rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`) : '';
+    const rawGst = String(rd?.gstNumber || rd?.gstNo || '');
+    const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
+    const rawFssai = String(rd?.fssaiNumber || rd?.fssaiNo || '');
+    const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
+
+    const printShowGst = rd?.printShowGst ?? true;
+    let rGstFssaiLine = '';
+    if (printShowGst) {
+      if (gstVal && fssaiVal) {
+        rGstFssaiLine = `GSTIN: ${gstVal}  |  FSSAI: ${fssaiVal}`;
+      } else if (gstVal) {
+        rGstFssaiLine = `GSTIN: ${gstVal}`;
+      } else if (fssaiVal) {
+        rGstFssaiLine = `FSSAI: ${fssaiVal}`;
+      }
+    }
+
     const curr = rd?.currency || '₹';
     const tp = rd?.taxRate ?? 5;
     const cgstRate = (tp / 2).toFixed(1);
     const sgstRate = (tp / 2).toFixed(1);
 
-    const printShowLogo = rd?.printShowLogo ?? true;
     const printShowAddress = rd?.printShowAddress ?? true;
     const printShowPhone = rd?.printShowPhone ?? true;
-    const printShowGst = rd?.printShowGst ?? true;
     const printShowHeaderNote = rd?.printShowHeaderNote ?? true;
     const printShowTime = rd?.printShowTime ?? true;
     const printShowTaxBreakdown = rd?.printShowTaxBreakdown ?? true;
@@ -520,31 +518,12 @@ export const BillingView: React.FC = () => {
           <div class="divider"></div>
         </div></body></html>`
       : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-          <!-- Logo SVG -->
-          ${printShowLogo ? `<div class="center" style="margin-bottom: 4px;">
-            <svg viewBox="0 0 240 70" width="160" height="46">
-              <path d="M 15 42 C 30 27, 50 47, 70 37 Q 48 32, 25 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="15" cy="42" r="2.5" fill="#000"/>
-              <path d="M 35 36 C 43 26, 55 30, 63 37" fill="none" stroke="#000" stroke-width="1.2"/>
-              <path d="M 225 42 C 210 27, 190 47, 170 37 Q 192 32, 215 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="225" cy="42" r="2.5" fill="#000"/>
-              <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" stroke-width="1.2"/>
-              <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000"/>
-              <circle cx="106" cy="6" r="2" fill="#000"/>
-              <circle cx="120" cy="4" r="2" fill="#000"/>
-              <circle cx="134" cy="6" r="2" fill="#000"/>
-              <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000"/>
-              <path d="M 106 30 L 132 56" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-              <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-              <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>` : ''}
-
           <!-- Restaurant Name & Details -->
           <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
+          ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
           ${printShowAddress && rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
           ${printShowPhone && rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
-          ${printShowGst && rGst ? `<div class="center" style="font-size: 10.5px;">${rGst}</div>` : ''}
+          ${rGstFssaiLine ? `<div class="center" style="font-size: 10.5px;">${rGstFssaiLine}</div>` : ''}
           ${printShowHeaderNote && rd?.headerNote ? `<div class="center" style="font-size: 10px; font-style: italic; margin-top: 2px;">${rd.headerNote}</div>` : ''}
           
           <div class="divider"></div>

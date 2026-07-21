@@ -53,11 +53,24 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
     setIsPrinting(true);
     try {
       const rName = String(restaurantDetails?.companyName || 'KISH MANDHI');
+      const rTagline = String(restaurantDetails?.tagline || '');
       const rAddr = String(restaurantDetails?.address || '');
       const rawPhone = String(restaurantDetails?.phone || '');
       const rPhone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
-      const rawGst = String(restaurantDetails?.gstNumber || '');
-      const rGst = rawGst ? (rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`) : '';
+      const rawGst = String(restaurantDetails?.gstNumber || restaurantDetails?.gstNo || '');
+      const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
+      const rawFssai = String(restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo || '');
+      const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
+
+      let rGstFssaiLine = '';
+      if (gstVal && fssaiVal) {
+        rGstFssaiLine = `GSTIN: ${gstVal}  |  FSSAI: ${fssaiVal}`;
+      } else if (gstVal) {
+        rGstFssaiLine = `GSTIN: ${gstVal}`;
+      } else if (fssaiVal) {
+        rGstFssaiLine = `FSSAI: ${fssaiVal}`;
+      }
+
       const cgstRate = (taxRate / 2).toFixed(1);
       const sgstRate = (taxRate / 2).toFixed(1);
 
@@ -81,9 +94,10 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
 
       const html = `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
         <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
+        ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
         ${rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
         ${rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
-        ${rGst ? `<div class="center" style="font-size: 10.5px;">${rGst}</div>` : ''}
+        ${rGstFssaiLine ? `<div class="center" style="font-size: 10.5px;">${rGstFssaiLine}</div>` : ''}
         
         <div class="divider"></div>
         <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">*** TAX INVOICE ***</div>

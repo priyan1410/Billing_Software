@@ -142,11 +142,25 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
       }
 
       const rName = String(restaurantDetails?.companyName || 'KISH MANDHI');
+      const rTagline = String(restaurantDetails?.tagline || '');
       const rAddr = String(restaurantDetails?.address || '');
       const rawPhone = String(restaurantDetails?.phone || '');
       const rPhone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
-      const rawGst = String(restaurantDetails?.gstNumber || '');
-      const rGst = rawGst ? (rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`) : '';
+      const rawGst = String(restaurantDetails?.gstNumber || restaurantDetails?.gstNo || '');
+      const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
+      const rawFssai = String(restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo || '');
+      const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
+
+      let rGstFssaiLine = '';
+      if (showGst) {
+        if (gstVal && fssaiVal) {
+          rGstFssaiLine = `GSTIN: ${gstVal}  |  FSSAI: ${fssaiVal}`;
+        } else if (gstVal) {
+          rGstFssaiLine = `GSTIN: ${gstVal}`;
+        } else if (fssaiVal) {
+          rGstFssaiLine = `FSSAI: ${fssaiVal}`;
+        }
+      }
       const cgstRate = (taxRate / 2).toFixed(1);
       const sgstRate = (taxRate / 2).toFixed(1);
 
@@ -184,29 +198,11 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
             <div class="divider"></div>
           </div></body></html>`
         : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-            ${showLogo ? `<div class="center" style="margin-bottom: 4px;">
-              <svg viewBox="0 0 240 70" width="160" height="46">
-                <path d="M 15 42 C 30 27, 50 47, 70 37 Q 48 32, 25 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
-                <circle cx="15" cy="42" r="2.5" fill="#000"/>
-                <path d="M 35 36 C 43 26, 55 30, 63 37" fill="none" stroke="#000" stroke-width="1.2"/>
-                <path d="M 225 42 C 210 27, 190 47, 170 37 Q 192 32, 215 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
-                <circle cx="225" cy="42" r="2.5" fill="#000"/>
-                <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" stroke-width="1.2"/>
-                <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000"/>
-                <circle cx="106" cy="6" r="2" fill="#000"/>
-                <circle cx="120" cy="4" r="2" fill="#000"/>
-                <circle cx="134" cy="6" r="2" fill="#000"/>
-                <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000"/>
-                <path d="M 106 30 L 132 56" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-                <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-                <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </div>` : ''}
-
             <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
+            ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
             ${showAddress && rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
             ${showPhone && rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
-            ${showGst && rGst ? `<div class="center" style="font-size: 10.5px;">${rGst}</div>` : ''}
+            ${rGstFssaiLine ? `<div class="center" style="font-size: 10.5px;">${rGstFssaiLine}</div>` : ''}
 
             <div class="divider"></div>
             <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">${headerTag || '*** REPRINT TAX INVOICE ***'}</div>
@@ -543,34 +539,21 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
             {selectedOrder ? (
               <div className="flex justify-center flex-1 overflow-y-auto pb-4">
                 <div className="w-full max-w-[340px] bg-white text-black font-mono shadow-2xl p-5 relative rounded-t-sm select-text border border-slate-300 text-left text-[11px] h-fit">
-                  {/* Restaurant Logo */}
-                  {showLogo && (
-                    <div className="flex justify-center mb-1">
-                      <svg viewBox="0 0 300 60" className="w-40 h-8 text-black">
-                        <circle cx="75" cy="42" r="2.5" fill="#000" />
-                        <path d="M 95 36 C 103 26, 115 30, 123 37" fill="none" stroke="#000" strokeWidth="1.2" />
-                        <circle cx="225" cy="42" r="2.5" fill="#000" />
-                        <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" strokeWidth="1.2" />
-                        <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000" />
-                        <circle cx="106" cy="6" r="2" fill="#000" />
-                        <circle cx="120" cy="4" r="2" fill="#000" />
-                        <circle cx="134" cy="6" r="2" fill="#000" />
-                        <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000" />
-                        <path d="M 106 30 L 132 56" stroke="#000" strokeWidth="3" strokeLinecap="round" />
-                        <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" />
-                        <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    </div>
-                  )}
-
                   {/* Title & Info */}
                   <div className="text-center">
                     <h2 className="text-base font-extrabold tracking-tight uppercase leading-tight font-sans text-black">
                       {restaurantDetails?.companyName || 'KISH MANDHI'}
                     </h2>
+                    {restaurantDetails?.tagline && <p className="text-[10px] text-slate-800 font-semibold mt-0.5">{restaurantDetails.tagline}</p>}
                     {showAddress && restaurantDetails?.address && <p className="text-[10px] text-slate-800">{restaurantDetails.address}</p>}
                     {showPhone && restaurantDetails?.phone && <p className="text-[10px] text-slate-800">Phone: {restaurantDetails.phone}</p>}
-                    {showGst && restaurantDetails?.gstNumber && <p className="text-[10px] text-slate-800">GSTIN: {restaurantDetails.gstNumber}</p>}
+                    {showGst && (
+                      <p className="text-[10px] text-slate-800">
+                        {restaurantDetails?.gstNumber || restaurantDetails?.gstNo ? `GSTIN: ${String(restaurantDetails?.gstNumber || restaurantDetails?.gstNo).replace(/^GSTIN:\s*/i, '')}` : ''}
+                        {(restaurantDetails?.gstNumber || restaurantDetails?.gstNo) && (restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo) ? '  |  ' : ''}
+                        {restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo ? `FSSAI: ${String(restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo).replace(/^FSSAI:\s*/i, '')}` : ''}
+                      </p>
+                    )}
                   </div>
 
                   <div className="border-b border-dashed border-black my-2"></div>
