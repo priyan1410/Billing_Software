@@ -79,6 +79,58 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB;
     `);
 
+    // Users table — create if not exists (compatible with existing username-based schema)
+    await query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(150) DEFAULT '',
+        name VARCHAR(100) NOT NULL DEFAULT '',
+        password VARCHAR(255) NOT NULL DEFAULT '',
+        role VARCHAR(30) DEFAULT 'admin',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB;
+    `);
+
+    // Safely add missing columns to existing users table (ALTER TABLE IF NOT EXISTS column)
+    const userCols = await query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'users'
+    `);
+    const existingCols = userCols.success ? userCols.data.map(r => r.COLUMN_NAME.toLowerCase()) : [];
+
+    if (!existingCols.includes('email')) {
+      await query(`ALTER TABLE users ADD COLUMN email VARCHAR(150) DEFAULT '' AFTER name`);
+      console.log('✓ Added email column to users table.');
+    }
+    if (!existingCols.includes('phone')) {
+      await query(`ALTER TABLE users ADD COLUMN phone VARCHAR(30) DEFAULT '' AFTER email`);
+      console.log('✓ Added phone column to users table.');
+    }
+    if (!existingCols.includes('username')) {
+      await query(`ALTER TABLE users ADD COLUMN username VARCHAR(150) DEFAULT '' AFTER id`);
+      console.log('✓ Added username column to users table.');
+    }
+
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS restaurant_details (
+        id INT PRIMARY KEY DEFAULT 1,
+        company_name VARCHAR(200) NOT NULL,
+        tagline VARCHAR(200) DEFAULT 'Arabic Grill & Fine Dining',
+        owner_name VARCHAR(100) DEFAULT '',
+        gst_number VARCHAR(50) DEFAULT '',
+        fssai_number VARCHAR(50) DEFAULT '',
+        phone VARCHAR(50) DEFAULT '',
+        email VARCHAR(150) DEFAULT '',
+        address TEXT,
+        tax_rate DECIMAL(5,2) DEFAULT 5.00,
+        currency VARCHAR(10) DEFAULT '₹',
+        header_note TEXT,
+        footer_note TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB;
+    `);
+
     // Step 3: Seed categories only if table is empty
     const catCheck = await query('SELECT COUNT(*) AS cnt FROM categories');
     if (catCheck.success && Number(catCheck.data[0].cnt) === 0) {

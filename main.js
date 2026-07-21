@@ -315,6 +315,276 @@ ipcMain.handle('db:saveConfig', async (evt, config) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// AUTHENTICATION & RESTAURANT DETAILS IPC HANDLERS
+// ─────────────────────────────────────────────────────────────
+
+// Check if any users are registered in the database
+ipcMain.handle('auth:hasUsers', async () => {
+  try {
+    const result = await query('SELECT COUNT(*) AS cnt FROM users');
+    if (!result.success) return { success: false, hasUsers: false };
+    return { success: true, hasUsers: Number(result.data[0].cnt) > 0 };
+  } catch (err) {
+    return { success: false, hasUsers: false };
+  }
+});
+
+// Verify a stored user session against the database
+ipcMain.handle('auth:verifyUser', async (evt, userId) => {
+  try {
+    if (!userId) return { success: false, valid: false };
+    const userRes = await query('SELECT id, username, name, email, phone, role FROM users WHERE id = ? LIMIT 1', [Number(userId)]);
+    if (!userRes.success || userRes.data.length === 0) return { success: true, valid: false };
+    const u = userRes.data[0];
+    return {
+      success: true,
+      valid: true,
+      user: {
+        id: u.id,
+        name: u.name || u.username || 'User',
+        email: u.email || '',
+        phone: u.phone || '',
+        role: u.role || 'admin',
+        username: u.username || ''
+      }
+    };
+  } catch (err) {
+    return { success: false, valid: false };
+  }
+});
+
+ipcMain.handle('auth:register', async (evt, { userData, restaurantData }) => {
+  try {
+    const { name, email, phone, password } = userData || {};
+    if (!password || !name) {
+      return { success: false, message: 'Name and password are required.' };
+    }
+
+    // username = email if provided, else lowercase name without spaces
+    const username = (email || name.replace(/\s+/g, '').toLowerCase()).trim();
+    const emailVal = (email || '').trim().toLowerCase();
+    const phoneVal = (phone || '').trim();
+
+    // Check existing username or email
+    const existing = await query(
+      'SELECT id FROM users WHERE username = ? OR (email != \'\' AND email = ?) LIMIT 1',
+      [username, emailVal]
+    );
+    if (existing.success && existing.data.length > 0) {
+      return { success: false, message: 'User with this username/email already exists.' };
+    }
+
+    // Insert User — handle both old (username) and new (email/phone) schemas
+    const userInsert = await query(
+      'INSERT INTO users (username, name, email, phone, password, role) VALUES (?, ?, ?, ?, ?, ?)',
+      [username, name.trim(), emailVal, phoneVal, password, 'admin']
+    );
+
+    if (!userInsert.success) {
+      // If INSERT failed due to missing columns, try minimal insert
+      const fallback = await query(
+        'INSERT INTO users (username, name, password, role) VALUES (?, ?, ?, ?)',
+        [username, name.trim(), password, 'admin']
+      );
+      if (!fallback.success) {
+        return { success: false, message: fallback.error || 'Failed to create user account.' };
+      }
+      userInsert.data = fallback.data;
+    }
+
+    const userId = userInsert.data.insertId;
+    const userObj = { id: userId, name: name.trim(), email: emailVal, phone: phoneVal, role: 'admin', username };
+
+    // Save initial restaurant details if provided
+    let restObj = null;
+    if (restaurantData) {
+      await query(
+        `INSERT INTO restaurant_details (id, company_name, tagline, owner_name, gst_number, fssai_number, phone, email, address, tax_rate, currency, header_note, footer_note)
+         VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           company_name = VALUES(company_name),
+           tagline = VALUES(tagline),
+           owner_name = VALUES(owner_name),
+           gst_number = VALUES(gst_number),
+           fssai_number = VALUES(fssai_number),
+           phone = VALUES(phone),
+           email = VALUES(email),
+           address = VALUES(address),
+           tax_rate = VALUES(tax_rate),
+           currency = VALUES(currency),
+           header_note = VALUES(header_note),
+           footer_note = VALUES(footer_note)`,
+        [
+          restaurantData.companyName || 'Kish Mandhi',
+          restaurantData.tagline || 'Arabic Grill & Fine Dining',
+          restaurantData.ownerName || name.trim(),
+          restaurantData.gstNumber || '',
+          restaurantData.fssaiNumber || '',
+          restaurantData.phone || phone || '',
+          restaurantData.email || email || '',
+          restaurantData.address || '',
+          Number(restaurantData.taxRate ?? 5.0),
+          restaurantData.currency || '₹',
+          restaurantData.headerNote || 'Welcome to Kish Mandhi',
+          restaurantData.footerNote || 'Thank you! Visit again.'
+        ]
+      );
+
+      restObj = {
+        companyName: restaurantData.companyName || 'Kish Mandhi',
+        tagline: restaurantData.tagline || 'Arabic Grill & Fine Dining',
+        ownerName: restaurantData.ownerName || name.trim(),
+        gstNumber: restaurantData.gstNumber || '',
+        fssaiNumber: restaurantData.fssaiNumber || '',
+        phone: restaurantData.phone || phone || '',
+        email: restaurantData.email || email || '',
+        address: restaurantData.address || '',
+        taxRate: Number(restaurantData.taxRate ?? 5.0),
+        currency: restaurantData.currency || '₹',
+        headerNote: restaurantData.headerNote || 'Welcome to Kish Mandhi',
+        footerNote: restaurantData.footerNote || 'Thank you! Visit again.'
+      };
+    }
+
+    return { success: true, user: userObj, restaurantDetails: restObj };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('auth:login', async (evt, { emailOrPhone, password }) => {
+  try {
+    if (!emailOrPhone || !password) {
+      return { success: false, message: 'Please enter your username/email and password.' };
+    }
+    const cleanInput = emailOrPhone.trim().toLowerCase();
+
+    // Search by username OR email OR phone — compatible with both old and new user records
+    const userRes = await query(
+      `SELECT * FROM users
+       WHERE LOWER(username) = ?
+          OR LOWER(email) = ?
+          OR phone = ?
+       LIMIT 1`,
+      [cleanInput, cleanInput, emailOrPhone.trim()]
+    );
+
+    if (!userRes.success || userRes.data.length === 0) {
+      return { success: false, message: 'User not found. Please check your username/email.' };
+    }
+
+    const userRow = userRes.data[0];
+    if (userRow.password !== password) {
+      return { success: false, message: 'Incorrect password.' };
+    }
+
+    const userObj = {
+      id: userRow.id,
+      name: userRow.name || userRow.username || 'User',
+      email: userRow.email || '',
+      phone: userRow.phone || '',
+      role: userRow.role || 'admin',
+      username: userRow.username || ''
+    };
+
+    // Get restaurant details
+    const restRes = await query('SELECT * FROM restaurant_details WHERE id = 1 LIMIT 1');
+    let restObj = null;
+    if (restRes.success && restRes.data.length > 0) {
+      const r = restRes.data[0];
+      restObj = {
+        companyName: r.company_name,
+        tagline: r.tagline,
+        ownerName: r.owner_name,
+        gstNumber: r.gst_number,
+        fssaiNumber: r.fssai_number,
+        phone: r.phone,
+        email: r.email,
+        address: r.address,
+        taxRate: Number(r.tax_rate),
+        currency: r.currency,
+        headerNote: r.header_note,
+        footerNote: r.footer_note
+      };
+    }
+
+    return { success: true, user: userObj, restaurantDetails: restObj };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('restaurant:getDetails', async () => {
+  try {
+    const res = await query('SELECT * FROM restaurant_details WHERE id = 1 LIMIT 1');
+    if (!res.success || res.data.length === 0) {
+      return { success: true, data: null };
+    }
+    const r = res.data[0];
+    return {
+      success: true,
+      data: {
+        companyName: r.company_name,
+        tagline: r.tagline,
+        ownerName: r.owner_name,
+        gstNumber: r.gst_number,
+        fssaiNumber: r.fssai_number,
+        phone: r.phone,
+        email: r.email,
+        address: r.address,
+        taxRate: Number(r.tax_rate),
+        currency: r.currency,
+        headerNote: r.header_note,
+        footerNote: r.footer_note
+      }
+    };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
+  try {
+    const res = await query(
+      `INSERT INTO restaurant_details (id, company_name, tagline, owner_name, gst_number, fssai_number, phone, email, address, tax_rate, currency, header_note, footer_note)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         company_name = VALUES(company_name),
+         tagline = VALUES(tagline),
+         owner_name = VALUES(owner_name),
+         gst_number = VALUES(gst_number),
+         fssai_number = VALUES(fssai_number),
+         phone = VALUES(phone),
+         email = VALUES(email),
+         address = VALUES(address),
+         tax_rate = VALUES(tax_rate),
+         currency = VALUES(currency),
+         header_note = VALUES(header_note),
+         footer_note = VALUES(footer_note)`,
+      [
+        data.companyName || 'Kish Mandhi',
+        data.tagline || '',
+        data.ownerName || '',
+        data.gstNumber || '',
+        data.fssaiNumber || '',
+        data.phone || '',
+        data.email || '',
+        data.address || '',
+        Number(data.taxRate ?? 5.0),
+        data.currency || '₹',
+        data.headerNote || '',
+        data.footerNote || ''
+      ]
+    );
+
+    if (!res.success) return { success: false, message: res.error };
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
 // PRINT RECEIPT
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('receipt:print', async (evt, receiptHtml) => {

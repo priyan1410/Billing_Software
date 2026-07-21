@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Trash2, Printer, FileCheck, Utensils, ShoppingBag, CreditCard, QrCode, Banknote, X } from 'lucide-react';
 import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, PortionVariant } from '../../types';
 
 export const BillingView: React.FC = () => {
   const { cart, orderType, paymentMode, discount, setOrderType, setPaymentMode, setDiscount, addToCart, updateQty, clearCart, loadTokenToCart } = usePosStore();
   const { activeTokensList } = useAppStore();
+  const { restaurantDetails } = useAuthStore();
 
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -46,7 +48,8 @@ export const BillingView: React.FC = () => {
   });
 
   const subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
-  const tax = subtotal * 0.05;
+  const taxRate = (restaurantDetails?.taxRate ?? 5) / 100;
+  const tax = subtotal * taxRate;
   const grandTotal = Math.max(0, subtotal + tax - discount);
 
   const handleImportToken = () => {
@@ -110,12 +113,22 @@ export const BillingView: React.FC = () => {
     if (!receiptData) return;
     const now = new Date().toLocaleString();
 
+    const rName = restaurantDetails?.companyName || 'Kish Mandhi';
+    const rAddr = restaurantDetails?.address || '';
+    const rPhone = restaurantDetails?.phone || '';
+    const rGst = restaurantDetails?.gstNumber || '';
+    const rTagline = restaurantDetails?.tagline || 'Arabic Grill & Dining';
+    const rCurr = restaurantDetails?.currency || '₹';
+    const rTaxPct = restaurantDetails?.taxRate ?? 5;
+    const rHeader = restaurantDetails?.headerNote || '';
+    const rFooter = restaurantDetails?.footerNote || 'Thank you for visiting!';
+
     const receiptHtml = isKot
       ? `
         <div style="font-family:monospace; font-size:12px; width:280px; margin:0 auto; padding:10px;">
           <div style="text-align:center; border-bottom:2px dashed #000; padding-bottom:8px;">
             <h2 style="margin:0;">*** KITCHEN TOKEN ***</h2>
-            <p style="margin:2px 0;">KISH MANDHI</p>
+            <p style="margin:2px 0;">${rName}</p>
             <div style="font-size:2.5rem; font-weight:bold; margin:5px 0;">TOKEN #${receiptData.tokenNumber}</div>
           </div>
           <div style="display:flex; justify-content:space-between; margin:8px 0;">
@@ -132,24 +145,32 @@ export const BillingView: React.FC = () => {
       : `
         <div style="font-family:monospace; font-size:12px; width:280px; margin:0 auto; padding:10px;">
           <div style="text-align:center; border-bottom:1px dashed #444; padding-bottom:8px;">
-            <h2 style="margin:0;">KISH MANDHI</h2>
-            <p style="margin:2px 0;">Arabian Grill & Mandhi</p>
+            ${rHeader ? `<p style="margin:2px 0; font-size:10px;">${rHeader}</p>` : ''}
+            <h2 style="margin:0; font-size:16px;">${rName}</h2>
+            <p style="margin:2px 0; font-size:11px;">${rTagline}</p>
+            ${rAddr ? `<p style="margin:2px 0; font-size:10px;">${rAddr}</p>` : ''}
+            ${rPhone ? `<p style="margin:2px 0; font-size:10px;">Ph: ${rPhone}</p>` : ''}
+            ${rGst ? `<p style="margin:2px 0; font-size:10px;">GSTIN: ${rGst}</p>` : ''}
           </div>
           <div style="display:flex; justify-content:space-between; margin:6px 0;">
             <span>Bill #: <strong>${receiptData.orderNumber}</strong></span>
             <span>TOKEN #: <strong>${receiptData.tokenNumber}</strong></span>
           </div>
+          <div style="font-size:10px; margin-bottom:4px;">${now} | ${receiptData.orderType} | ${receiptData.paymentMode}</div>
           <table style="width:100%; text-align:left; border-collapse:collapse; margin:8px 0;">
             <thead><tr style="border-bottom:1px solid #111;"><th>Item</th><th>Qty</th><th style="text-align:right;">Amt</th></tr></thead>
             <tbody>
-              ${receiptData.items.map((i: any) => `<tr><td>${i.name} (${i.variant})</td><td>${i.quantity}</td><td style="text-align:right;">₹${i.totalPrice.toFixed(2)}</td></tr>`).join('')}
+              ${receiptData.items.map((i: any) => `<tr><td>${i.name} (${i.variant})</td><td>${i.quantity}</td><td style="text-align:right;">${rCurr}${i.totalPrice.toFixed(2)}</td></tr>`).join('')}
             </tbody>
           </table>
           <div style="border-top:1px dashed #444; padding-top:6px;">
-            <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>₹${receiptData.subtotal.toFixed(2)}</span></div>
-            ${receiptData.discount > 0 ? `<div style="display:flex; justify-content:space-between; color:#b91c1c;"><span>Discount:</span><span>-₹${receiptData.discount.toFixed(2)}</span></div>` : ''}
-            <div style="display:flex; justify-content:space-between;"><span>GST (5%):</span><span>₹${receiptData.tax.toFixed(2)}</span></div>
-            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-top:4px;"><span>GRAND TOTAL:</span><span>₹${receiptData.grandTotal.toFixed(2)}</span></div>
+            <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>${rCurr}${receiptData.subtotal.toFixed(2)}</span></div>
+            ${receiptData.discount > 0 ? `<div style="display:flex; justify-content:space-between; color:#b91c1c;"><span>Discount:</span><span>-${rCurr}${receiptData.discount.toFixed(2)}</span></div>` : ''}
+            <div style="display:flex; justify-content:space-between;"><span>GST (${rTaxPct}%):</span><span>${rCurr}${receiptData.tax.toFixed(2)}</span></div>
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-top:4px;"><span>GRAND TOTAL:</span><span>${rCurr}${receiptData.grandTotal.toFixed(2)}</span></div>
+          </div>
+          <div style="text-align:center; margin-top:8px; border-top:1px dashed #444; padding-top:8px; font-size:10px;">
+            ${rFooter}
           </div>
         </div>
       `;
@@ -320,8 +341,8 @@ export const BillingView: React.FC = () => {
 
         {/* Summary & Checkout */}
         <div className="space-y-2 text-xs text-olive-300 pt-1">
-          <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
-          <div className="flex justify-between"><span>GST (5%)</span><span>₹{tax.toFixed(2)}</span></div>
+          <div className="flex justify-between"><span>Subtotal</span><span>{restaurantDetails?.currency || '₹'}{subtotal.toFixed(2)}</span></div>
+          <div className="flex justify-between"><span>GST ({restaurantDetails?.taxRate ?? 5}%)</span><span>{restaurantDetails?.currency || '₹'}{tax.toFixed(2)}</span></div>
           <div className="flex justify-between items-center text-emerald-400">
             <span>Discount (₹)</span>
             <input
@@ -333,7 +354,7 @@ export const BillingView: React.FC = () => {
           </div>
           <div className="flex justify-between text-base font-extrabold text-gold-500 border-t border-dashed border-gold-500/20 pt-2">
             <span>Grand Total</span>
-            <span>₹{grandTotal.toFixed(2)}</span>
+            <span>{restaurantDetails?.currency || '₹'}{grandTotal.toFixed(2)}</span>
           </div>
 
           {/* Payment Method */}
@@ -388,8 +409,10 @@ export const BillingView: React.FC = () => {
 
             <div className="bg-[#fcfbfa] text-black font-mono p-4 rounded-lg text-xs space-y-2 max-h-80 overflow-y-auto">
               <div className="text-center border-b border-dashed border-black pb-2">
-                <h3 className="font-bold text-sm">KISH MANDHI</h3>
-                <p className="text-[10px]">Authentic Arabian Grill & Mandhi</p>
+                <h3 className="font-bold text-sm">{restaurantDetails?.companyName || 'KISH MANDHI'}</h3>
+                <p className="text-[10px]">{restaurantDetails?.tagline || 'Authentic Arabian Grill & Mandhi'}</p>
+                {restaurantDetails?.address && <p className="text-[10px]">{restaurantDetails.address}</p>}
+                {restaurantDetails?.gstNumber && <p className="text-[10px]">GSTIN: {restaurantDetails.gstNumber}</p>}
               </div>
               <div className="flex justify-between text-[11px]">
                 <span>Bill #: {receiptData.orderNumber}</span>
@@ -404,15 +427,15 @@ export const BillingView: React.FC = () => {
                 ))}
               </div>
               <div className="pt-1 space-y-0.5 border-b border-black pb-1">
-                <div className="flex justify-between"><span>Subtotal:</span><span>₹{receiptData.subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Subtotal:</span><span>{restaurantDetails?.currency || '₹'}{receiptData.subtotal.toFixed(2)}</span></div>
                 {receiptData.discount > 0 && (
-                  <div className="flex justify-between text-rose-700 font-bold"><span>Discount:</span><span>-₹{receiptData.discount.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-rose-700 font-bold"><span>Discount:</span><span>-{restaurantDetails?.currency || '₹'}{receiptData.discount.toFixed(2)}</span></div>
                 )}
-                <div className="flex justify-between"><span>GST (5%):</span><span>₹{receiptData.tax.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>GST ({restaurantDetails?.taxRate ?? 5}%):</span><span>{restaurantDetails?.currency || '₹'}{receiptData.tax.toFixed(2)}</span></div>
               </div>
               <div className="flex justify-between font-bold text-sm pt-1">
                 <span>GRAND TOTAL</span>
-                <span>₹{receiptData.grandTotal.toFixed(2)}</span>
+                <span>{restaurantDetails?.currency || '₹'}{receiptData.grandTotal.toFixed(2)}</span>
               </div>
             </div>
 

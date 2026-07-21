@@ -29,5 +29,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   importBackup: (backupData) => ipcRenderer.invoke('db:importBackup', backupData),
 
   // Thermal Receipt Printing
-  printReceipt: (receiptHtml) => ipcRenderer.invoke('receipt:print', receiptHtml)
+  printReceipt: (receiptHtml) => ipcRenderer.invoke('receipt:print', receiptHtml),
+
+  // Auth & Restaurant Details
+  register: (userData, restaurantData) => ipcRenderer.invoke('auth:register', { userData, restaurantData }),
+  login: (emailOrPhone, password) => ipcRenderer.invoke('auth:login', { emailOrPhone, password }),
+  hasUsers: () => ipcRenderer.invoke('auth:hasUsers'),
+  verifyUser: (userId) => ipcRenderer.invoke('auth:verifyUser', userId),
+  getRestaurantDetails: () => ipcRenderer.invoke('restaurant:getDetails'),
+  saveRestaurantDetails: (data) => ipcRenderer.invoke('restaurant:saveDetails', data)
 });

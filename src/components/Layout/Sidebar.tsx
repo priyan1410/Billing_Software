@@ -1,9 +1,11 @@
 import React from 'react';
-import { Crown, PieChart, Receipt, Ticket, Wallet, Store, Database } from 'lucide-react';
+import { Crown, PieChart, Receipt, Ticket, Wallet, Store, Database, Settings2 } from 'lucide-react';
 import { useAppStore, AppSection } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 export const Sidebar: React.FC = () => {
   const { activeSection, setActiveSection } = useAppStore();
+  const { restaurantDetails } = useAuthStore();
 
   const navItems: { id: AppSection; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <PieChart className="w-5 h-5" /> },
@@ -11,6 +13,7 @@ export const Sidebar: React.FC = () => {
     { id: 'tokens', label: 'Tokens', icon: <Ticket className="w-5 h-5" /> },
     { id: 'expenses', label: 'Expenses', icon: <Wallet className="w-5 h-5" /> },
     { id: 'restaurant', label: 'Restaurant', icon: <Store className="w-5 h-5" /> },
+    { id: 'settings', label: 'Settings', icon: <Settings2 className="w-5 h-5" /> },
   ];
 
   return (
@@ -21,9 +24,13 @@ export const Sidebar: React.FC = () => {
           <div className="w-11 h-11 bg-gradient-to-br from-gold-500 to-gold-dark rounded-xl flex items-center justify-center text-olive-950 font-bold shadow-lg shadow-gold-500/20">
             <Crown className="w-6 h-6" />
           </div>
-          <div>
-            <h1 className="font-heading text-lg font-bold text-gold-500 tracking-wide">KISH MANDHI</h1>
-            <span className="text-xs text-olive-300 uppercase tracking-widest font-medium">Arabic Grill & Dining</span>
+          <div className="min-w-0">
+            <h1 className="font-heading text-base font-bold text-gold-500 tracking-wide truncate">
+              {restaurantDetails?.companyName || 'KISH MANDHI'}
+            </h1>
+            <span className="text-[10px] text-olive-300 uppercase tracking-widest font-medium truncate block">
+              {restaurantDetails?.tagline || 'Arabic Grill & Dining'}
+            </span>
           </div>
         </div>
 
@@ -51,6 +58,12 @@ export const Sidebar: React.FC = () => {
 
       {/* Footer / Database Status */}
       <div className="pt-4 border-t border-gold-500/20">
+        {restaurantDetails?.gstNumber && (
+          <div className="mb-3 px-3 py-2 bg-amber-500/8 rounded-lg border border-amber-500/15">
+            <p className="text-[10px] text-amber-400/60 uppercase tracking-widest font-semibold">GSTIN</p>
+            <p className="text-[11px] text-amber-300/80 font-mono mt-0.5">{restaurantDetails.gstNumber}</p>
+          </div>
+        )}
         <button
           onClick={() => setActiveSection('db-settings')}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium bg-olive-800/60 border border-gold-500/20 hover:border-gold-500/40 transition-colors ${
@@ -59,7 +72,7 @@ export const Sidebar: React.FC = () => {
         >
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-gold-500" />
-            <span>SQLite Active</span>
+            <span>MySQL Active</span>
           </div>
           <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500"></span>
         </button>

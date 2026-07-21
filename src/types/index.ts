@@ -65,3 +65,35 @@ export interface Expense {
 }
 
 export type PnLPeriod = 'today' | 'week' | 'month' | 'year' | 'all' | 'custom';
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  role?: string;
+  username?: string;
+}
+
+export interface RestaurantDetails {
+  companyName: string;
+  tagline?: string;
+  ownerName?: string;
+  gstNumber?: string;
+  fssaiNumber?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  taxRate: number;
+  currency: string;
+  headerNote?: string;
+  footerNote?: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message?: string;
+  user?: User;
+  restaurantDetails?: RestaurantDetails | null;
+}
+
