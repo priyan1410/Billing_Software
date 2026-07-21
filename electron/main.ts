@@ -96,6 +96,13 @@ ipcMain.handle('orders:create', async (_evt: any, orderData: any) => {
     discountAmount: orderData.discount_amount || orderData.discountAmount,
     grandTotal: orderData.grand_total || orderData.grandTotal,
     paymentMode: orderData.payment_mode || orderData.paymentMode || 'Cash',
+    items: orderData.items || [],
+    shippingCharges: orderData.shipping_charges || orderData.shippingCharges || 0,
+    roundOff: orderData.round_off || orderData.roundOff || 0,
+    orderDate: orderData.order_date || orderData.orderDate || new Date().toISOString().split('T')[0],
+    dueDate: orderData.due_date || orderData.dueDate || '',
+    customerName: orderData.customer_name || orderData.customerName || '',
+    customerPhone: orderData.customer_phone || orderData.customerPhone || '',
     createdAt: new Date().toISOString()
   };
 
@@ -105,6 +112,19 @@ ipcMain.handle('orders:create', async (_evt: any, orderData: any) => {
 
 ipcMain.handle('orders:getAll', async () => {
   return { success: true, data: db.orders };
+});
+
+ipcMain.handle('orders:getByDateRange', async (_evt: any, { startDate, endDate }: any) => {
+  let filtered = db.orders;
+  if (startDate) {
+    const start = new Date(startDate).setHours(0, 0, 0, 0);
+    filtered = filtered.filter((o: any) => new Date(o.createdAt).getTime() >= start);
+  }
+  if (endDate) {
+    const end = new Date(endDate).setHours(23, 59, 59, 999);
+    filtered = filtered.filter((o: any) => new Date(o.createdAt).getTime() <= end);
+  }
+  return { success: true, data: filtered };
 });
 
 ipcMain.handle('dashboard:getStats', async () => {
@@ -121,6 +141,38 @@ ipcMain.handle('dashboard:getStats', async () => {
       totalExpenseSum,
       netProfit,
       recentOrders: db.orders.slice(0, 5)
+    }
+  };
+});
+
+ipcMain.handle('dashboard:getPnLSummary', async (_evt: any, { startDate, endDate }: any) => {
+  let filteredOrders = db.orders;
+  let filteredExpenses = db.expenses;
+
+  if (startDate) {
+    const start = new Date(startDate).setHours(0, 0, 0, 0);
+    filteredOrders = filteredOrders.filter((o: any) => new Date(o.createdAt).getTime() >= start);
+    filteredExpenses = filteredExpenses.filter((e: any) => new Date(e.createdAt || e.expenseDate).getTime() >= start);
+  }
+  if (endDate) {
+    const end = new Date(endDate).setHours(23, 59, 59, 999);
+    filteredOrders = filteredOrders.filter((o: any) => new Date(o.createdAt).getTime() <= end);
+    filteredExpenses = filteredExpenses.filter((e: any) => new Date(e.createdAt || e.expenseDate).getTime() <= end);
+  }
+
+  const totalRevenue = filteredOrders.reduce((sum: number, o: any) => sum + Number(o.grandTotal || 0), 0);
+  const totalExpenses = filteredExpenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+
+  return {
+    success: true,
+    data: {
+      totalRevenue,
+      totalExpenses,
+      netProfit: totalRevenue - totalExpenses,
+      orderCount: filteredOrders.length,
+      expenseCount: filteredExpenses.length,
+      orders: filteredOrders,
+      expenses: filteredExpenses
     }
   };
 });
@@ -179,16 +231,16 @@ ipcMain.handle('db:resetDefaults', async () => {
   db.orders = [];
   db.expenses = [];
   db.menuItems = [
-    { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
-    { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
-    { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
-    { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
-    { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
-    { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
-    { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
-    { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
-    { id: 9, categoryId: 4, name: 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
-    { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
+    { id: 1, categoryId: 1, name: 'Special Chicken Mandhi', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
+    { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
+    { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
+    { id: 4, categoryId: 2, name: 'Peri Peri Alfaham', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
+    { id: 5, categoryId: 2, name: 'Honey Chili Alfaham', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
+    { id: 6, categoryId: 3, name: 'Kubboos - 2 Pcs', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
+    { id: 7, categoryId: 3, name: 'Special Garlic Sauce', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
+    { id: 8, categoryId: 4, name: 'Mint Lime Mojito', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
+    { id: 9, categoryId: 4, name: 'Avocado Milkshake', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
+    { id: 10, categoryId: 5, name: 'Turkish Kunafa', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
   ];
   return { success: true };
 });

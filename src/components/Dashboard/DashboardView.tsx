@@ -133,6 +133,15 @@ export const DashboardView: React.FC = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
+          <div className="mt-4 grid gap-2 text-sm">
+            {pieData.map((entry) => (
+              <div key={entry.name} className="flex items-center gap-2">
+                <span className="inline-flex h-3.5 w-3.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                <span className="text-slate-100">{entry.name}</span>
+                <span className="ml-auto text-emerald-300">{entry.value}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -142,7 +151,7 @@ export const DashboardView: React.FC = () => {
           <h4 className="text-sm font-bold text-gold-500">Recent Completed Bills</h4>
           <button
             onClick={() => setActiveSection('billing')}
-            className="text-xs font-semibold text-gold-400 hover:underline flex items-center gap-1"
+            className="text-xs font-semibold text-gold-400 flex items-center gap-1"
           >
             Go to Billing POS <ChevronRight className="w-4 h-4" />
           </button>

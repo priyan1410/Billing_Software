@@ -11,7 +11,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Orders & POS Billing
   createOrder: (orderData) => ipcRenderer.invoke('orders:create', orderData),
   getOrders: (filter) => ipcRenderer.invoke('orders:getAll', filter),
+  getOrdersByDateRange: (dateRange) => ipcRenderer.invoke('orders:getByDateRange', dateRange),
+  getOrderItems: (orderId) => ipcRenderer.invoke('orders:getItems', orderId),
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),
+  getPnLSummary: (dateRange) => ipcRenderer.invoke('dashboard:getPnLSummary', dateRange),
 
   // Expenses
   getExpenses: () => ipcRenderer.invoke('expenses:getAll'),

@@ -188,6 +188,22 @@ ipcMain.handle('orders:getAll', async () => {
   })) };
 });
 
+ipcMain.handle('orders:getItems', async (evt, orderId) => {
+  const result = await query(
+    'SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC',
+    [Number(orderId)]
+  );
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: result.data.map(r => ({
+    id: r.id,
+    dishName: r.item_name,
+    variant: r.variant,
+    quantity: Number(r.quantity),
+    unitPrice: Number(r.unit_price),
+    totalPrice: Number(r.total_price)
+  })) };
+});
+
 // ─────────────────────────────────────────────────────────────
 // DASHBOARD STATS (live from MySQL)
 // ─────────────────────────────────────────────────────────────

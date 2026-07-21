@@ -1,6 +1,7 @@
 export type OrderType = 'Dine-In' | 'Takeaway';
 export type PaymentMode = 'Cash' | 'UPI' | 'Card';
 export type PortionVariant = 'Quarter' | 'Half' | 'Full';
+export type UnitType = 'Pcs' | 'Kg' | 'Litre' | 'Box' | 'Plate' | 'Glass' | 'Bottle';
 
 export interface Category {
   id: number;
@@ -16,6 +17,8 @@ export interface Dish {
   priceHalf: number;
   priceFull: number;
   isAvailable: boolean;
+  hsnSac?: string;
+  unit?: UnitType;
 }
 
 export interface CartItem {
@@ -26,6 +29,9 @@ export interface CartItem {
   unitPrice: number;
   quantity: number;
   totalPrice: number;
+  unit?: UnitType;
+  hsnSac?: string;
+  discount?: number;
 }
 
 export interface Order {
@@ -39,6 +45,28 @@ export interface Order {
   grandTotal: number;
   paymentMode: PaymentMode;
   createdAt: string;
+  customerName?: string;
+  customerPhone?: string;
+  shippingCharges?: number;
+  roundOff?: number;
+  orderDate?: string;
+  dueDate?: string;
+}
+
+export interface OrderPayload {
+  order_type: OrderType;
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
+  grand_total: number;
+  payment_mode: PaymentMode;
+  items: CartItem[];
+  customer_name?: string;
+  customer_phone?: string;
+  shipping_charges?: number;
+  round_off?: number;
+  order_date?: string;
+  due_date?: string;
 }
 
 export interface TokenItem {
@@ -49,6 +77,8 @@ export interface TokenItem {
     name: string;
     variant: PortionVariant;
     quantity: number;
+    unit?: UnitType;
+    hsnSac?: string;
   }[];
   timestamp: string;
 }
@@ -65,6 +95,18 @@ export interface Expense {
 }
 
 export type PnLPeriod = 'today' | 'week' | 'month' | 'year' | 'all' | 'custom';
+
+export interface PnLSummary {
+  period: PnLPeriod;
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  orderCount: number;
+  orders: Order[];
+  expenses: Expense[];
+  startDate?: string;
+  endDate?: string;
+}
 
 export interface User {
   id: number;
@@ -96,4 +138,3 @@ export interface AuthResponse {
   user?: User;
   restaurantDetails?: RestaurantDetails | null;
 }
-

@@ -89,7 +89,6 @@ export const TokensView: React.FC = () => {
       timestamp: new Date().toLocaleTimeString()
     };
 
-    addActiveToken(newTokenObj);
     setPreviewToken(newTokenObj);
     setShowPreviewModal(true);
   };
@@ -97,6 +96,17 @@ export const TokensView: React.FC = () => {
   const handleSelectActiveToken = (token: any) => {
     setPreviewToken(token);
     setShowPreviewModal(true);
+  };
+
+  const handleSaveToken = () => {
+    if (!previewToken) return;
+    const exists = activeTokensList.some((t) => t.tokenNumber === previewToken.tokenNumber);
+    if (exists) {
+      alert(`Token #${previewToken.tokenNumber} is already saved.`);
+      return;
+    }
+    addActiveToken(previewToken);
+    alert(`✓ Token #${previewToken.tokenNumber} saved and available for billing.`);
   };
 
   const handleSendToBilling = () => {
@@ -138,7 +148,7 @@ export const TokensView: React.FC = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-110px)] select-none">
       {/* Menu Catalog Left (No Prices) */}
-      <div className="lg:col-span-2 flex flex-col h-full space-y-4">
+      <div className="lg:col-span-2 flex flex-col h-full min-h-0 space-y-4">
         {/* Active Tokens Queue Bar */}
         {activeTokensList.length > 0 && (
           <div className="bg-olive-900 border border-gold-500/20 rounded-xl p-3">
@@ -183,11 +193,10 @@ export const TokensView: React.FC = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  activeCategory === cat.id
-                    ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md shadow-gold-500/20'
-                    : 'bg-olive-900 border border-gold-500/20 text-olive-300 hover:text-white'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${activeCategory === cat.id
+                  ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md shadow-gold-500/20'
+                  : 'bg-olive-900 border border-gold-500/20 text-olive-300 hover:text-white'
+                  }`}
               >
                 {cat.label}
               </button>
@@ -196,7 +205,7 @@ export const TokensView: React.FC = () => {
         </div>
 
         {/* Dishes Rows */}
-        <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pr-1">
           {filteredDishes.map((dish) => (
             <div
               key={dish.id}
@@ -235,7 +244,7 @@ export const TokensView: React.FC = () => {
       </div>
 
       {/* Token Cart Right (No Prices / Pure Token Generator) */}
-      <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col h-full">
+      <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col h-full min-h-0 overflow-hidden">
         <div className="flex justify-between items-center pb-3 border-b border-gold-500/20">
           <h3 className="text-base font-bold text-gold-500 flex items-center gap-2">
             <Ticket className="w-5 h-5" /> New Token Order
@@ -248,23 +257,21 @@ export const TokensView: React.FC = () => {
         <div className="flex bg-olive-950 p-1 rounded-xl gap-1 my-3">
           <button
             onClick={() => setOrderType('Dine-In')}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              orderType === 'Dine-In' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300 hover:text-white'
-            }`}
+            className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${orderType === 'Dine-In' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300 hover:text-white'
+              }`}
           >
             <Utensils className="w-3.5 h-3.5" /> Dine-In
           </button>
           <button
             onClick={() => setOrderType('Takeaway')}
-            className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              orderType === 'Takeaway' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300 hover:text-white'
-            }`}
+            className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${orderType === 'Takeaway' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300 hover:text-white'
+              }`}
           >
             <ShoppingBag className="w-3.5 h-3.5" /> Takeaway
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto my-3 border-y border-gold-500/10 py-2 space-y-2">
+        <div className="flex-1 min-h-0 overflow-y-auto my-3 border-y border-gold-500/10 py-2 space-y-2">
           {tokenCart.length === 0 ? (
             <div className="text-center py-10 text-olive-300 text-xs">
               <Ticket className="w-8 h-8 mx-auto mb-2 opacity-20" />
@@ -341,6 +348,9 @@ export const TokensView: React.FC = () => {
             <div className="flex gap-2">
               <button onClick={() => setShowPreviewModal(false)} className="flex-1 py-2 bg-olive-800 text-white rounded-lg text-xs font-bold">
                 Close
+              </button>
+              <button onClick={handleSaveToken} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold">
+                Save Token
               </button>
               <button onClick={handleSendToBilling} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1">
                 Send to Billing <ArrowRight className="w-3.5 h-3.5" />

@@ -52,6 +52,8 @@ export const usePosStore = create<PosState>((set: any) => ({
             unitPrice: price,
             quantity: 1,
             totalPrice: price,
+            unit: dish.unit || 'Plate',
+            hsnSac: dish.hsnSac || undefined,
           },
         ],
       };
@@ -92,6 +94,8 @@ export const usePosStore = create<PosState>((set: any) => ({
           unitPrice: price,
           quantity: item.quantity,
           totalPrice: price * item.quantity,
+          unit: item.unit || (dish?.unit || 'Plate'),
+          hsnSac: item.hsnSac || dish?.hsnSac || undefined,
         };
       });
 

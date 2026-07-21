@@ -21,6 +21,13 @@ export interface DbStore {
     discountAmount: number;
     grandTotal: number;
     paymentMode: string;
+    items: any[];
+    shippingCharges?: number;
+    roundOff?: number;
+    orderDate?: string;
+    dueDate?: string;
+    customerName?: string;
+    customerPhone?: string;
     createdAt: string;
   }>;
   expenses: Array<{
