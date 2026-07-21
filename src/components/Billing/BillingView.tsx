@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, ShoppingCart, Trash2, Printer, Utensils, ShoppingBag,
-  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone
+  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone, History
 } from 'lucide-react';
 import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderPayload, PortionVariant } from '../../types';
+import { PreviousBillsModal } from './PreviousBillsModal';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n: number, curr = '₹') =>
@@ -314,6 +315,7 @@ export const BillingView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTokenNum, setSelectedTokenNum] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showPreviousBillsModal, setShowPreviousBillsModal] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [nextBillNumber, setNextBillNumber] = useState<string>('KMIV-001');
 
@@ -528,7 +530,7 @@ export const BillingView: React.FC = () => {
           ${printShowAddress && rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
           ${printShowPhone && rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
           ${printShowGst && rGst ? `<div class="center" style="font-size: 10.5px;">${rGst}</div>` : ''}
-          ${printShowHeaderNote && rDetails?.headerNote ? `<div class="center" style="font-size: 10px; font-style: italic; margin-top: 2px;">${rDetails.headerNote}</div>` : ''}
+          ${printShowHeaderNote && rd?.headerNote ? `<div class="center" style="font-size: 10px; font-style: italic; margin-top: 2px;">${rd.headerNote}</div>` : ''}
           
           <div class="divider"></div>
           <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">*** TAX INVOICE ***</div>
@@ -556,8 +558,10 @@ export const BillingView: React.FC = () => {
           <!-- Items List -->
           ${(data.items || []).map((i: any) => {
         const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
-        const uPrice = Number(i.unitPrice || i.price || 0).toFixed(2);
-        const tPrice = Number(i.totalPrice || (uPrice * (i.quantity || 1))).toFixed(2);
+        const uNum = Number(i.unitPrice || i.price || 0);
+        const tNum = Number(i.totalPrice || (uNum * (i.quantity || 1)));
+        const uPrice = uNum.toFixed(2);
+        const tPrice = tNum.toFixed(2);
         return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span><span class="col-rate">${uPrice}</span><span class="col-amt">${tPrice}</span></div>`;
       }).join('')}
           
@@ -597,7 +601,7 @@ export const BillingView: React.FC = () => {
               <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
             </div>
             <div style="font-size: 9.5px; line-height: 1.3;">
-              ${rDetails?.footerNote || 'Goods once sold cannot be returned.'}
+              ${rd?.footerNote || 'Goods once sold cannot be returned.'}
             </div>
           </div>` : ''}
         </div></body></html>`;
@@ -674,15 +678,25 @@ export const BillingView: React.FC = () => {
       {/* ══ RIGHT: CART + BILL (scrollable) ══════════════════════════ */}
       <div className="w-80 xl:w-96 flex flex-col gap-3 flex-shrink-0 overflow-hidden">
 
-        {/* Token Import */}
+        {/* Token Import & Previous Bills */}
         <div className="flex gap-2 flex-shrink-0">
-          <select value={selectedTokenNum} onChange={(e) => setSelectedTokenNum(e.target.value)}
-            className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none"
+          <div className="flex-1 flex gap-1.5 min-w-0">
+            <select value={selectedTokenNum} onChange={(e) => setSelectedTokenNum(e.target.value)}
+              className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none min-w-0"
+            >
+              <option value="">Import Token...</option>
+              {activeTokensList.map((t) => <option key={t.tokenNumber} value={t.tokenNumber}>Token #{t.tokenNumber}</option>)}
+            </select>
+            <button onClick={handleImportToken} className="px-3 py-2 bg-gold-500/20 border border-gold-500/40 text-gold-400 font-bold text-xs rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-all flex-shrink-0">Load</button>
+          </div>
+
+          <button
+            onClick={() => setShowPreviousBillsModal(true)}
+            className="px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 font-extrabold text-xs rounded-xl hover:scale-[1.03] transition-transform flex items-center gap-1.5 shadow-md shadow-gold-500/10 flex-shrink-0"
+            title="View & Print Custom Previous Bills"
           >
-            <option value="">Import from Token...</option>
-            {activeTokensList.map((t) => <option key={t.tokenNumber} value={t.tokenNumber}>Token #{t.tokenNumber}</option>)}
-          </select>
-          <button onClick={handleImportToken} className="px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl hover:scale-105 transition-transform">Load</button>
+            <History className="w-3.5 h-3.5" /> Previous Bills
+          </button>
         </div>
 
         {/* Order Type */}
@@ -772,6 +786,11 @@ export const BillingView: React.FC = () => {
           onCancel={() => setShowConfirmModal(false)}
           isLoading={isCheckingOut}
         />
+      )}
+
+      {/* Previous Bills History & Custom Print Modal */}
+      {showPreviousBillsModal && (
+        <PreviousBillsModal onClose={() => setShowPreviousBillsModal(false)} />
       )}
     </div>
   );

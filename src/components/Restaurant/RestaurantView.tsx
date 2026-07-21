@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Utensils, TrendingUp, Store, Plus, Edit2, Trash2, Calendar } from 'lucide-react';
+import { Utensils, TrendingUp, Store, Plus, Edit2, Trash2, Calendar, Receipt, Printer } from 'lucide-react';
 import { Dish, PnLPeriod } from '../../types';
+import { BillDetailModal } from './BillDetailModal';
 
 export const RestaurantView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dishes' | 'pnl' | 'about'>('dishes');
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedPnlBill, setSelectedPnlBill] = useState<any | null>(null);
 
   // Add Dish Form State
   const [addName, setAddName] = useState('');
@@ -390,20 +392,40 @@ export const RestaurantView: React.FC = () => {
                     <th className="p-3">Amount</th>
                     <th className="p-3">Payment</th>
                     <th className="p-3">Date</th>
+                    <th className="p-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gold-500/10">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-olive-300">No bills found for this period.</td>
+                      <td colSpan={5} className="py-8 text-center text-olive-300">No bills found for this period.</td>
                     </tr>
                   ) : (
                     filteredOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-olive-800/30 transition-colors">
-                        <td className="p-3 font-semibold text-white">{order.orderNumber || `KM-${order.id}`}</td>
-                        <td className="p-3 font-bold text-gold-400">₹{Number(order.grandTotal || order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <tr
+                        key={order.id}
+                        onClick={() => setSelectedPnlBill(order)}
+                        className="hover:bg-gold-500/10 cursor-pointer transition-colors group"
+                        title="Click to view & print bill"
+                      >
+                        <td className="p-3 font-semibold text-white group-hover:text-gold-400 flex items-center gap-1.5">
+                          <Receipt className="w-3.5 h-3.5 text-gold-500" />
+                          {order.orderNumber || order.order_number || `KM-${order.id}`}
+                        </td>
+                        <td className="p-3 font-bold text-gold-400">₹{Number(order.grandTotal || order.grand_total || order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         <td className="p-3 text-emerald-300">{order.paymentMode || order.payment_mode || 'Cash'}</td>
-                        <td className="p-3 text-olive-300">{new Date(order.createdAt || order.orderDate || order.created_at || Date.now()).toLocaleDateString('en-IN')}</td>
+                        <td className="p-3 text-olive-300">
+                          {new Date(order.createdAt || order.orderDate || order.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setSelectedPnlBill(order); }}
+                            className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-[11px] font-bold rounded-lg group-hover:bg-gold-500 group-hover:text-olive-950 transition-colors inline-flex items-center gap-1"
+                          >
+                            <Printer className="w-3 h-3" /> Print
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -586,6 +608,10 @@ export const RestaurantView: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+      {/* Bill Details & Print Modal for PnL Statement */}
+      {selectedPnlBill && (
+        <BillDetailModal order={selectedPnlBill} onClose={() => setSelectedPnlBill(null)} />
       )}
     </div>
   );

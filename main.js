@@ -221,17 +221,31 @@ ipcMain.handle('orders:getAll', async () => {
 });
 
 ipcMain.handle('orders:getItems', async (evt, orderId) => {
-  let targetTokenId = String(orderId);
-  if (!targetTokenId.startsWith('KMKOT-') && !isNaN(Number(targetTokenId))) {
-    targetTokenId = `KMKOT-${String(targetTokenId).padStart(3, '0')}`;
+  let searchTokens = [String(orderId)];
+
+  if (!isNaN(Number(orderId))) {
+    const num = Number(orderId);
+    searchTokens.push(`KMKOT-${String(num).padStart(3, '0')}`);
+    searchTokens.push(`KMIV-${String(num).padStart(3, '0')}`);
+    searchTokens.push(num);
+  } else if (typeof orderId === 'string' && orderId.startsWith('KMIV-')) {
+    const rawNum = orderId.replace('KMIV-', '');
+    if (!isNaN(Number(rawNum))) {
+      const num = Number(rawNum);
+      searchTokens.push(num);
+      searchTokens.push(`KMKOT-${String(num).padStart(3, '0')}`);
+    }
   }
+
+  const placeholders = searchTokens.map(() => '?').join(',');
   const result = await query(
-    'SELECT * FROM order_items WHERE token_id = ? OR token_id = ? OR token_id = ? ORDER BY id ASC',
-    [targetTokenId, String(orderId), Number(orderId)]
+    `SELECT * FROM order_items WHERE token_id IN (${placeholders}) ORDER BY id ASC`,
+    searchTokens
   );
   if (!result.success) return { success: false, message: result.error };
   return { success: true, data: result.data.map(r => ({
     id: r.id,
+    name: r.item_name,
     dishName: r.item_name,
     variant: r.variant,
     quantity: Number(r.quantity),
