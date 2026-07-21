@@ -38,88 +38,97 @@ const ConfirmOrderModal: React.FC<{
   onCancel: () => void;
   isLoading: boolean;
 }> = ({ cart, orderType, paymentMode, subtotal, tax, discount, grandTotal, taxRate, curr, onConfirm, onCancel, isLoading }) => {
-  const invoiceDate = new Date().toLocaleDateString('en-IN');
+  const now = new Date();
+  const invoiceDate = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  const invoiceTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const billNumber = '6622';
   const cgst = taxRate / 2;
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const tableNumber = '96';
+  const customerName = 'Customer Name';
+  const cashierName = 'Staff Name';
+  const taxableAmount = Math.max(0, subtotal - discount);
+  const lineCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-3xl shadow-2xl shadow-black/10 max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center gap-3 p-5 border-b border-slate-200 flex-shrink-0">
+      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl shadow-2xl shadow-black/10 max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center gap-3 p-4 border-b border-slate-200 flex-shrink-0">
           <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-slate-700" />
+            <Receipt className="w-5 h-5 text-slate-700" />
           </div>
           <div>
-            <h4 className="font-bold text-slate-950 text-base uppercase tracking-[0.15em]">Bill Preview</h4>
-            <p className="text-sm text-slate-500 mt-1">Review the invoice content before recording it to the ledger.</p>
+            <h4 className="font-bold text-slate-950 text-base uppercase tracking-[0.15em]">Receipt Preview</h4>
           </div>
           <button onClick={onCancel} className="ml-auto text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-5 text-slate-900">
-          <div className="space-y-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
-              <div>
-                <h3 className="text-xl font-semibold">Kish Mandhi</h3>
-                <p className="text-sm text-slate-600 mt-1">Arabic Grill & Fine Dining</p>
-                <p className="text-sm text-slate-600">GSTIN: 33ABCDE1234F2Z5</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                <div className="flex justify-between"><span>Invoice Date</span><span className="font-semibold text-slate-900">{invoiceDate}</span></div>
-                <div className="flex justify-between"><span>Order Type</span><span className="font-semibold text-slate-900">{orderType}</span></div>
-                <div className="flex justify-between"><span>Payment</span><span className="font-semibold text-slate-900">{paymentMode}</span></div>
-                <div className="flex justify-between"><span>Items</span><span className="font-semibold text-slate-900">{itemCount}</span></div>
-              </div>
-            </div>
-          </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="mx-auto max-w-[360px] border border-slate-200 shadow-sm bg-slate-50 font-mono text-[11px] text-slate-900">
+            <div className="p-4">
+              <div className="text-center uppercase tracking-[0.24em] font-black text-sm">Kish Mandhi</div>
+              <div className="text-center text-[10px] uppercase tracking-[0.18em] mt-2">Business Address Line 1</div>
+              <div className="text-center text-[10px] uppercase tracking-[0.18em]">Business Address Line 2</div>
+              <div className="text-center text-[10px] text-slate-600 mt-1">GSTIN: 33ABCDE1234F1Z5</div>
+              <div className="text-center text-[10px] text-slate-600">Phone: +91 98765 43210</div>
+              <div className="border-t border-slate-200 my-3"></div>
 
-          <div className="overflow-x-auto rounded-3xl border border-slate-200">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-600 uppercase text-[10px] tracking-[0.12em]">
-                  <th className="p-3 text-left">#</th>
-                  <th className="p-3 text-left">Product</th>
-                  <th className="p-3 text-left">Qty</th>
-                  <th className="p-3 text-right">Rate</th>
-                  <th className="p-3 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cart.map((item, idx) => {
-                  const lineTotal = item.totalPrice;
-                  return (
-                    <tr key={item.cartKey} className="border-b border-slate-100">
-                      <td className="p-3 text-slate-600">{idx + 1}</td>
-                      <td className="p-3">
-                        <div className="font-medium text-slate-900">{item.name}</div>
-                        <div className="text-[11px] text-slate-500">{item.variant} · {item.unit || 'Plate'}</div>
-                      </td>
-                      <td className="p-3 text-slate-700">{item.quantity}</td>
-                      <td className="p-3 text-right text-slate-700">{curr}{item.unitPrice.toFixed(2)}</td>
-                      <td className="p-3 text-right font-semibold text-slate-900">{curr}{lineTotal.toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[10px] leading-5">
+                <div className="font-semibold uppercase">BILL NO</div>
+                <div className="font-semibold uppercase">DATE</div>
+                <div className="font-semibold uppercase">TIME</div>
+                <div className="truncate">{billNumber}</div>
+                <div className="truncate">{invoiceDate}</div>
+                <div className="truncate text-right">{invoiceTime}</div>
+              </div>
+              <div className="border-t border-slate-200 my-3"></div>
 
-          <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900 mb-2">Notes</p>
-              <p>Goods once sold cannot be returned. Please verify the invoice before confirming.</p>
-            </div>
-            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-2">
-              <div className="flex justify-between"><span>Subtotal</span><span className="text-slate-900">{curr}{subtotal.toFixed(2)}</span></div>
-              {discount > 0 && <div className="flex justify-between"><span>Discount</span><span className="text-slate-900">-{curr}{discount.toFixed(2)}</span></div>}
-              <div className="flex justify-between"><span>CGST @ {cgst}%</span><span className="text-slate-900">{curr}{(tax / 2).toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>SGST @ {cgst}%</span><span className="text-slate-900">{curr}{(tax / 2).toFixed(2)}</span></div>
-              <div className="border-t border-slate-200 pt-3 flex justify-between font-semibold text-slate-950 text-base"><span>Total</span><span>{curr}{grandTotal.toFixed(2)}</span></div>
+              <div className="grid grid-cols-[1.5fr_0.5fr_0.9fr_0.9fr] gap-2 text-[10px] uppercase tracking-[0.12em] text-slate-600">
+                <span>DESCRIPTION</span>
+                <span className="text-right">QTY</span>
+                <span className="text-right">RATE</span>
+                <span className="text-right">AMOUNT</span>
+              </div>
+              <div className="border-t border-slate-200 my-2"></div>
+
+              {cart.map((item) => {
+                const lineTotal = item.totalPrice;
+                const label = `${item.name}${item.variant ? ` (${item.variant})` : ''}`;
+                return (
+                  <div key={item.cartKey} className="space-y-1 mb-2 text-[10px] text-slate-700">
+                    <div className="font-semibold text-slate-900">{label}</div>
+                    <div className="grid grid-cols-[1.5fr_0.5fr_0.9fr_0.9fr] gap-2">
+                      <span className="truncate">&nbsp;</span>
+                      <span className="text-right">{item.quantity}</span>
+                      <span className="text-right">{curr}{item.unitPrice.toFixed(2)}</span>
+                      <span className="text-right">{curr}{lineTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="border-t border-slate-200 my-2"></div>
+              <div className="space-y-1 text-[10px] text-slate-700">
+                <div className="flex justify-between"><span>SUB TOTAL</span><span>{curr}{subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Discount ({taxRate}%)</span><span>( - {curr}{discount.toFixed(2)} )</span></div>
+                <div className="flex justify-between"><span>Taxable Amount</span><span>{curr}{taxableAmount.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>CGST @ {cgst}%</span><span>{curr}{(tax / 2).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>SGST @ {cgst}%</span><span>{curr}{(tax / 2).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Rounding</span><span>( + {curr}0.00 )</span></div>
+              </div>
+              <div className="border-t border-slate-200 my-2"></div>
+              <div className="flex justify-between text-[12px] font-bold uppercase text-slate-900">
+                <span>TOTAL</span>
+                <span>{curr}{grandTotal.toFixed(2)}</span>
+              </div>
+
+              <div className="border-t border-slate-200 my-3"></div>
+              <div className="text-center text-[10px] uppercase tracking-[0.2em] font-bold">THANKS FOR YOUR VISIT!</div>
+              <div className="text-center text-[9px] text-slate-600 mt-1">HAPPY JOURNEY</div>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-3 p-5 border-t border-slate-200 flex-shrink-0 bg-slate-50">
+        <div className="flex gap-3 p-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
           <button onClick={onCancel} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-100 transition-colors">
             Cancel
           </button>
@@ -128,7 +137,7 @@ const ConfirmOrderModal: React.FC<{
             disabled={isLoading}
             className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-extrabold shadow-sm hover:bg-slate-800 transition-colors disabled:opacity-60"
           >
-            {isLoading ? 'Saving...' : 'Confirm Invoice & Print'}
+            {isLoading ? 'Saving...' : 'Confirm & Print Receipt'}
           </button>
         </div>
       </div>
@@ -352,8 +361,20 @@ export const BillingView: React.FC = () => {
       due_date: '',
       shipping_charges: 0,
       round_off: 0,
+      customer_name: 'Walk-in',
     };
-    const base = { items: [...cart], subtotal, tax: taxAmt, discount, grandTotal, orderType, paymentMode };
+    const base = {
+      items: [...cart],
+      subtotal,
+      tax: taxAmt,
+      discount,
+      grandTotal,
+      orderType,
+      paymentMode,
+      customerName: 'Walk-in',
+      cashierName: (useAuthStore.getState().user?.name || 'Staff') as string,
+      tableNumber: 'N/A',
+    };
 
     if ((window as any).electronAPI) {
       const res = await (window as any).electronAPI.createOrder(payload);
@@ -391,70 +412,83 @@ export const BillingView: React.FC = () => {
     const rPhone = rd?.phone || '';
     const rGst = rd?.gstNumber || '';
     const rTagline = rd?.tagline || 'Arabic Grill & Fine Dining';
+    const curr = rd?.currency || '₹';
     const rFooter = rd?.footerNote || 'Thank you for visiting!';
     const tp = rd?.taxRate ?? 5;
     const cgst = tp / 2; const sgst = tp / 2;
 
     const receiptStyles = `
       <style>
-        @page { size: 80mm auto; margin: 5mm; }
-        body { margin: 0; padding: 0; font-family: monospace, sans-serif; font-size: 11px; color: #000; background: #fff; }
-        .receipt { width: 78mm; margin: 0 auto; padding: 8px; }
-        .receipt h2, .receipt h3, .receipt p { margin: 0; }
-        .receipt .center { text-align: center; }
-        .receipt .divider { border-top: 1px dashed #000; margin: 8px 0; }
-        .receipt table { width: 100%; border-collapse: collapse; }
-        .receipt th, .receipt td { padding: 2px 0; }
-        .receipt .text-right { text-align: right; }
-        .receipt .text-left { text-align: left; }
-        .receipt .small { font-size: 10px; }
-        .receipt .bold { font-weight: bold; }
+        @page { size: 80mm auto; margin: 4mm; }
+        body { margin: 0; padding: 0; font-family: monospace, Arial, sans-serif; font-size: 10px; color: #000; background: #fff; }
+        .receipt { width: 76mm; margin: 0 auto; padding: 6px; }
+        .center { text-align: center; }
+        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+        .tiny { font-size: 9px; }
+        .small { font-size: 10px; }
+        .bold { font-weight: 700; }
+        .row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .row span { display: inline-block; }
+        .label { width: 46%; text-align: left; }
+        .qty, .rate, .amt { width: 18%; text-align: right; }
+        .value { width: 54%; text-align: right; }
       </style>
     `;
 
+    const billNumber = receiptData.orderNumber || `KM-${Date.now().toString().slice(-6)}`;
+    const tableNumber = receiptData.tableNumber || '96';
+    const customerName = receiptData.customerName || 'Walk-in';
+    const cashierName = receiptData.cashierName || (useAuthStore.getState().user?.name || 'Staff');
+    const taxableAmount = Math.max(0, receiptData.subtotal - receiptData.discount);
+    const rounding = receiptData.roundOff ?? 0;
+    const paidAmount = receiptData.grandTotal;
+    const changeDue = 0.00;
+    const totalGstIncluded = receiptData.tax;
+    const nonTaxableAmount = 0.00;
+    const invoiceDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    const invoiceTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
     const html = isKot
       ? `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-          <div class="center bold"><h2>${rName}</h2><p class="small">KITCHEN ORDER TICKET</p></div>
+          <div class="center bold"><div>${rName}</div><div class="small">KITCHEN ORDER TICKET</div></div>
           <div class="divider"></div>
-          <div class="small"><div>Token: ${receiptData.tokenNumber}</div><div>Type: ${receiptData.orderType}</div><div>${now}</div></div>
+          <div class="small"><div>Token: ${receiptData.tokenNumber}</div><div>Type: ${receiptData.orderType}</div><div>${invoiceDate} ${invoiceTime}</div></div>
           <div class="divider"></div>
-          <table>
-            ${receiptData.items.map((i: any) => `<tr><td class="text-left">${i.quantity} x ${i.name}</td></tr>`).join('')}
-          </table>
+          <div class="row small bold"><span class="label">DESCRIPTION</span><span class="qty">QTY</span><span class="rate">RATE</span><span class="amt">AMOUNT</span></div>
+          ${receiptData.items.map((i: any) => {
+        const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
+        return `<div class="row small"><span class="label">${label}</span><span class="qty">${i.quantity}</span><span class="rate">${curr}${i.unitPrice.toFixed(2)}</span><span class="amt">${curr}${i.totalPrice.toFixed(2)}</span></div>`;
+      }).join('')}
           <div class="divider"></div>
         </div></body></html>`
       : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-          <div class="center bold"><h2>${rName}</h2><p class="small">${rTagline}</p></div>
-          ${rAddr ? `<div class="center small">${rAddr}</div>` : ''}
-          ${rPhone ? `<div class="center small">Ph: ${rPhone}</div>` : ''}
-          ${rGst ? `<div class="center small">GST: ${rGst}</div>` : ''}
+          <div class="center bold"><div>${rName}</div><div class="small">${rTagline}</div></div>
+          ${rAddr ? `<div class="center tiny">${rAddr}</div>` : ''}
+          ${rPhone ? `<div class="center tiny">Phone: ${rPhone}</div>` : ''}
+          ${rGst ? `<div class="center tiny">GSTIN: ${rGst}</div>` : ''}
           <div class="divider"></div>
-          <div class="small"><div>Bill #: ${receiptData.orderNumber}</div><div>Token #: ${receiptData.tokenNumber}</div><div>${now}</div></div>
+          <div class="row small"><span class="label">BILL NO</span><span class="value">${billNumber}</span></div>
+          <div class="row small"><span class="label">DATE</span><span class="value">${invoiceDate}</span></div>
+          <div class="row small"><span class="label">TIME</span><span class="value">${invoiceTime}</span></div>
           <div class="divider"></div>
-          <table>
-            ${receiptData.items.map((i: any) => `
-              <tr>
-                <td class="text-left small">${i.name} (${i.variant})</td>
-              </tr>
-              <tr>
-                <td class="text-left small">${i.quantity} x ${curr}${i.unitPrice.toFixed(2)}</td>
-                <td class="text-right small">${curr}${i.totalPrice.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </table>
+          <div class="row small bold"><span class="col-desc">DESCRIPTION</span><span class="col-qty">QTY</span><span class="col-rate">RATE</span><span class="col-amt">AMOUNT</span></div>
+          ${receiptData.items.map((i: any) => {
+        const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
+        return `<div class="row small"><span class="label">${label}</span><span class="qty">${i.quantity}</span><span class="rate">${curr}${i.unitPrice.toFixed(2)}</span><span class="amt">${curr}${i.totalPrice.toFixed(2)}</span></div>`;
+      }).join('')}
           <div class="divider"></div>
-          <div class="small">
-            <div class="flex-row"><span>Subtotal</span><span class="text-right">${curr}${receiptData.subtotal.toFixed(2)}</span></div>
-            <div class="flex-row"><span>CGST @${cgst}%</span><span class="text-right">${curr}${(receiptData.tax / 2).toFixed(2)}</span></div>
-            <div class="flex-row"><span>SGST @${sgst}%</span><span class="text-right">${curr}${(receiptData.tax / 2).toFixed(2)}</span></div>
-            ${receiptData.discount > 0 ? `<div class="flex-row"><span>Discount</span><span class="text-right">-${curr}${receiptData.discount.toFixed(2)}</span></div>` : ''}
-            <div class="divider"></div>
-            <div class="flex-row bold"><span>Total</span><span class="text-right">${curr}${receiptData.grandTotal.toFixed(2)}</span></div>
-          </div>
+          <div class="row small"><span class="label">SUB TOTAL</span><span class="value">${curr}${receiptData.subtotal.toFixed(2)}</span></div>
+          <div class="row small"><span class="label">Discount (${tp}%)</span><span class="value">( - ${curr}${receiptData.discount.toFixed(2)} )</span></div>
+          <div class="row small"><span class="label">Taxable Amount</span><span class="value">${curr}${taxableAmount.toFixed(2)}</span></div>
+          <div class="row small"><span class="label">CGST @ ${cgst}%</span><span class="value">${curr}${(receiptData.tax / 2).toFixed(2)}</span></div>
+          <div class="row small"><span class="label">SGST @ ${sgst}%</span><span class="value">${curr}${(receiptData.tax / 2).toFixed(2)}</span></div>
+          <div class="row small"><span class="label">Rounding</span><span class="value">( + ${curr}${rounding.toFixed(2)} )</span></div>
           <div class="divider"></div>
-          <div class="center small">${rFooter}</div>
+          <div class="row bold"><span class="label">TOTAL</span><span class="value">${curr}${receiptData.grandTotal.toFixed(2)}</span></div>
+          <div class="divider"></div>
+          <div class="center bold">THANKS FOR YOUR VISIT!</div>
+          <div class="center tiny">HAPPY JOURNEY</div>
         </div></body></html>`;
-
     if ((window as any).electronAPI) {
       await (window as any).electronAPI.printReceipt(html);
     } else {

@@ -151,13 +151,13 @@ export const RestaurantView: React.FC = () => {
         dishes.map((d) =>
           d.id === editId
             ? {
-                ...d,
-                name: editName,
-                categoryId: Number(editCat),
-                priceQuarter: Number(editQtr || 0),
-                priceHalf: Number(editHalf || 0),
-                priceFull: Number(editFull)
-              }
+              ...d,
+              name: editName,
+              categoryId: Number(editCat),
+              priceQuarter: Number(editQtr || 0),
+              priceHalf: Number(editHalf || 0),
+              priceFull: Number(editFull)
+            }
             : d
         )
       );
@@ -223,25 +223,22 @@ export const RestaurantView: React.FC = () => {
       <div className="flex bg-olive-900 p-1 border border-gold-500/20 rounded-xl w-fit gap-1">
         <button
           onClick={() => setActiveTab('dishes')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'dishes' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
-          }`}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'dishes' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
+            }`}
         >
           <Utensils className="w-4 h-4" /> Dishes & Menu
         </button>
         <button
           onClick={() => setActiveTab('pnl')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'pnl' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
-          }`}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'pnl' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
+            }`}
         >
           <TrendingUp className="w-4 h-4" /> Profit & Loss Statement
         </button>
         <button
           onClick={() => setActiveTab('about')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${
-            activeTab === 'about' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
-          }`}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'about' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
+            }`}
         >
           <Store className="w-4 h-4" /> About Kish Mandhi
         </button>
@@ -325,9 +322,8 @@ export const RestaurantView: React.FC = () => {
                 <button
                   key={p.id}
                   onClick={() => setPeriod(p.id as PnLPeriod)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    period === p.id ? 'bg-gold-500 text-olive-950 font-bold shadow' : 'text-olive-300'
-                  }`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${period === p.id ? 'bg-gold-500 text-olive-950 font-bold shadow' : 'text-olive-300'
+                    }`}
                 >
                   {p.label}
                 </button>
@@ -375,6 +371,46 @@ export const RestaurantView: React.FC = () => {
             <div className="bg-olive-900 border border-gold-500/30 rounded-2xl p-5">
               <span className="text-xs text-olive-300 font-medium">Net Profit Margin Rate</span>
               <h3 className="text-2xl font-bold text-white mt-1">{pnlMargin}%</h3>
+            </div>
+          </div>
+
+          <div className="bg-olive-900 border border-gold-500/30 rounded-2xl p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h4 className="text-base font-bold text-gold-500">Invoice Bills</h4>
+                <p className="text-xs text-olive-300">Showing {filteredOrders.length} completed bill{filteredOrders.length === 1 ? '' : 's'} for the selected period.</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-olive-800 text-olive-300 font-semibold border-b border-gold-500/20">
+                  <tr>
+                    <th className="p-3">Bill #</th>
+                    <th className="p-3">Token</th>
+                    <th className="p-3">Amount</th>
+                    <th className="p-3">Payment</th>
+                    <th className="p-3">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gold-500/10">
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-olive-300">No bills found for this period.</td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-olive-800/30 transition-colors">
+                        <td className="p-3 font-semibold text-white">{order.orderNumber || `KM-${order.id}`}</td>
+                        <td className="p-3 text-olive-300">#{order.tokenNumber || '-'}</td>
+                        <td className="p-3 font-bold text-gold-400">₹{Number(order.grandTotal || order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-3 text-emerald-300">{order.paymentMode || order.payment_mode || 'Cash'}</td>
+                        <td className="p-3 text-olive-300">{new Date(order.createdAt || order.orderDate || order.created_at || Date.now()).toLocaleDateString('en-IN')}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
