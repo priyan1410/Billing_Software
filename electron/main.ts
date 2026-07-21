@@ -81,6 +81,12 @@ ipcMain.handle('menu:deleteItem', async (_evt: any, id: any) => {
   return { success: true };
 });
 
+ipcMain.handle('orders:getNextNumber', async () => {
+  const nextSeq = db.orders.length + 1;
+  const seqStr = String(nextSeq).padStart(3, '0');
+  return { success: true, nextOrderNumber: `KMIV-${seqStr}` };
+});
+
 ipcMain.handle('orders:create', async (_evt: any, orderData: any) => {
   const nextSeq = db.orders.length + 1;
   const seqStr = String(nextSeq).padStart(3, '0');

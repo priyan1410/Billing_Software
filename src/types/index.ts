@@ -129,6 +129,15 @@ export interface RestaurantDetails {
   currency: string;
   headerNote?: string;
   footerNote?: string;
+  printShowLogo?: boolean;
+  printShowAddress?: boolean;
+  printShowPhone?: boolean;
+  printShowGst?: boolean;
+  printShowHeaderNote?: boolean;
+  printShowTime?: boolean;
+  printShowTaxBreakdown?: boolean;
+  printShowRoundOff?: boolean;
+  printShowFooterNote?: boolean;
 }
 
 export interface AuthResponse {

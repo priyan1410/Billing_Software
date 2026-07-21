@@ -134,14 +134,19 @@ ipcMain.handle('menu:deleteItem', async (evt, id) => {
 // ─────────────────────────────────────────────────────────────
 // ORDERS
 // ─────────────────────────────────────────────────────────────
-ipcMain.handle('orders:create', async (evt, orderData) => {
+ipcMain.handle('orders:getNextNumber', async () => {
   const maxIdRes = await query('SELECT MAX(id) as maxId FROM orders');
   const nextSeq = ((maxIdRes.data && maxIdRes.data[0] && maxIdRes.data[0].maxId) || 0) + 1;
   const seqStr = String(nextSeq).padStart(3, '0');
+  return { success: true, nextOrderNumber: `KMIV-${seqStr}` };
+});
 
-  const orderNumber = orderData.order_number || orderData.orderNumber || `KMIV-${seqStr}`;
+ipcMain.handle('orders:create', async (evt, orderData) => {
+  const maxIdRes = await query('SELECT MAX(id) as maxId FROM orders');
+  const nextSeq = ((maxIdRes.data && maxIdRes.data[0] && maxIdRes.data[0].maxId) || 0) + 1;
+  let orderNumber = orderData.order_number || orderData.orderNumber || `KMIV-${String(nextSeq).padStart(3, '0')}`;
 
-  const insertOrder = await query(
+  let insertOrder = await query(
     `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, 'Completed')`,
     [
@@ -154,6 +159,27 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
       orderData.payment_mode || orderData.paymentMode || 'Cash'
     ]
   );
+
+  // If duplicate entry error occurs on order_number, fallback to max(id)+1 sequence
+  if (!insertOrder.success && String(insertOrder.error).includes('Duplicate entry')) {
+    const maxRetry = await query('SELECT MAX(id) as maxId FROM orders');
+    const seqRetry = ((maxRetry.data && maxRetry.data[0] && maxRetry.data[0].maxId) || 0) + 1;
+    orderNumber = `KMIV-${String(seqRetry).padStart(3, '0')}`;
+
+    insertOrder = await query(
+      `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+      [
+        orderNumber,
+        orderData.order_type || orderData.orderType || 'Dine-In',
+        Number(orderData.subtotal || 0),
+        Number(orderData.tax_amount || orderData.taxAmount || 0),
+        Number(orderData.discount_amount || orderData.discountAmount || 0),
+        Number(orderData.grand_total || orderData.grandTotal || 0),
+        orderData.payment_mode || orderData.paymentMode || 'Cash'
+      ]
+    );
+  }
 
   if (!insertOrder.success) return { success: false, message: insertOrder.error };
   const orderId = insertOrder.data.insertId;

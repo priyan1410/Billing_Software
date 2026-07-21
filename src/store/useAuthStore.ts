@@ -13,7 +13,16 @@ export const defaultRestaurant: RestaurantDetails = {
   taxRate: 5.0,
   currency: '₹',
   headerNote: 'Welcome to Kish Mandhi - Arabic Grill & Dining',
-  footerNote: 'Thank you for visiting! Please visit again.'
+  footerNote: 'Thank you for visiting! Please visit again.',
+  printShowLogo: true,
+  printShowAddress: true,
+  printShowPhone: true,
+  printShowGst: true,
+  printShowHeaderNote: true,
+  printShowTime: true,
+  printShowTaxBreakdown: true,
+  printShowRoundOff: true,
+  printShowFooterNote: true
 };
 
 interface AuthState {

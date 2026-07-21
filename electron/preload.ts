@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Orders & POS Billing
   createOrder: (orderData: any) => ipcRenderer.invoke('orders:create', orderData),
+  getNextOrderNumber: () => ipcRenderer.invoke('orders:getNextNumber'),
   getOrders: () => ipcRenderer.invoke('orders:getAll'),
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),
 

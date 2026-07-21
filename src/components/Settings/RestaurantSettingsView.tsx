@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Building2, Receipt, Phone, Mail, MapPin, Percent,
   FileText, Save, CheckCircle2, AlertCircle, User,
-  LogOut, Shield, Store, Edit3, RefreshCw
+  LogOut, Shield, Store, Edit3, RefreshCw, Printer
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { RestaurantDetails } from '../../types';
@@ -59,7 +59,7 @@ export const RestaurantSettingsView: React.FC = () => {
     setIsDirty(false);
   }, [restaurantDetails]);
 
-  const update = (key: keyof RestaurantDetails | 'taxRateStr', value: string) => {
+  const update = (key: keyof RestaurantDetails | 'taxRateStr', value: string | boolean) => {
     setForm(prev => ({ ...prev, [key]: value }));
     setIsDirty(true);
     setSaveStatus('idle');
@@ -79,7 +79,16 @@ export const RestaurantSettingsView: React.FC = () => {
       taxRate: Number(form.taxRateStr) || 5,
       currency: form.currency,
       headerNote: form.headerNote,
-      footerNote: form.footerNote
+      footerNote: form.footerNote,
+      printShowLogo: form.printShowLogo ?? true,
+      printShowAddress: form.printShowAddress ?? true,
+      printShowPhone: form.printShowPhone ?? true,
+      printShowGst: form.printShowGst ?? true,
+      printShowHeaderNote: form.printShowHeaderNote ?? true,
+      printShowTime: form.printShowTime ?? true,
+      printShowTaxBreakdown: form.printShowTaxBreakdown ?? true,
+      printShowRoundOff: form.printShowRoundOff ?? true,
+      printShowFooterNote: form.printShowFooterNote ?? true
     };
 
     const res = await updateRestaurantDetails(payload);
@@ -213,7 +222,7 @@ export const RestaurantSettingsView: React.FC = () => {
         </SectionCard>
 
         {/* Receipt Customization */}
-        <SectionCard title="Receipt Customization" icon={<FileText className="w-5 h-5" />} subtitle="Custom text printed on top and bottom of receipts">
+        <SectionCard title="Receipt Notes" icon={<FileText className="w-5 h-5" />} subtitle="Custom text printed on top and bottom of receipts">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label htmlFor="s-header" className="block text-[11px] font-semibold text-amber-300/70 uppercase tracking-widest mb-1.5">Receipt Header Note</label>
@@ -223,6 +232,36 @@ export const RestaurantSettingsView: React.FC = () => {
               <label htmlFor="s-footer" className="block text-[11px] font-semibold text-amber-300/70 uppercase tracking-widest mb-1.5">Receipt Footer Note</label>
               <textarea id="s-footer" value={form.footerNote || ''} onChange={(e) => update('footerNote', e.target.value)} placeholder="e.g. Thank you for dining with us!" rows={2} className="w-full bg-white/5 border border-white/10 text-white placeholder-white/20 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/60 transition-all resize-none" />
             </div>
+          </div>
+        </SectionCard>
+
+        {/* Bill Print Customization */}
+        <SectionCard title="Bill Print Customization" icon={<Printer className="w-5 h-5" />} subtitle="Select which fields to include or hide on printed thermal bills">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              { id: 'printShowLogo', label: 'Show Restaurant Logo Header', value: form.printShowLogo ?? true },
+              { id: 'printShowAddress', label: 'Show Restaurant Address', value: form.printShowAddress ?? true },
+              { id: 'printShowPhone', label: 'Show Phone Number', value: form.printShowPhone ?? true },
+              { id: 'printShowGst', label: 'Show GSTIN / Tax Number', value: form.printShowGst ?? true },
+              { id: 'printShowHeaderNote', label: 'Show Receipt Header Note', value: form.printShowHeaderNote ?? true },
+              { id: 'printShowTime', label: 'Show Print Time', value: form.printShowTime ?? true },
+              { id: 'printShowTaxBreakdown', label: 'Show Tax Breakdown (CGST / SGST)', value: form.printShowTaxBreakdown ?? true },
+              { id: 'printShowRoundOff', label: 'Show Round Off Amount', value: form.printShowRoundOff ?? true },
+              { id: 'printShowFooterNote', label: 'Show Footer Note & Terms', value: form.printShowFooterNote ?? true }
+            ].map((item) => (
+              <label
+                key={item.id}
+                className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-colors select-none"
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(item.value)}
+                  onChange={(e) => update(item.id as any, e.target.checked)}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+                <span className="text-xs font-semibold text-white">{item.label}</span>
+              </label>
+            ))}
           </div>
         </SectionCard>
 

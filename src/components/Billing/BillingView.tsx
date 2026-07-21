@@ -34,12 +34,13 @@ const ConfirmOrderModal: React.FC<{
   grandTotal: number;
   taxRate: number;
   curr: string;
+  billNumber: string;
   restaurantDetails?: any;
   onSaveOnly: () => void;
   onPrintAndSave: () => void;
   onCancel: () => void;
   isLoading: boolean;
-}> = ({ cart, orderType, paymentMode, subtotal, tax, discount, grandTotal, taxRate, curr, restaurantDetails, onSaveOnly, onPrintAndSave, onCancel, isLoading }) => {
+}> = ({ cart, orderType, paymentMode, subtotal, tax, discount, grandTotal, taxRate, curr, billNumber, restaurantDetails, onSaveOnly, onPrintAndSave, onCancel, isLoading }) => {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -58,9 +59,16 @@ const ConfirmOrderModal: React.FC<{
   const rawPhone = restaurantDetails?.phone || '+91 98765 43210';
   const phone = rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`}`;
   const rawGst = restaurantDetails?.gstNumber || '33ABCDE1234F1Z5';
-  const gstin = rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`;
+  const printShowLogo = restaurantDetails?.printShowLogo ?? true;
+  const printShowAddress = restaurantDetails?.printShowAddress ?? true;
+  const printShowPhone = restaurantDetails?.printShowPhone ?? true;
+  const printShowGst = restaurantDetails?.printShowGst ?? true;
+  const printShowHeaderNote = restaurantDetails?.printShowHeaderNote ?? true;
+  const printShowTime = restaurantDetails?.printShowTime ?? true;
+  const printShowTaxBreakdown = restaurantDetails?.printShowTaxBreakdown ?? true;
+  const printShowRoundOff = restaurantDetails?.printShowRoundOff ?? true;
+  const printShowFooterNote = restaurantDetails?.printShowFooterNote ?? true;
 
-  const billNumber = 'KMIV-' + Math.floor(100 + Math.random() * 900);
   const taxableAmount = Math.max(0, subtotal - discount);
   const cgstRate = (taxRate / 2).toFixed(1);
   const sgstRate = (taxRate / 2).toFixed(1);
@@ -92,41 +100,37 @@ const ConfirmOrderModal: React.FC<{
         <div className="flex-1 overflow-y-auto p-6 bg-slate-950/80 flex justify-center">
           <div className="w-full max-w-[370px] bg-white text-black font-mono shadow-2xl p-6 relative rounded-t-sm select-text border border-slate-300 text-left">
 
-            {/* Top Logo SVG */}
-            <div className="flex justify-center mb-1">
-              <svg viewBox="0 0 240 70" className="w-44 h-12">
-                {/* Left Flourish */}
-                <path d="M 15 42 C 30 27, 50 47, 70 37 Q 48 32, 25 44" fill="none" stroke="#000" strokeWidth="1.8" strokeLinecap="round" />
-                <circle cx="15" cy="42" r="2.5" fill="#000" />
-                <path d="M 35 36 C 43 26, 55 30, 63 37" fill="none" stroke="#000" strokeWidth="1.2" />
-
-                {/* Right Flourish */}
-                <path d="M 225 42 C 210 27, 190 47, 170 37 Q 192 32, 215 44" fill="none" stroke="#000" strokeWidth="1.8" strokeLinecap="round" />
-                <circle cx="225" cy="42" r="2.5" fill="#000" />
-                <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" strokeWidth="1.2" />
-
-                {/* Crown */}
-                <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000" />
-                <circle cx="106" cy="6" r="2" fill="#000" />
-                <circle cx="120" cy="4" r="2" fill="#000" />
-                <circle cx="134" cy="6" r="2" fill="#000" />
-
-                {/* Spoon & Fork Crossed */}
-                <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000" />
-                <path d="M 106 30 L 132 56" stroke="#000" strokeWidth="3" strokeLinecap="round" />
-                <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" />
-                <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </div>
+            {/* Receipt Header SVG Illustration */}
+            {printShowLogo && (
+              <div className="flex justify-center mb-1">
+                <svg viewBox="0 0 300 60" className="w-48 h-10 text-black">
+                  <circle cx="75" cy="42" r="2.5" fill="#000" />
+                  <path d="M 95 36 C 103 26, 115 30, 123 37" fill="none" stroke="#000" strokeWidth="1.2" />
+                  <circle cx="225" cy="42" r="2.5" fill="#000" />
+                  <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" strokeWidth="1.2" />
+                  <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000" />
+                  <circle cx="106" cy="6" r="2" fill="#000" />
+                  <circle cx="120" cy="4" r="2" fill="#000" />
+                  <circle cx="134" cy="6" r="2" fill="#000" />
+                  <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000" />
+                  <path d="M 106 30 L 132 56" stroke="#000" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+            )}
 
             {/* Restaurant Title */}
             <div className="text-center">
               <h2 className="text-xl font-extrabold tracking-tight uppercase leading-tight font-sans text-black">
                 {storeName}
               </h2>
-              {address && <p className="text-[11px] text-slate-900 font-medium mt-0.5">{address}</p>}
-              {phone && <p className="text-[11px] text-slate-900 font-medium">{phone}</p>}
-              {gstin && <p className="text-[11px] text-slate-900 font-medium">{gstin}</p>}
+              {printShowAddress && address && <p className="text-[11px] text-slate-900 font-medium mt-0.5">{address}</p>}
+              {printShowPhone && phone && <p className="text-[11px] text-slate-900 font-medium">{phone}</p>}
+              {printShowGst && gstin && <p className="text-[11px] text-slate-900 font-medium">{gstin}</p>}
+              {printShowHeaderNote && restaurantDetails?.headerNote && (
+                <p className="text-[10px] text-slate-700 italic font-semibold mt-1">{restaurantDetails.headerNote}</p>
+              )}
             </div>
 
             {/* Dashed Line */}
@@ -143,9 +147,11 @@ const ConfirmOrderModal: React.FC<{
                 <span>Bill No &nbsp;: {billNumber}</span>
                 <span>Date &nbsp;: {invoiceDate}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Time &nbsp;&nbsp;&nbsp;: {invoiceTime}</span>
-              </div>
+              {printShowTime && (
+                <div className="flex justify-between">
+                  <span>Time &nbsp;&nbsp;&nbsp;: {invoiceTime}</span>
+                </div>
+              )}
             </div>
 
             {/* Dashed Line */}
@@ -161,14 +167,16 @@ const ConfirmOrderModal: React.FC<{
 
             {/* Items List */}
             <div className="space-y-1.5 my-2 text-[11px]">
-              {cart.map((item, idx) => {
+              {(cart || []).map((item, idx) => {
                 const label = `${item.name}${item.variant ? ` (${item.variant})` : ''}`;
+                const unitP = Number(item.unitPrice || item.price || 0);
+                const totalP = Number(item.totalPrice || (unitP * (item.quantity || 1)));
                 return (
                   <div key={idx} className="grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 text-[11px] leading-tight items-baseline">
                     <span className="font-semibold text-black break-words">{label}</span>
-                    <span className="text-center">{item.quantity}</span>
-                    <span className="text-right">{item.unitPrice.toFixed(2)}</span>
-                    <span className="text-right font-semibold">{item.totalPrice.toFixed(2)}</span>
+                    <span className="text-center">{item.quantity || 1}</span>
+                    <span className="text-right">{unitP.toFixed(2)}</span>
+                    <span className="text-right font-semibold">{totalP.toFixed(2)}</span>
                   </div>
                 );
               })}
@@ -181,13 +189,13 @@ const ConfirmOrderModal: React.FC<{
             <div className="space-y-1 text-[11px]">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>{subtotal.toFixed(2)}</span>
+                <span>{Number(subtotal || 0).toFixed(2)}</span>
               </div>
 
-              {discount > 0 && (
+              {Number(discount || 0) > 0 && (
                 <div className="flex justify-between">
                   <span>Discount</span>
-                  <span>-{discount.toFixed(2)}</span>
+                  <span>-{Number(discount || 0).toFixed(2)}</span>
                 </div>
               )}
 
@@ -197,20 +205,28 @@ const ConfirmOrderModal: React.FC<{
 
               <div className="flex justify-between">
                 <span>Taxable Amount</span>
-                <span>{taxableAmount.toFixed(2)}</span>
+                <span>{Number(taxableAmount || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>CGST ({cgstRate}%)</span>
-                <span>{cgstAmt.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>SGST ({sgstRate}%)</span>
-                <span>{sgstAmt.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Round Off</span>
-                <span>{roundOff >= 0 ? `${roundOff.toFixed(2)}` : `${roundOff.toFixed(2)}`}</span>
-              </div>
+
+              {printShowTaxBreakdown && (
+                <>
+                  <div className="flex justify-between">
+                    <span>CGST ({cgstRate}%)</span>
+                    <span>{Number(cgstAmt || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>SGST ({sgstRate}%)</span>
+                    <span>{Number(sgstAmt || 0).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+
+              {printShowRoundOff && (
+                <div className="flex justify-between">
+                  <span>Round Off</span>
+                  <span>{Number(roundOff || 0).toFixed(2)}</span>
+                </div>
+              )}
             </div>
 
             {/* Dashed Line */}
@@ -219,28 +235,29 @@ const ConfirmOrderModal: React.FC<{
             {/* Grand Total Box with double line */}
             <div className="border-y-[3px] border-double border-black py-1.5 my-2 flex justify-between items-center text-sm font-black tracking-wide">
               <span>GRAND TOTAL</span>
-              <span className="text-base">{curr} {finalTotal.toFixed(2)}</span>
+              <span className="text-base">{curr} {Number(finalTotal || 0).toFixed(2)}</span>
             </div>
 
             {/* Dashed Line */}
             <div className="border-b border-dashed border-black my-2"></div>
 
             {/* Footer Text */}
-            <div className="text-center mt-3 pt-1">
-              <div className="font-serif italic font-bold text-sm text-black leading-snug">
-                Thank You!<br />
-                Visit Again.
+            {printShowFooterNote && (
+              <div className="text-center mt-3 pt-1">
+                <div className="font-serif italic font-bold text-sm text-black leading-snug">
+                  Thank You!<br />
+                  Visit Again.
+                </div>
+                <div className="flex items-center justify-center gap-2 my-2">
+                  <div className="h-[1px] bg-black w-10"></div>
+                  <span className="text-[10px]">★</span>
+                  <div className="h-[1px] bg-black w-10"></div>
+                </div>
+                <div className="text-[10px] text-slate-800 leading-tight">
+                  {restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
+                </div>
               </div>
-              <div className="flex items-center justify-center gap-2 my-2">
-                <div className="h-[1px] bg-black w-10"></div>
-                <span className="text-[10px]">★</span>
-                <div className="h-[1px] bg-black w-10"></div>
-              </div>
-              <div className="text-[10px] text-slate-800 leading-tight">
-                Goods once sold cannot be returned.<br />
-                Please visit again.
-              </div>
-            </div>
+            )}
 
             {/* Sawtooth Jagged Bottom */}
             <div
@@ -297,11 +314,24 @@ export const BillingView: React.FC = () => {
   const [selectedTokenNum, setSelectedTokenNum] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [nextBillNumber, setNextBillNumber] = useState<string>('KMIV-001');
 
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 5;
 
+  const fetchNextBillNumber = async () => {
+    if ((window as any).electronAPI?.getNextOrderNumber) {
+      const res = await (window as any).electronAPI.getNextOrderNumber();
+      if (res.success && res.nextOrderNumber) {
+        setNextBillNumber(res.nextOrderNumber);
+        return res.nextOrderNumber;
+      }
+    }
+    return nextBillNumber;
+  };
+
   useEffect(() => { loadDishes(); }, [activeCategory]);
+  useEffect(() => { fetchNextBillNumber(); }, []);
 
   const loadDishes = async () => {
     if ((window as any).electronAPI) {
@@ -338,14 +368,17 @@ export const BillingView: React.FC = () => {
     if (target) loadTokenToCart(target, dishes);
   };
 
-  const handleCheckoutClick = () => {
+  const handleCheckoutClick = async () => {
     if (cart.length === 0) { alert('Cart is empty! Add items first.'); return; }
+    await fetchNextBillNumber();
     setShowConfirmModal(true);
   };
 
   const handleSaveOrder = async (shouldPrint = true) => {
     setIsCheckingOut(true);
+    const currentBillNumber = await fetchNextBillNumber();
     const payload = {
+      order_number: currentBillNumber,
       order_type: orderType,
       subtotal,
       tax_amount: taxAmt,
@@ -360,6 +393,7 @@ export const BillingView: React.FC = () => {
       customer_name: 'Walk-in',
     };
     const base = {
+      orderNumber: currentBillNumber,
       items: [...cart],
       subtotal,
       tax: taxAmt,
@@ -377,16 +411,14 @@ export const BillingView: React.FC = () => {
     if ((window as any).electronAPI) {
       const res = await (window as any).electronAPI.createOrder(payload);
       if (res.success) {
-        createdData = { ...res.data, ...base };
+        createdData = { ...base, ...res.data };
       } else {
         alert(res.message || 'Order failed. Try again.');
         setIsCheckingOut(false);
         return;
       }
     } else {
-      const fallbackSeq = Math.floor(100 + Math.random() * 900);
       createdData = {
-        orderNumber: `KMIV-${fallbackSeq}`,
         orderDate: payload.order_date,
         dueDate: payload.due_date,
         shippingCharges: payload.shipping_charges,
@@ -402,6 +434,7 @@ export const BillingView: React.FC = () => {
     setShowConfirmModal(false);
     clearCart();
     setIsCheckingOut(false);
+    fetchNextBillNumber();
   };
 
   const triggerPrintDirect = async (data: any, isKot = false) => {
@@ -430,6 +463,16 @@ export const BillingView: React.FC = () => {
     const tp = rd?.taxRate ?? 5;
     const cgstRate = (tp / 2).toFixed(1);
     const sgstRate = (tp / 2).toFixed(1);
+
+    const printShowLogo = rd?.printShowLogo ?? true;
+    const printShowAddress = rd?.printShowAddress ?? true;
+    const printShowPhone = rd?.printShowPhone ?? true;
+    const printShowGst = rd?.printShowGst ?? true;
+    const printShowHeaderNote = rd?.printShowHeaderNote ?? true;
+    const printShowTime = rd?.printShowTime ?? true;
+    const printShowTaxBreakdown = rd?.printShowTaxBreakdown ?? true;
+    const printShowRoundOff = rd?.printShowRoundOff ?? true;
+    const printShowFooterNote = rd?.printShowFooterNote ?? true;
 
     const receiptStyles = `
       <style>
@@ -471,7 +514,7 @@ export const BillingView: React.FC = () => {
         </div></body></html>`
       : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
           <!-- Logo SVG -->
-          <div class="center" style="margin-bottom: 4px;">
+          ${printShowLogo ? `<div class="center" style="margin-bottom: 4px;">
             <svg viewBox="0 0 240 70" width="160" height="46">
               <path d="M 15 42 C 30 27, 50 47, 70 37 Q 48 32, 25 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
               <circle cx="15" cy="42" r="2.5" fill="#000"/>
@@ -488,13 +531,14 @@ export const BillingView: React.FC = () => {
               <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
               <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" stroke-width="2" stroke-linecap="round"/>
             </svg>
-          </div>
+          </div>` : ''}
 
           <!-- Restaurant Name & Details -->
           <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-          ${rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
-          ${rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
-          ${rGst ? `<div class="center" style="font-size: 10.5px;">${rGst}</div>` : ''}
+          ${printShowAddress && rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
+          ${printShowPhone && rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
+          ${printShowGst && rGst ? `<div class="center" style="font-size: 10.5px;">${rGst}</div>` : ''}
+          ${printShowHeaderNote && rDetails?.headerNote ? `<div class="center" style="font-size: 10px; font-style: italic; margin-top: 2px;">${rDetails.headerNote}</div>` : ''}
           
           <div class="divider"></div>
           <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">*** TAX INVOICE ***</div>
@@ -504,9 +548,9 @@ export const BillingView: React.FC = () => {
               <span>Bill No &nbsp;: ${billNumber}</span>
               <span>Date &nbsp;: ${formattedDate}</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
+            ${printShowTime ? `<div style="display: flex; justify-content: space-between;">
               <span>Time &nbsp;&nbsp;&nbsp;: ${formattedTime}</span>
-            </div>
+            </div>` : ''}
           </div>
           
           <div class="divider"></div>
@@ -520,9 +564,11 @@ export const BillingView: React.FC = () => {
           </div>
           
           <!-- Items List -->
-          ${data.items.map((i: any) => {
+          ${(data.items || []).map((i: any) => {
         const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
-        return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity}</span><span class="col-rate">${i.unitPrice.toFixed(2)}</span><span class="col-amt">${i.totalPrice.toFixed(2)}</span></div>`;
+        const uPrice = Number(i.unitPrice || i.price || 0).toFixed(2);
+        const tPrice = Number(i.totalPrice || (uPrice * (i.quantity || 1))).toFixed(2);
+        return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span><span class="col-rate">${uPrice}</span><span class="col-amt">${tPrice}</span></div>`;
       }).join('')}
           
           <div class="divider"></div>
@@ -533,9 +579,11 @@ export const BillingView: React.FC = () => {
             ${data.discount > 0 ? `<div class="row"><span>Discount</span><span>-${data.discount.toFixed(2)}</span></div>` : ''}
             <div style="display: flex; justify-content: flex-end; margin: 3px 0;"><div style="border-top: 1px dashed #000; width: 80px;"></div></div>
             <div class="row"><span>Taxable Amount</span><span>${taxableAmount.toFixed(2)}</span></div>
+            ${printShowTaxBreakdown ? `
             <div class="row"><span>CGST (${cgstRate}%)</span><span>${((data.tax || 0) / 2).toFixed(2)}</span></div>
             <div class="row"><span>SGST (${sgstRate}%)</span><span>${((data.tax || 0) / 2).toFixed(2)}</span></div>
-            <div class="row"><span>Round Off</span><span>${rounding >= 0 ? rounding.toFixed(2) : rounding.toFixed(2)}</span></div>
+            ` : ''}
+            ${printShowRoundOff ? `<div class="row"><span>Round Off</span><span>${rounding.toFixed(2)}</span></div>` : ''}
           </div>
           
           <div class="divider"></div>
@@ -549,7 +597,7 @@ export const BillingView: React.FC = () => {
           <div class="divider"></div>
           
           <!-- Footer -->
-          <div class="center" style="margin-top: 8px;">
+          ${printShowFooterNote ? `<div class="center" style="margin-top: 8px;">
             <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: bold; font-size: 14px;">
               Thank You!<br/>Visit Again.
             </div>
@@ -559,10 +607,9 @@ export const BillingView: React.FC = () => {
               <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
             </div>
             <div style="font-size: 9.5px; line-height: 1.3;">
-              Goods once sold cannot be returned.<br/>
-              Please visit again.
+              ${rDetails?.footerNote || 'Goods once sold cannot be returned.'}
             </div>
-          </div>
+          </div>` : ''}
         </div></body></html>`;
     if ((window as any).electronAPI) {
       await (window as any).electronAPI.printReceipt(html);
@@ -729,7 +776,7 @@ export const BillingView: React.FC = () => {
         <ConfirmOrderModal
           cart={cart} orderType={orderType} paymentMode={paymentMode}
           subtotal={subtotal} tax={taxAmt} discount={discount} grandTotal={grandTotal}
-          taxRate={taxRate} curr={curr} restaurantDetails={restaurantDetails}
+          taxRate={taxRate} curr={curr} billNumber={nextBillNumber} restaurantDetails={restaurantDetails}
           onSaveOnly={() => handleSaveOrder(false)}
           onPrintAndSave={() => handleSaveOrder(true)}
           onCancel={() => setShowConfirmModal(false)}
