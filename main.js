@@ -350,11 +350,8 @@ ipcMain.handle('expenses:delete', async (evt, id) => {
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('tokens:getNextSeq', async () => {
   const currentSeq = Number(tokenState.lastTokenSeq || 0);
-  const nextSeq = currentSeq + 1;
   const tokenNumber = getNextTokenNumber(currentSeq);
-  tokenState.lastTokenSeq = nextSeq;
-  persistTokenState();
-  return { success: true, nextSeq, tokenNumber };
+  return { success: true, nextSeq: currentSeq + 1, tokenNumber };
 });
 
 ipcMain.handle('tokens:getActive', async () => {

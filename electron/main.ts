@@ -268,11 +268,8 @@ ipcMain.handle('receipt:print', async (_evt: any, receiptHtml: string) => {
 
 ipcMain.handle('tokens:getNextSeq', async () => {
   const currentSeq = Number(db.lastTokenSeq || 0);
-  const nextSeq = currentSeq + 1;
   const tokenNumber = getNextTokenNumber(currentSeq);
-  db.lastTokenSeq = nextSeq;
-  persistTokenState();
-  return { success: true, nextSeq, tokenNumber };
+  return { success: true, nextSeq: currentSeq + 1, tokenNumber };
 });
 
 ipcMain.handle('tokens:save', async (_evt: any, tokenData: any) => {
