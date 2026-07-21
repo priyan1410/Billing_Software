@@ -6,7 +6,33 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "npx vite build && electron ."
+    "start": "npx vite build && electron .",
+    "dist": "npx vite build && npx electron-builder --win"
+  },
+  "build": {
+    "appId": "com.kishmandhi.billing",
+    "productName": "Kish Mandhi Billing",
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "db/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
