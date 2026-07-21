@@ -375,6 +375,9 @@ export const BillingView: React.FC = () => {
   const handleSaveOrder = async (shouldPrint = true) => {
     setIsCheckingOut(true);
     const currentBillNumber = await fetchNextBillNumber();
+    const orderDate = new Date();
+    const orderDateString = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
+
     const payload = {
       order_number: currentBillNumber,
       order_type: orderType,
@@ -385,7 +388,7 @@ export const BillingView: React.FC = () => {
       payment_mode: paymentMode,
       token_number: selectedTokenNum || undefined,
       items: cart,
-      order_date: new Date().toISOString().split('T')[0],
+      order_date: orderDateString,
       due_date: '',
       shipping_charges: 0,
       round_off: 0,

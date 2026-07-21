@@ -178,35 +178,47 @@ export const RestaurantView: React.FC = () => {
     }
   };
 
+  // Helper for local YYYY-MM-DD string
+  const toLocalDateString = (val: any): string => {
+    if (!val) return '';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val).split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Timeline Filter Math
   const filterItemByPeriod = (item: any, dateKey: string) => {
     const rawVal = item ? item[dateKey] : null;
-    let valStr = '';
-    if (rawVal) {
-      if (typeof rawVal === 'string') valStr = rawVal;
-      else if (rawVal instanceof Date) valStr = rawVal.toISOString();
-      else valStr = String(rawVal);
-    }
-    const todayStr = new Date().toISOString().split('T')[0];
+    if (!rawVal) return false;
+
+    const itemDateStr = toLocalDateString(rawVal);
+    const todayStr = toLocalDateString(new Date());
+
     if (period === 'all') return true;
 
     if (period === 'today') {
-      return valStr.split('T')[0] === todayStr;
+      return itemDateStr === todayStr;
     }
     if (period === 'week') {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      return new Date(rawVal || Date.now()) >= sevenDaysAgo;
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      const itemDate = new Date(rawVal);
+      return itemDate >= sevenDaysAgo;
     }
     if (period === 'month') {
-      return valStr.substring(0, 7) === todayStr.substring(0, 7);
+      return itemDateStr.substring(0, 7) === todayStr.substring(0, 7);
     }
     if (period === 'year') {
-      return valStr.substring(0, 4) === todayStr.substring(0, 4);
+      return itemDateStr.substring(0, 4) === todayStr.substring(0, 4);
     }
     if (period === 'custom') {
-      if (!startDate || !endDate) return true;
-      const d = valStr.split('T')[0];
-      return d >= startDate && d <= endDate;
+      if (!startDate && !endDate) return true;
+      if (startDate && itemDateStr < startDate) return false;
+      if (endDate && itemDateStr > endDate) return false;
+      return true;
     }
     return true;
   };

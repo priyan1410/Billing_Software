@@ -149,13 +149,21 @@ ipcMain.handle('orders:getAll', async () => {
 
 ipcMain.handle('orders:getByDateRange', async (_evt: any, { startDate, endDate }: any) => {
   let filtered = db.orders;
+  // Compare using local YYYY-MM-DD strings to avoid timezone shifts
+  const toLocalDateOnly = (val: any) => {
+    if (!val) return '';
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   if (startDate) {
-    const start = new Date(startDate).setHours(0, 0, 0, 0);
-    filtered = filtered.filter((o: any) => new Date(o.createdAt).getTime() >= start);
+    const s = String(startDate);
+    filtered = filtered.filter((o: any) => toLocalDateOnly(o.createdAt) >= s);
   }
   if (endDate) {
-    const end = new Date(endDate).setHours(23, 59, 59, 999);
-    filtered = filtered.filter((o: any) => new Date(o.createdAt).getTime() <= end);
+    const e = String(endDate);
+    filtered = filtered.filter((o: any) => toLocalDateOnly(o.createdAt) <= e);
   }
   return { success: true, data: filtered };
 });
@@ -181,16 +189,23 @@ ipcMain.handle('dashboard:getStats', async () => {
 ipcMain.handle('dashboard:getPnLSummary', async (_evt: any, { startDate, endDate }: any) => {
   let filteredOrders = db.orders;
   let filteredExpenses = db.expenses;
+  // Use local YYYY-MM-DD comparison to avoid timezone parsing differences
+  const toLocalDateOnly = (val: any) => {
+    if (!val) return '';
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
 
   if (startDate) {
-    const start = new Date(startDate).setHours(0, 0, 0, 0);
-    filteredOrders = filteredOrders.filter((o: any) => new Date(o.createdAt).getTime() >= start);
-    filteredExpenses = filteredExpenses.filter((e: any) => new Date(e.createdAt || e.expenseDate).getTime() >= start);
+    const s = String(startDate);
+    filteredOrders = filteredOrders.filter((o: any) => toLocalDateOnly(o.createdAt) >= s);
+    filteredExpenses = filteredExpenses.filter((e: any) => toLocalDateOnly(e.createdAt || e.expenseDate) >= s);
   }
   if (endDate) {
-    const end = new Date(endDate).setHours(23, 59, 59, 999);
-    filteredOrders = filteredOrders.filter((o: any) => new Date(o.createdAt).getTime() <= end);
-    filteredExpenses = filteredExpenses.filter((e: any) => new Date(e.createdAt || e.expenseDate).getTime() <= end);
+    const e = String(endDate);
+    filteredOrders = filteredOrders.filter((o: any) => toLocalDateOnly(o.createdAt) <= e);
+    filteredExpenses = filteredExpenses.filter((e2: any) => toLocalDateOnly(e2.createdAt || e2.expenseDate) <= e);
   }
 
   const totalRevenue = filteredOrders.reduce((sum: number, o: any) => sum + Number(o.grandTotal || 0), 0);

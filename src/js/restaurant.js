@@ -224,22 +224,32 @@ const Restaurant = {
     }
   },
 
+  toLocalDateString(val) {
+    if (!val) return '';
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val).split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  },
+
   filterByPeriod(items, dateKey) {
     const period = this.selectedPeriod || 'today';
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = this.toLocalDateString(new Date());
 
     if (period === 'all') return items;
 
     if (period === 'today') {
       return items.filter(item => {
         if (!item[dateKey]) return true;
-        return item[dateKey].split('T')[0] === todayStr;
+        return this.toLocalDateString(item[dateKey]) === todayStr;
       });
     }
 
     if (period === 'week') {
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
       return items.filter(item => {
         if (!item[dateKey]) return true;
         const d = new Date(item[dateKey]);
@@ -251,7 +261,7 @@ const Restaurant = {
       const currentMonth = todayStr.substring(0, 7); // YYYY-MM
       return items.filter(item => {
         if (!item[dateKey]) return true;
-        return item[dateKey].substring(0, 7) === currentMonth;
+        return this.toLocalDateString(item[dateKey]).substring(0, 7) === currentMonth;
       });
     }
 
@@ -259,19 +269,21 @@ const Restaurant = {
       const currentYear = todayStr.substring(0, 4); // YYYY
       return items.filter(item => {
         if (!item[dateKey]) return true;
-        return item[dateKey].substring(0, 4) === currentYear;
+        return this.toLocalDateString(item[dateKey]).substring(0, 4) === currentYear;
       });
     }
 
     if (period === 'custom') {
-      const start = document.getElementById('pnl-start-date').value;
-      const end = document.getElementById('pnl-end-date').value;
-      if (!start || !end) return items;
+      const start = document.getElementById('pnl-start-date')?.value;
+      const end = document.getElementById('pnl-end-date')?.value;
+      if (!start && !end) return items;
 
       return items.filter(item => {
         if (!item[dateKey]) return true;
-        const dateStr = item[dateKey].split('T')[0];
-        return dateStr >= start && dateStr <= end;
+        const dateStr = this.toLocalDateString(item[dateKey]);
+        if (start && dateStr < start) return false;
+        if (end && dateStr > end) return false;
+        return true;
       });
     }
 
