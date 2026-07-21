@@ -830,14 +830,21 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
 // ─────────────────────────────────────────────────────────────
 // PRINT RECEIPT
 // ─────────────────────────────────────────────────────────────
-ipcMain.handle('receipt:print', async (evt, receiptHtml) => {
+ipcMain.handle('receipt:print', async (evt, receiptHtml, options = {}) => {
   try {
     const printWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false } });
     printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml)}`);
     printWin.webContents.on('did-finish-load', () => {
-      printWin.webContents.print({ silent: false, printBackground: true }, () => {
-        printWin.close();
-      });
+      printWin.webContents.print(
+        {
+          silent: options.silent !== undefined ? options.silent : true,
+          printBackground: true,
+          deviceName: options.printerName || ''
+        },
+        (success, failureReason) => {
+          printWin.close();
+        }
+      );
     });
     return { success: true };
   } catch (err) {
