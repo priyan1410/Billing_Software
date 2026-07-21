@@ -148,10 +148,26 @@ async function initializeDatabase() {
     `);
 
     const restColsRes = await query(`SHOW COLUMNS FROM restaurant_details`);
-    const existingRestCols = restColsRes.success ? restColsRes.data.map(c => c.Field) : [];
-    if (!existingRestCols.includes('print_config')) {
-      await query(`ALTER TABLE restaurant_details ADD COLUMN print_config TEXT`);
-      console.log('✓ Added print_config column to restaurant_details table.');
+    if (restColsRes.success) {
+      const existingRestCols = restColsRes.data.map(c => c.Field.toLowerCase());
+      if (!existingRestCols.includes('owner_name')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN owner_name VARCHAR(100) DEFAULT ''`);
+      }
+      if (!existingRestCols.includes('gst_number')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN gst_number VARCHAR(50) DEFAULT ''`);
+      }
+      if (!existingRestCols.includes('fssai_number')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN fssai_number VARCHAR(50) DEFAULT ''`);
+      }
+      if (!existingRestCols.includes('header_note')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN header_note TEXT`);
+      }
+      if (!existingRestCols.includes('footer_note')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN footer_note TEXT`);
+      }
+      if (!existingRestCols.includes('print_config')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN print_config TEXT`);
+      }
     }
 
     console.log('✓ All tables ready in kish_mandhi database.');

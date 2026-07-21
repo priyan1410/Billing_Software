@@ -711,7 +711,7 @@ ipcMain.handle('auth:login', async (evt, payload) => {
 
 ipcMain.handle('restaurant:getDetails', async () => {
   try {
-    const res = await query('SELECT * FROM restaurant_details WHERE id = 1 LIMIT 1');
+    const res = await query('SELECT * FROM restaurant_details ORDER BY id ASC LIMIT 1');
     if (!res.success || res.data.length === 0) {
       return { success: true, data: null };
     }
@@ -721,18 +721,18 @@ ipcMain.handle('restaurant:getDetails', async () => {
     return {
       success: true,
       data: {
-        companyName: r.company_name,
-        tagline: r.tagline,
-        ownerName: r.owner_name,
-        gstNumber: r.gst_number,
-        fssaiNumber: r.fssai_number,
-        phone: r.phone,
-        email: r.email,
-        address: r.address,
-        taxRate: Number(r.tax_rate),
-        currency: r.currency,
-        headerNote: r.header_note,
-        footerNote: r.footer_note,
+        companyName: r.company_name || 'Kish Mandhi',
+        tagline: r.tagline || '',
+        ownerName: r.owner_name || '',
+        gstNumber: r.gst_number || r.gst_no || '',
+        fssaiNumber: r.fssai_number || r.fssai_no || '',
+        phone: r.phone || '',
+        email: r.email || '',
+        address: r.address || '',
+        taxRate: Number(r.tax_rate ?? 5),
+        currency: r.currency || '₹',
+        headerNote: r.header_note || '',
+        footerNote: r.footer_note || r.receipt_footer || '',
         ...parsedPrintConfig
       }
     };
@@ -754,42 +754,74 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
       printShowRoundOff: data.printShowRoundOff ?? true,
       printShowFooterNote: data.printShowFooterNote ?? true
     };
-    const res = await query(
-      `INSERT INTO restaurant_details (id, company_name, tagline, owner_name, gst_number, fssai_number, phone, email, address, tax_rate, currency, header_note, footer_note, print_config)
-       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         company_name = VALUES(company_name),
-         tagline = VALUES(tagline),
-         owner_name = VALUES(owner_name),
-         gst_number = VALUES(gst_number),
-         fssai_number = VALUES(fssai_number),
-         phone = VALUES(phone),
-         email = VALUES(email),
-         address = VALUES(address),
-         tax_rate = VALUES(tax_rate),
-         currency = VALUES(currency),
-         header_note = VALUES(header_note),
-         footer_note = VALUES(footer_note),
-         print_config = VALUES(print_config)`,
-      [
+
+    const colsRes = await query('SHOW COLUMNS FROM restaurant_details');
+    const cols = colsRes.success ? colsRes.data.map(c => c.Field.toLowerCase()) : [];
+
+    const checkRes = await query('SELECT id FROM restaurant_details ORDER BY id ASC LIMIT 1');
+
+    if (checkRes.success && checkRes.data && checkRes.data.length > 0) {
+      const existingId = checkRes.data[0].id;
+      const setClauses = [
+        'company_name = ?',
+        'tagline = ?',
+        'phone = ?',
+        'email = ?',
+        'address = ?',
+        'tax_rate = ?',
+        'currency = ?'
+      ];
+      const params = [
         data.companyName || 'Kish Mandhi',
         data.tagline || '',
-        data.ownerName || '',
-        data.gstNumber || '',
-        data.fssaiNumber || '',
         data.phone || '',
         data.email || '',
         data.address || '',
         Number(data.taxRate ?? 5.0),
-        data.currency || '₹',
-        data.headerNote || '',
-        data.footerNote || '',
-        JSON.stringify(printConfigObj)
-      ]
-    );
+        data.currency || '₹'
+      ];
 
-    if (!res.success) return { success: false, message: res.error };
-    return { success: true };
+      if (cols.includes('owner_name')) { setClauses.push('owner_name = ?'); params.push(data.ownerName || ''); }
+      if (cols.includes('gst_number')) { setClauses.push('gst_number = ?'); params.push(data.gstNumber || ''); }
+      if (cols.includes('gst_no')) { setClauses.push('gst_no = ?'); params.push(data.gstNumber || ''); }
+      if (cols.includes('fssai_number')) { setClauses.push('fssai_number = ?'); params.push(data.fssaiNumber || ''); }
+      if (cols.includes('fssai_no')) { setClauses.push('fssai_no = ?'); params.push(data.fssaiNumber || ''); }
+      if (cols.includes('header_note')) { setClauses.push('header_note = ?'); params.push(data.headerNote || ''); }
+      if (cols.includes('footer_note')) { setClauses.push('footer_note = ?'); params.push(data.footerNote || ''); }
+      if (cols.includes('receipt_footer')) { setClauses.push('receipt_footer = ?'); params.push(data.footerNote || ''); }
+      if (cols.includes('print_config')) { setClauses.push('print_config = ?'); params.push(JSON.stringify(printConfigObj)); }
+
+      params.push(existingId);
+      const res = await query(`UPDATE restaurant_details SET ${setClauses.join(', ')} WHERE id = ?`, params);
+      if (!res.success) return { success: false, message: res.error };
+      return { success: true };
+    } else {
+      const insertFields = ['id', 'company_name', 'tagline', 'phone', 'email', 'address', 'tax_rate', 'currency'];
+      const placeholders = ['1', '?', '?', '?', '?', '?', '?', '?'];
+      const params = [
+        data.companyName || 'Kish Mandhi',
+        data.tagline || '',
+        data.phone || '',
+        data.email || '',
+        data.address || '',
+        Number(data.taxRate ?? 5.0),
+        data.currency || '₹'
+      ];
+
+      if (cols.includes('owner_name')) { insertFields.push('owner_name'); placeholders.push('?'); params.push(data.ownerName || ''); }
+      if (cols.includes('gst_number')) { insertFields.push('gst_number'); placeholders.push('?'); params.push(data.gstNumber || ''); }
+      if (cols.includes('gst_no')) { insertFields.push('gst_no'); placeholders.push('?'); params.push(data.gstNumber || ''); }
+      if (cols.includes('fssai_number')) { insertFields.push('fssai_number'); placeholders.push('?'); params.push(data.fssaiNumber || ''); }
+      if (cols.includes('fssai_no')) { insertFields.push('fssai_no'); placeholders.push('?'); params.push(data.fssaiNumber || ''); }
+      if (cols.includes('header_note')) { insertFields.push('header_note'); placeholders.push('?'); params.push(data.headerNote || ''); }
+      if (cols.includes('footer_note')) { insertFields.push('footer_note'); placeholders.push('?'); params.push(data.footerNote || ''); }
+      if (cols.includes('receipt_footer')) { insertFields.push('receipt_footer'); placeholders.push('?'); params.push(data.footerNote || ''); }
+      if (cols.includes('print_config')) { insertFields.push('print_config'); placeholders.push('?'); params.push(JSON.stringify(printConfigObj)); }
+
+      const res = await query(`INSERT INTO restaurant_details (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')})`, params);
+      if (!res.success) return { success: false, message: res.error };
+      return { success: true };
+    }
   } catch (err) {
     return { success: false, message: err.message };
   }

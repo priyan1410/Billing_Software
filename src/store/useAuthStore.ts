@@ -41,6 +41,7 @@ interface AuthState {
   ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateRestaurantDetails: (data: Partial<RestaurantDetails>) => Promise<{ success: boolean; message?: string }>;
+  loadRestaurantDetails: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -311,7 +312,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: () => {
     localStorage.removeItem('km_user');
-    set({ user: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false, isLoading: false, error: null });
   },
 
   updateRestaurantDetails: async (data) => {
@@ -336,6 +337,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: any) {
       set({ isLoading: false });
       return { success: false, message: err.message || 'Failed to save details' };
+    }
+  },
+
+  loadRestaurantDetails: async () => {
+    try {
+      if ((window as any).electronAPI?.getRestaurantDetails) {
+        const res = await (window as any).electronAPI.getRestaurantDetails();
+        if (res && res.success && res.data) {
+          const rest = { ...defaultRestaurant, ...res.data };
+          localStorage.setItem('km_restaurant', JSON.stringify(rest));
+          set({ restaurantDetails: rest });
+        }
+      }
+    } catch (err) {
+      console.error('loadRestaurantDetails error:', err);
     }
   }
 }));

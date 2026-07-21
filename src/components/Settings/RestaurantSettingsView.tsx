@@ -45,7 +45,7 @@ const FieldRow: React.FC<{
 );
 
 export const RestaurantSettingsView: React.FC = () => {
-  const { restaurantDetails, user, updateRestaurantDetails, logout, isLoading } = useAuthStore();
+  const { restaurantDetails, user, updateRestaurantDetails, loadRestaurantDetails, logout, isLoading } = useAuthStore();
   const [form, setForm] = useState<RestaurantDetails & { taxRateStr: string }>({
     ...restaurantDetails,
     taxRateStr: String(restaurantDetails.taxRate ?? 5)
@@ -53,6 +53,10 @@ export const RestaurantSettingsView: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveMsg, setSaveMsg] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    loadRestaurantDetails();
+  }, []);
 
   useEffect(() => {
     setForm({ ...restaurantDetails, taxRateStr: String(restaurantDetails.taxRate ?? 5) });
