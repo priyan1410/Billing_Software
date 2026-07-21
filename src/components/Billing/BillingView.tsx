@@ -54,11 +54,12 @@ const ConfirmOrderModal: React.FC<{
   hours = hours ? hours : 12;
   const invoiceTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
-  const storeName = restaurantDetails?.companyName || 'ROYAL SPICE RESTAURANT';
-  const address = restaurantDetails?.address || '123 Main Street, Chennai, Tamil Nadu';
-  const rawPhone = restaurantDetails?.phone || '+91 98765 43210';
+  const storeName = String(restaurantDetails?.companyName || 'KISH MANDHI');
+  const address = String(restaurantDetails?.address || '45, Arabian Avenue, Mount Road, Chennai');
+  const rawPhone = String(restaurantDetails?.phone || '+91 98765 43210');
   const phone = rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`}`;
-  const rawGst = restaurantDetails?.gstNumber || '33ABCDE1234F1Z5';
+  const rawGst = String(restaurantDetails?.gstNumber || '33ABCDE1234F1Z5');
+  const gstin = rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`;
   const printShowLogo = restaurantDetails?.printShowLogo ?? true;
   const printShowAddress = restaurantDetails?.printShowAddress ?? true;
   const printShowPhone = restaurantDetails?.printShowPhone ?? true;
@@ -453,11 +454,11 @@ export const BillingView: React.FC = () => {
     const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
     const rd = restaurantDetails;
-    const rName = rd?.companyName || 'ROYAL SPICE RESTAURANT';
-    const rAddr = rd?.address || '123 Main Street, Chennai, Tamil Nadu';
-    const rawPhone = rd?.phone || '+91 98765 43210';
+    const rName = String(rd?.companyName || 'KISH MANDHI');
+    const rAddr = String(rd?.address || '45, Arabian Avenue, Mount Road, Chennai');
+    const rawPhone = String(rd?.phone || '+91 98765 43210');
     const rPhone = rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`}`;
-    const rawGst = rd?.gstNumber || '33ABCDE1234F1Z5';
+    const rawGst = String(rd?.gstNumber || '33ABCDE1234F1Z5');
     const rGst = rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`;
     const curr = rd?.currency || '₹';
     const tp = rd?.taxRate ?? 5;
