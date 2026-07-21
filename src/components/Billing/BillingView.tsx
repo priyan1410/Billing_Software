@@ -334,7 +334,9 @@ export const BillingView: React.FC = () => {
 
   const subtotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
   const taxAmt = subtotal * (taxRate / 100);
-  const grandTotal = Math.max(0, subtotal + taxAmt - discount);
+  const exactTotal = Math.max(0, subtotal + taxAmt - discount);
+  const grandTotal = Math.round(exactTotal);
+  const roundOff = Number((grandTotal - exactTotal).toFixed(2));
 
   const handleImportToken = () => {
     if (!selectedTokenNum) return;
@@ -375,7 +377,7 @@ export const BillingView: React.FC = () => {
       order_date: orderDateString,
       due_date: '',
       shipping_charges: 0,
-      round_off: 0,
+      round_off: roundOff,
       customer_name: 'Walk-in',
     };
     const base = {
@@ -385,6 +387,7 @@ export const BillingView: React.FC = () => {
       tax: taxAmt,
       discount,
       grandTotal,
+      roundOff,
       orderType,
       paymentMode,
       customerName: 'Walk-in',

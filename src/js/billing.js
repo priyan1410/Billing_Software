@@ -355,7 +355,8 @@ const Billing = {
     const discountInput = document.getElementById('cart-discount-input');
     const discount = discountInput ? Number(discountInput.value || 0) : 0;
 
-    const grandTotal = Math.max(0, subtotal + tax - discount);
+    const exactTotal = Math.max(0, subtotal + tax - discount);
+    const grandTotal = Math.round(exactTotal);
 
     document.getElementById('cart-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
     document.getElementById('cart-tax').textContent = `₹${tax.toFixed(2)}`;
@@ -372,7 +373,9 @@ const Billing = {
     const tax_amount = subtotal * 0.05;
     const discountInput = document.getElementById('cart-discount-input');
     const discount_amount = discountInput ? Number(discountInput.value || 0) : 0;
-    const grand_total = Math.max(0, subtotal + tax_amount - discount_amount);
+    const exactTotal = Math.max(0, subtotal + tax_amount - discount_amount);
+    const grand_total = Math.round(exactTotal);
+    const round_off = Number((grand_total - exactTotal).toFixed(2));
     const table_no = 'N/A';
 
     const orderPayload = {
