@@ -47,40 +47,13 @@ async function initializeDatabase() {
         discount_amount DECIMAL(10,2) DEFAULT 0,
         grand_total DECIMAL(10,2) NOT NULL DEFAULT 0,
         payment_mode VARCHAR(30) DEFAULT 'Cash',
+        token_number VARCHAR(50) DEFAULT NULL,
         status VARCHAR(30) DEFAULT 'Completed',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
 
-    // Safely drop token_number column if it exists
-    await query(`ALTER TABLE orders DROP COLUMN token_number;`).catch(() => { });
-
-    // Drop legacy foreign keys if present
-    await query(`ALTER TABLE order_items DROP FOREIGN KEY order_items_ibfk_1;`).catch(() => { });
-    await query(`ALTER TABLE order_items DROP FOREIGN KEY fk_order_items_orders;`).catch(() => { });
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS order_items (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        token_id VARCHAR(50) NOT NULL,
-        item_name VARCHAR(200) NOT NULL,
-        variant VARCHAR(30) DEFAULT 'Full',
-        unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
-        quantity INT NOT NULL DEFAULT 1,
-        total_price DECIMAL(10,2) NOT NULL DEFAULT 0
-      ) ENGINE=InnoDB;
-    `);
-
-    // Safely rename order_id column to token_id if order_id exists
-    const orderItemsCols = await query(`
-      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'order_items'
-    `);
-    const oiCols = orderItemsCols.success ? orderItemsCols.data.map(r => r.COLUMN_NAME.toLowerCase()) : [];
-    if (oiCols.includes('order_id') && !oiCols.includes('token_id')) {
-      await query(`ALTER TABLE order_items CHANGE COLUMN order_id token_id VARCHAR(50) NOT NULL;`).catch(() => { });
-    }
-    await query(`UPDATE order_items SET token_id = CONCAT('KMKOT-', LPAD(token_id, 3, '0')) WHERE token_id REGEXP '^[0-9]+$';`).catch(() => { });
+    await query(`ALTER TABLE orders ADD COLUMN token_number VARCHAR(50) DEFAULT NULL`).catch(() => { });
 
     await query(`
       CREATE TABLE IF NOT EXISTS expenses (

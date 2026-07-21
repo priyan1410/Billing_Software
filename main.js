@@ -176,10 +176,12 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   const maxIdRes = await query('SELECT MAX(id) as maxId FROM orders');
   const nextSeq = ((maxIdRes.data && maxIdRes.data[0] && maxIdRes.data[0].maxId) || 0) + 1;
   let orderNumber = orderData.order_number || orderData.orderNumber || `KMIV-${String(nextSeq).padStart(3, '0')}`;
+  const rawToken = orderData.token_number || orderData.tokenNumber || orderData.token_id || orderData.tokenId || '';
+  const normalizedToken = rawToken ? normalizeTokenNumber(rawToken) : null;
 
   let insertOrder = await query(
-    `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+    `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
     [
       orderNumber,
       orderData.order_type || orderData.orderType || 'Dine-In',
@@ -187,7 +189,8 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
       Number(orderData.tax_amount || orderData.taxAmount || 0),
       Number(orderData.discount_amount || orderData.discountAmount || 0),
       Number(orderData.grand_total || orderData.grandTotal || 0),
-      orderData.payment_mode || orderData.paymentMode || 'Cash'
+      orderData.payment_mode || orderData.paymentMode || 'Cash',
+      normalizedToken
     ]
   );
 
@@ -198,8 +201,8 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
     orderNumber = `KMIV-${String(seqRetry).padStart(3, '0')}`;
 
     insertOrder = await query(
-      `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+      `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
       [
         orderNumber,
         orderData.order_type || orderData.orderType || 'Dine-In',
@@ -207,7 +210,8 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
         Number(orderData.tax_amount || orderData.taxAmount || 0),
         Number(orderData.discount_amount || orderData.discountAmount || 0),
         Number(orderData.grand_total || orderData.grandTotal || 0),
-        orderData.payment_mode || orderData.paymentMode || 'Cash'
+        orderData.payment_mode || orderData.paymentMode || 'Cash',
+        normalizedToken
       ]
     );
   }
@@ -215,21 +219,10 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   if (!insertOrder.success) return { success: false, message: insertOrder.error };
   const orderId = insertOrder.data.insertId;
 
-  // Format token ID (KMKOT-001)
-  const rawToken = orderData.token_id || orderData.tokenId || orderData.tokenNumber;
-  const tokenId = rawToken
-    ? (String(rawToken).startsWith('KMKOT-') ? String(rawToken) : `KMKOT-${String(rawToken).padStart(3, '0')}`)
+  const tokenRef = orderData.token_id || orderData.tokenId || orderData.tokenNumber || normalizedToken;
+  const tokenId = tokenRef
+    ? (String(tokenRef).startsWith('KMKOT-') ? String(tokenRef) : `KMKOT-${String(tokenRef).padStart(3, '0')}`)
     : `KMKOT-${String(orderId).padStart(3, '0')}`;
-
-  // Insert order items referencing token_id (KMKOT-001)
-  if (orderData.items && Array.isArray(orderData.items)) {
-    for (const item of orderData.items) {
-      await query(
-        'INSERT INTO order_items (token_id, item_name, variant, unit_price, quantity, total_price) VALUES (?, ?, ?, ?, ?, ?)',
-        [tokenId, item.name, item.variant || 'Full', Number(item.unitPrice || item.price || 0), Number(item.quantity || 1), Number(item.totalPrice || 0)]
-      );
-    }
-  }
 
   return { success: true, data: { id: orderId, orderNumber, tokenId } };
 });
@@ -241,6 +234,7 @@ ipcMain.handle('orders:getAll', async () => {
     success: true, data: result.data.map(r => ({
       id: r.id,
       orderNumber: r.order_number,
+      tokenNumber: r.token_number,
       orderType: r.order_type,
       subtotal: Number(r.subtotal),
       taxAmount: Number(r.tax_amount),
@@ -249,42 +243,6 @@ ipcMain.handle('orders:getAll', async () => {
       paymentMode: r.payment_mode,
       status: r.status,
       createdAt: r.created_at
-    }))
-  };
-});
-
-ipcMain.handle('orders:getItems', async (evt, orderId) => {
-  let searchTokens = [String(orderId)];
-
-  if (!isNaN(Number(orderId))) {
-    const num = Number(orderId);
-    searchTokens.push(`KMKOT-${String(num).padStart(3, '0')}`);
-    searchTokens.push(`KMIV-${String(num).padStart(3, '0')}`);
-    searchTokens.push(num);
-  } else if (typeof orderId === 'string' && orderId.startsWith('KMIV-')) {
-    const rawNum = orderId.replace('KMIV-', '');
-    if (!isNaN(Number(rawNum))) {
-      const num = Number(rawNum);
-      searchTokens.push(num);
-      searchTokens.push(`KMKOT-${String(num).padStart(3, '0')}`);
-    }
-  }
-
-  const placeholders = searchTokens.map(() => '?').join(',');
-  const result = await query(
-    `SELECT * FROM order_items WHERE token_id IN (${placeholders}) ORDER BY id ASC`,
-    searchTokens
-  );
-  if (!result.success) return { success: false, message: result.error };
-  return {
-    success: true, data: result.data.map(r => ({
-      id: r.id,
-      name: r.item_name,
-      dishName: r.item_name,
-      variant: r.variant,
-      quantity: Number(r.quantity),
-      unitPrice: Number(r.unit_price),
-      totalPrice: Number(r.total_price)
     }))
   };
 });
@@ -481,7 +439,6 @@ ipcMain.handle('tokens:delete', async (evt, tokenNumber) => {
 // DATABASE CONTROLLER ACTIONS
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('db:clearOrders', async () => {
-  await query('DELETE FROM order_items');
   await query('DELETE FROM orders');
   return { success: true };
 });
@@ -492,14 +449,13 @@ ipcMain.handle('db:clearExpenses', async () => {
 });
 
 ipcMain.handle('db:resetDefaults', async () => {
-  await query('DELETE FROM order_items');
   await query('DELETE FROM orders');
   await query('DELETE FROM expenses');
   return { success: true };
 });
 
 ipcMain.handle('db:getTableData', async (evt, tableName) => {
-  const allowed = ['menu_items', 'orders', 'expenses', 'categories', 'order_items', 'tokens'];
+  const allowed = ['menu_items', 'orders', 'expenses', 'categories', 'tokens'];
   if (!allowed.includes(tableName)) return { success: false, message: 'Table not allowed' };
   const result = await query(`SELECT * FROM \`${tableName}\` ORDER BY id DESC`);
   if (!result.success) return { success: false, message: result.error };

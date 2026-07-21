@@ -383,6 +383,7 @@ export const BillingView: React.FC = () => {
       discount_amount: discount,
       grand_total: grandTotal,
       payment_mode: paymentMode,
+      token_number: selectedTokenNum || undefined,
       items: cart,
       order_date: new Date().toISOString().split('T')[0],
       due_date: '',
