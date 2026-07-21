@@ -465,10 +465,7 @@ const Billing = {
           </svg>
         </div>
 
-        <div style="text-align: center; font-weight: bold; font-size: 15px; text-transform: uppercase;">ROYAL SPICE RESTAURANT</div>
-        <div style="text-align: center; font-size: 10px;">123 Main Street, Chennai, Tamil Nadu</div>
-        <div style="text-align: center; font-size: 10px;">Phone: +91 98765 43210</div>
-        <div style="text-align: center; font-size: 10px;">GSTIN: 33ABCDE1234F1Z5</div>
+        <div style="text-align: center; font-weight: bold; font-size: 15px; text-transform: uppercase;">KISH MANDHI</div>
 
         <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
 

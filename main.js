@@ -184,17 +184,23 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   if (!insertOrder.success) return { success: false, message: insertOrder.error };
   const orderId = insertOrder.data.insertId;
 
-  // Insert order items
+  // Format token ID (KMKOT-001)
+  const rawToken = orderData.token_id || orderData.tokenId || orderData.tokenNumber;
+  const tokenId = rawToken
+    ? (String(rawToken).startsWith('KMKOT-') ? String(rawToken) : `KMKOT-${String(rawToken).padStart(3, '0')}`)
+    : `KMKOT-${String(orderId).padStart(3, '0')}`;
+
+  // Insert order items referencing token_id (KMKOT-001)
   if (orderData.items && Array.isArray(orderData.items)) {
     for (const item of orderData.items) {
       await query(
-        'INSERT INTO order_items (order_id, item_name, variant, unit_price, quantity, total_price) VALUES (?, ?, ?, ?, ?, ?)',
-        [orderId, item.name, item.variant || 'Full', Number(item.unitPrice || item.price || 0), Number(item.quantity || 1), Number(item.totalPrice || 0)]
+        'INSERT INTO order_items (token_id, item_name, variant, unit_price, quantity, total_price) VALUES (?, ?, ?, ?, ?, ?)',
+        [tokenId, item.name, item.variant || 'Full', Number(item.unitPrice || item.price || 0), Number(item.quantity || 1), Number(item.totalPrice || 0)]
       );
     }
   }
 
-  return { success: true, data: { id: orderId, orderNumber } };
+  return { success: true, data: { id: orderId, orderNumber, tokenId } };
 });
 
 ipcMain.handle('orders:getAll', async () => {
@@ -215,9 +221,13 @@ ipcMain.handle('orders:getAll', async () => {
 });
 
 ipcMain.handle('orders:getItems', async (evt, orderId) => {
+  let targetTokenId = String(orderId);
+  if (!targetTokenId.startsWith('KMKOT-') && !isNaN(Number(targetTokenId))) {
+    targetTokenId = `KMKOT-${String(targetTokenId).padStart(3, '0')}`;
+  }
   const result = await query(
-    'SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC',
-    [Number(orderId)]
+    'SELECT * FROM order_items WHERE token_id = ? OR token_id = ? OR token_id = ? ORDER BY id ASC',
+    [targetTokenId, String(orderId), Number(orderId)]
   );
   if (!result.success) return { success: false, message: result.error };
   return { success: true, data: result.data.map(r => ({

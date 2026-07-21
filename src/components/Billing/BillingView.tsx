@@ -55,11 +55,11 @@ const ConfirmOrderModal: React.FC<{
   const invoiceTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
   const storeName = String(restaurantDetails?.companyName || 'KISH MANDHI');
-  const address = String(restaurantDetails?.address || '45, Arabian Avenue, Mount Road, Chennai');
-  const rawPhone = String(restaurantDetails?.phone || '+91 98765 43210');
-  const phone = rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`}`;
-  const rawGst = String(restaurantDetails?.gstNumber || '33ABCDE1234F1Z5');
-  const gstin = rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`;
+  const address = String(restaurantDetails?.address || '');
+  const rawPhone = String(restaurantDetails?.phone || '');
+  const phone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
+  const rawGst = String(restaurantDetails?.gstNumber || '');
+  const gstin = rawGst ? (rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`) : '';
   const printShowLogo = restaurantDetails?.printShowLogo ?? true;
   const printShowAddress = restaurantDetails?.printShowAddress ?? true;
   const printShowPhone = restaurantDetails?.printShowPhone ?? true;
@@ -339,18 +339,7 @@ export const BillingView: React.FC = () => {
       const res = await (window as any).electronAPI.getMenuItems(activeCategory);
       if (res.success) setDishes(res.data);
     } else {
-      setDishes([
-        { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
-        { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
-        { id: 3, categoryId: 1, name: 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', priceQuarter: 280, priceHalf: 520, priceFull: 980, isAvailable: true },
-        { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
-        { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
-        { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
-        { id: 7, categoryId: 3, name: 'Special Garlic Sauce (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
-        { id: 8, categoryId: 4, name: 'Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
-        { id: 9, categoryId: 4, name: 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
-        { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
-      ]);
+      setDishes([]);
     }
   };
 
@@ -455,11 +444,11 @@ export const BillingView: React.FC = () => {
 
     const rd = restaurantDetails;
     const rName = String(rd?.companyName || 'KISH MANDHI');
-    const rAddr = String(rd?.address || '45, Arabian Avenue, Mount Road, Chennai');
-    const rawPhone = String(rd?.phone || '+91 98765 43210');
-    const rPhone = rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`}`;
-    const rawGst = String(rd?.gstNumber || '33ABCDE1234F1Z5');
-    const rGst = rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`;
+    const rAddr = String(rd?.address || '');
+    const rawPhone = String(rd?.phone || '');
+    const rPhone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
+    const rawGst = String(rd?.gstNumber || '');
+    const rGst = rawGst ? (rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`) : '';
     const curr = rd?.currency || '₹';
     const tp = rd?.taxRate ?? 5;
     const cgstRate = (tp / 2).toFixed(1);

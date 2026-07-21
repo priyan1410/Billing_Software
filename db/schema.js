@@ -55,18 +55,32 @@ async function initializeDatabase() {
     // Safely drop token_number column if it exists
     await query(`ALTER TABLE orders DROP COLUMN token_number;`).catch(() => {});
 
+    // Drop legacy foreign keys if present
+    await query(`ALTER TABLE order_items DROP FOREIGN KEY order_items_ibfk_1;`).catch(() => {});
+    await query(`ALTER TABLE order_items DROP FOREIGN KEY fk_order_items_orders;`).catch(() => {});
+
     await query(`
       CREATE TABLE IF NOT EXISTS order_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        order_id INT NOT NULL,
+        token_id VARCHAR(50) NOT NULL,
         item_name VARCHAR(200) NOT NULL,
         variant VARCHAR(30) DEFAULT 'Full',
         unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
         quantity INT NOT NULL DEFAULT 1,
-        total_price DECIMAL(10,2) NOT NULL DEFAULT 0,
-        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        total_price DECIMAL(10,2) NOT NULL DEFAULT 0
       ) ENGINE=InnoDB;
     `);
+
+    // Safely rename order_id column to token_id if order_id exists
+    const orderItemsCols = await query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'order_items'
+    `);
+    const oiCols = orderItemsCols.success ? orderItemsCols.data.map(r => r.COLUMN_NAME.toLowerCase()) : [];
+    if (oiCols.includes('order_id') && !oiCols.includes('token_id')) {
+      await query(`ALTER TABLE order_items CHANGE COLUMN order_id token_id VARCHAR(50) NOT NULL;`).catch(() => {});
+    }
+    await query(`UPDATE order_items SET token_id = CONCAT('KMKOT-', LPAD(token_id, 3, '0')) WHERE token_id REGEXP '^[0-9]+$';`).catch(() => {});
 
     await query(`
       CREATE TABLE IF NOT EXISTS expenses (
@@ -132,39 +146,6 @@ async function initializeDatabase() {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
-
-    // Step 3: Seed categories only if table is empty
-    const catCheck = await query('SELECT COUNT(*) AS cnt FROM categories');
-    if (catCheck.success && Number(catCheck.data[0].cnt) === 0) {
-      await query(`
-        INSERT INTO categories (id, name, icon) VALUES
-        (1, 'Mandhi Special', 'utensils'),
-        (2, 'Alfaham & Grill', 'fire'),
-        (3, 'Starters & Sides', 'drumstick-bite'),
-        (4, 'Beverages', 'glass-martini-alt'),
-        (5, 'Desserts', 'ice-cream');
-      `);
-      console.log('✓ Seeded default categories.');
-    }
-
-    // Step 4: Seed menu items only if table is empty
-    const menuCheck = await query('SELECT COUNT(*) AS cnt FROM menu_items');
-    if (menuCheck.success && Number(menuCheck.data[0].cnt) === 0) {
-      await query(`
-        INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full) VALUES
-        (1, 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', 220, 420, 790),
-        (1, 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', 350, 680, 1290),
-        (1, 'Beef Ribs Mandhi (பீஃப் ரிப்ஸ் மந்தி)', 280, 520, 980),
-        (2, 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', 160, 310, 590),
-        (2, 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', 170, 330, 620),
-        (3, 'Kubboos (குபூஸ் - 2 Pcs)', 30, 30, 30),
-        (3, 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', 40, 40, 40),
-        (4, 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', 70, 70, 70),
-        (4, 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', 110, 110, 110),
-        (5, 'Turkish Kunafa (துருக்கி குனாஃபா)', 180, 180, 180);
-      `);
-      console.log('✓ Seeded default menu items.');
-    }
 
     console.log('✓ All tables ready in kish_mandhi database.');
     return { success: true, message: 'Database ready!' };
