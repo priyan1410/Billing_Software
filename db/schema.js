@@ -41,7 +41,6 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS orders (
         id INT AUTO_INCREMENT PRIMARY KEY,
         order_number VARCHAR(50) NOT NULL UNIQUE,
-        token_number INT NOT NULL,
         order_type VARCHAR(30) DEFAULT 'Dine-In',
         subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
         tax_amount DECIMAL(10,2) DEFAULT 0,
@@ -52,6 +51,9 @@ async function initializeDatabase() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
+
+    // Safely drop token_number column if it exists
+    await query(`ALTER TABLE orders DROP COLUMN token_number;`).catch(() => {});
 
     await query(`
       CREATE TABLE IF NOT EXISTS order_items (

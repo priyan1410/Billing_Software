@@ -64,9 +64,9 @@ export const DbSettingsView: React.FC = () => {
   };
 
   const handleExportOrdersExcel = () => {
-    let csv = "Order Number,Token Number,Order Type,Subtotal (INR),GST Tax (INR),Discount (INR),Grand Total (INR),Payment Mode,Created Date\n";
+    let csv = "Order Number,Order Type,Subtotal (INR),GST Tax (INR),Discount (INR),Grand Total (INR),Payment Mode,Created Date\n";
     orders.forEach((o) => {
-      csv += `"${o.orderNumber}",${o.tokenNumber},"${o.orderType}",${o.subtotal},${o.taxAmount},${o.discountAmount},${o.grandTotal},"${o.paymentMode}","${o.createdAt || ''}"\n`;
+      csv += `"${o.orderNumber}","${o.orderType}",${o.subtotal},${o.taxAmount},${o.discountAmount},${o.grandTotal},"${o.paymentMode}","${o.createdAt || ''}"\n`;
     });
     downloadCsvForExcel(`Kish_Mandhi_Completed_Orders_${Date.now()}.csv`, csv);
     alert('✓ Completed Orders exported as Excel Spreadsheet (.CSV)!');
@@ -400,7 +400,6 @@ export const DbSettingsView: React.FC = () => {
               <thead>
                 <tr className="bg-olive-950 text-gold-400 border-b border-gold-500/20">
                   <th className="py-2.5 px-3">Order #</th>
-                  <th className="py-2.5 px-3">Token #</th>
                   <th className="py-2.5 px-3">Type</th>
                   <th className="py-2.5 px-3">Subtotal</th>
                   <th className="py-2.5 px-3">GST Tax</th>
@@ -411,13 +410,12 @@ export const DbSettingsView: React.FC = () => {
               <tbody className="divide-y divide-gold-500/10">
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-olive-300">No completed orders logged yet.</td>
+                    <td colSpan={6} className="py-8 text-center text-olive-300">No completed orders logged yet.</td>
                   </tr>
                 ) : (
                   filteredOrders.map((o) => (
                     <tr key={o.id} className="hover:bg-olive-800/40">
                       <td className="py-3 px-3 font-bold text-white">{o.orderNumber}</td>
-                      <td className="py-3 px-3 font-extrabold text-amber-500">#{o.tokenNumber}</td>
                       <td className="py-3 px-3 font-semibold text-olive-300">{o.orderType}</td>
                       <td className="py-3 px-3">₹{Number(o.subtotal || 0).toFixed(2)}</td>
                       <td className="py-3 px-3">₹{Number(o.taxAmount || 0).toFixed(2)}</td>

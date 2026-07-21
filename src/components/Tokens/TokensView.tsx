@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, X } from 'lucide-react';
+import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, X, CheckCircle2 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
 import { Dish, OrderType, PortionVariant } from '../../types';
@@ -14,7 +14,7 @@ export const TokensView: React.FC = () => {
   const [orderType, setOrderType] = useState<OrderType>('Dine-In');
   const [tokenCart, setTokenCart] = useState<Array<{ itemId: number; name: string; variant: PortionVariant; quantity: number }>>([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [previewToken, setPreviewToken] = useState<{ tokenNumber: number; orderType: OrderType; items: any[] } | null>(null);
+  const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; items: any[] } | null>(null);
 
   useEffect(() => {
     loadDishes();
@@ -32,8 +32,8 @@ export const TokensView: React.FC = () => {
         { id: 4, categoryId: 2, name: 'Peri Peri Alfaham (பெரி பெரி அல்ஃபஹாம்)', priceQuarter: 160, priceHalf: 310, priceFull: 590, isAvailable: true },
         { id: 5, categoryId: 2, name: 'Honey Chili Alfaham (ஹனி சில்லி அல்ஃபஹாம்)', priceQuarter: 170, priceHalf: 330, priceFull: 620, isAvailable: true },
         { id: 6, categoryId: 3, name: 'Kubboos (குபூஸ் - 2 Pcs)', priceQuarter: 30, priceHalf: 30, priceFull: 30, isAvailable: true },
-        { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
-        { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
+        { id: 7, categoryId: 3, name: 'Special Garlic Sauce (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
+        { id: 8, categoryId: 4, name: 'Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
         { id: 9, categoryId: 4, name: 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
         { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
       ]);
@@ -42,19 +42,16 @@ export const TokensView: React.FC = () => {
 
   const filteredDishes = dishes.filter((d) => {
     const matchesCat = activeCategory === 'all' || String(d.categoryId) === String(activeCategory);
-    const matchesQuery = d.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCat && matchesQuery;
+    return matchesCat && d.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const addToTokenCart = (dish: Dish, variant: PortionVariant) => {
     setTokenCart((prev) => {
-      const existing = prev.find((item) => item.itemId === dish.id && item.variant === variant);
-      if (existing) {
-        return prev.map((item) =>
-          item.itemId === dish.id && item.variant === variant
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
+      const existingIndex = prev.findIndex((i) => i.itemId === dish.id && i.variant === variant);
+      if (existingIndex > -1) {
+        const newCart = [...prev];
+        newCart[existingIndex] = { ...newCart[existingIndex], quantity: newCart[existingIndex].quantity + 1 };
+        return newCart;
       }
       return [...prev, { itemId: dish.id, name: dish.name, variant, quantity: 1 }];
     });
@@ -81,7 +78,7 @@ export const TokensView: React.FC = () => {
       alert('Token cart is empty! Select dishes first.');
       return;
     }
-    const tokenNum = Math.floor(100 + Math.random() * 900);
+    const tokenNum = `KMKOT-${String(activeTokensList.length + 1).padStart(3, '0')}`;
     const newTokenObj = {
       tokenNumber: tokenNum,
       orderType,
@@ -98,21 +95,25 @@ export const TokensView: React.FC = () => {
     setShowPreviewModal(true);
   };
 
-  const handleSaveToken = () => {
+  const handleSaveTokenOnly = () => {
     if (!previewToken) return;
     const exists = activeTokensList.some((t) => t.tokenNumber === previewToken.tokenNumber);
-    if (exists) {
-      alert(`Token #${previewToken.tokenNumber} is already saved.`);
-      return;
+    if (!exists) {
+      addActiveToken(previewToken);
     }
-    addActiveToken(previewToken);
-    alert(`✓ Token #${previewToken.tokenNumber} saved and available for billing.`);
+    setShowPreviewModal(false);
+    setTokenCart([]);
   };
 
-  const handleSendToBilling = () => {
+  const handlePrintAndSaveToken = async () => {
     if (!previewToken) return;
-    loadTokenToCart({ tokenNumber: previewToken.tokenNumber, orderType: previewToken.orderType, items: previewToken.items, timestamp: '' }, dishes);
-    alert(`✓ Token #${previewToken.tokenNumber} order loaded into Billing POS cart!`);
+    const exists = activeTokensList.some((t) => t.tokenNumber === previewToken.tokenNumber);
+    if (!exists) {
+      addActiveToken(previewToken);
+    }
+    await triggerTokenPrint();
+    setShowPreviewModal(false);
+    setTokenCart([]);
   };
 
   const triggerTokenPrint = async () => {
@@ -345,18 +346,27 @@ export const TokensView: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <button onClick={() => setShowPreviewModal(false)} className="flex-1 py-2 bg-olive-800 text-white rounded-lg text-xs font-bold">
+            {/* Modal Controls */}
+            <div className="flex gap-2.5 pt-2 border-t border-gold-500/20">
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="flex-1 py-2.5 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
+              >
                 Close
               </button>
-              <button onClick={handleSaveToken} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold">
-                Save Token
+              <button
+                onClick={handleSaveTokenOnly}
+                className="flex-1 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Save Only
               </button>
-              <button onClick={handleSendToBilling} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1">
-                Send to Billing <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={triggerTokenPrint} className="flex-1 py-2 bg-gradient-to-r from-orange-600 to-amber-700 text-white rounded-lg text-xs font-extrabold flex items-center justify-center gap-1">
-                <Printer className="w-3.5 h-3.5" /> Print Token
+              <button
+                onClick={handlePrintAndSaveToken}
+                className="flex-[1.3] py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-extrabold shadow-lg shadow-amber-500/20 hover:scale-[1.01] transition-all flex items-center justify-center gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print & Save
               </button>
             </div>
           </div>

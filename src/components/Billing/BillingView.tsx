@@ -34,252 +34,250 @@ const ConfirmOrderModal: React.FC<{
   grandTotal: number;
   taxRate: number;
   curr: string;
-  onConfirm: () => void;
+  restaurantDetails?: any;
+  onSaveOnly: () => void;
+  onPrintAndSave: () => void;
   onCancel: () => void;
   isLoading: boolean;
-}> = ({ cart, orderType, paymentMode, subtotal, tax, discount, grandTotal, taxRate, curr, onConfirm, onCancel, isLoading }) => {
+}> = ({ cart, orderType, paymentMode, subtotal, tax, discount, grandTotal, taxRate, curr, restaurantDetails, onSaveOnly, onPrintAndSave, onCancel, isLoading }) => {
   const now = new Date();
-  const invoiceDate = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-  const invoiceTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-  const billNumber = '6622';
-  const cgst = taxRate / 2;
-  const tableNumber = '96';
-  const customerName = 'Customer Name';
-  const cashierName = 'Staff Name';
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  const invoiceDate = `${day}/${month}/${year}`;
+
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const invoiceTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+  const storeName = restaurantDetails?.companyName || 'ROYAL SPICE RESTAURANT';
+  const address = restaurantDetails?.address || '123 Main Street, Chennai, Tamil Nadu';
+  const rawPhone = restaurantDetails?.phone || '+91 98765 43210';
+  const phone = rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`}`;
+  const rawGst = restaurantDetails?.gstNumber || '33ABCDE1234F1Z5';
+  const gstin = rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`;
+
+  const billNumber = 'KMIV-' + Math.floor(100 + Math.random() * 900);
   const taxableAmount = Math.max(0, subtotal - discount);
-  const lineCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cgstRate = (taxRate / 2).toFixed(1);
+  const sgstRate = (taxRate / 2).toFixed(1);
+  const cgstAmt = tax / 2;
+  const sgstAmt = tax / 2;
+  const calculatedTotal = taxableAmount + tax;
+  const roundedGrandTotal = Math.round(calculatedTotal);
+  const roundOff = roundedGrandTotal - calculatedTotal;
+  const finalTotal = grandTotal || roundedGrandTotal;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl shadow-2xl shadow-black/10 max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center gap-3 p-4 border-b border-slate-200 flex-shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
-            <Receipt className="w-5 h-5 text-slate-700" />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-xl shadow-2xl shadow-black/80 max-h-[92vh] overflow-hidden flex flex-col">
+        {/* Modal Header */}
+        <div className="flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-950 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+            <Receipt className="w-5 h-5 text-amber-400" />
           </div>
           <div>
-            <h4 className="font-bold text-slate-950 text-base uppercase tracking-[0.15em]">Receipt Preview</h4>
+            <h4 className="font-bold text-white text-base uppercase tracking-[0.15em]">Receipt Preview</h4>
+            <p className="text-xs text-slate-400">Review thermal bill layout before printing</p>
           </div>
-          <button onClick={onCancel} className="ml-auto text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
+          <button onClick={onCancel} className="ml-auto text-slate-400 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="mx-auto max-w-[360px] border border-slate-200 shadow-sm bg-slate-50 font-mono text-[11px] text-slate-900">
-            <div className="p-4">
-              <div className="text-center uppercase tracking-[0.24em] font-black text-sm">Kish Mandhi</div>
-              <div className="text-center text-[10px] uppercase tracking-[0.18em] mt-2">Business Address Line 1</div>
-              <div className="text-center text-[10px] uppercase tracking-[0.18em]">Business Address Line 2</div>
-              <div className="text-center text-[10px] text-slate-600 mt-1">GSTIN: 33ABCDE1234F1Z5</div>
-              <div className="text-center text-[10px] text-slate-600">Phone: +91 98765 43210</div>
-              <div className="border-t border-slate-200 my-3"></div>
+        {/* Paper Preview */}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-950/80 flex justify-center">
+          <div className="w-full max-w-[370px] bg-white text-black font-mono shadow-2xl p-6 relative rounded-t-sm select-text border border-slate-300 text-left">
 
-              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[10px] leading-5">
-                <div className="font-semibold uppercase">BILL NO</div>
-                <div className="font-semibold uppercase">DATE</div>
-                <div className="font-semibold uppercase">TIME</div>
-                <div className="truncate">{billNumber}</div>
-                <div className="truncate">{invoiceDate}</div>
-                <div className="truncate text-right">{invoiceTime}</div>
+            {/* Top Logo SVG */}
+            <div className="flex justify-center mb-1">
+              <svg viewBox="0 0 240 70" className="w-44 h-12">
+                {/* Left Flourish */}
+                <path d="M 15 42 C 30 27, 50 47, 70 37 Q 48 32, 25 44" fill="none" stroke="#000" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="15" cy="42" r="2.5" fill="#000" />
+                <path d="M 35 36 C 43 26, 55 30, 63 37" fill="none" stroke="#000" strokeWidth="1.2" />
+
+                {/* Right Flourish */}
+                <path d="M 225 42 C 210 27, 190 47, 170 37 Q 192 32, 215 44" fill="none" stroke="#000" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="225" cy="42" r="2.5" fill="#000" />
+                <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" strokeWidth="1.2" />
+
+                {/* Crown */}
+                <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000" />
+                <circle cx="106" cy="6" r="2" fill="#000" />
+                <circle cx="120" cy="4" r="2" fill="#000" />
+                <circle cx="134" cy="6" r="2" fill="#000" />
+
+                {/* Spoon & Fork Crossed */}
+                <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000" />
+                <path d="M 106 30 L 132 56" stroke="#000" strokeWidth="3" strokeLinecap="round" />
+                <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" strokeWidth="3" strokeLinecap="round" />
+                <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+
+            {/* Restaurant Title */}
+            <div className="text-center">
+              <h2 className="text-xl font-extrabold tracking-tight uppercase leading-tight font-sans text-black">
+                {storeName}
+              </h2>
+              {address && <p className="text-[11px] text-slate-900 font-medium mt-0.5">{address}</p>}
+              {phone && <p className="text-[11px] text-slate-900 font-medium">{phone}</p>}
+              {gstin && <p className="text-[11px] text-slate-900 font-medium">{gstin}</p>}
+            </div>
+
+            {/* Dashed Line */}
+            <div className="border-b border-dashed border-black my-2.5"></div>
+
+            {/* Tax Invoice Subheader */}
+            <div className="text-center font-bold text-xs tracking-wider uppercase mb-2">
+              *** TAX INVOICE ***
+            </div>
+
+            {/* Invoice Metadata */}
+            <div className="text-[11px] leading-relaxed mb-2">
+              <div className="flex justify-between">
+                <span>Bill No &nbsp;: {billNumber}</span>
+                <span>Date &nbsp;: {invoiceDate}</span>
               </div>
-              <div className="border-t border-slate-200 my-3"></div>
-
-              <div className="grid grid-cols-[1.5fr_0.5fr_0.9fr_0.9fr] gap-2 text-[10px] uppercase tracking-[0.12em] text-slate-600">
-                <span>DESCRIPTION</span>
-                <span className="text-right">QTY</span>
-                <span className="text-right">RATE</span>
-                <span className="text-right">AMOUNT</span>
+              <div className="flex justify-between">
+                <span>Time &nbsp;&nbsp;&nbsp;: {invoiceTime}</span>
               </div>
-              <div className="border-t border-slate-200 my-2"></div>
+            </div>
 
-              {cart.map((item) => {
-                const lineTotal = item.totalPrice;
+            {/* Dashed Line */}
+            <div className="border-b border-dashed border-black my-2"></div>
+
+            {/* Items Table Header */}
+            <div className="border-y-2 border-black py-1 my-1.5 grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 text-[11px] font-bold">
+              <span>Item</span>
+              <span className="text-center">Qty</span>
+              <span className="text-right">Rate ({curr})</span>
+              <span className="text-right">Amount ({curr})</span>
+            </div>
+
+            {/* Items List */}
+            <div className="space-y-1.5 my-2 text-[11px]">
+              {cart.map((item, idx) => {
                 const label = `${item.name}${item.variant ? ` (${item.variant})` : ''}`;
                 return (
-                  <div key={item.cartKey} className="space-y-1 mb-2 text-[10px] text-slate-700">
-                    <div className="font-semibold text-slate-900">{label}</div>
-                    <div className="grid grid-cols-[1.5fr_0.5fr_0.9fr_0.9fr] gap-2">
-                      <span className="truncate">&nbsp;</span>
-                      <span className="text-right">{item.quantity}</span>
-                      <span className="text-right">{curr}{item.unitPrice.toFixed(2)}</span>
-                      <span className="text-right">{curr}{lineTotal.toFixed(2)}</span>
-                    </div>
+                  <div key={idx} className="grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 text-[11px] leading-tight items-baseline">
+                    <span className="font-semibold text-black break-words">{label}</span>
+                    <span className="text-center">{item.quantity}</span>
+                    <span className="text-right">{item.unitPrice.toFixed(2)}</span>
+                    <span className="text-right font-semibold">{item.totalPrice.toFixed(2)}</span>
                   </div>
                 );
               })}
-
-              <div className="border-t border-slate-200 my-2"></div>
-              <div className="space-y-1 text-[10px] text-slate-700">
-                <div className="flex justify-between"><span>SUB TOTAL</span><span>{curr}{subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Discount ({taxRate}%)</span><span>( - {curr}{discount.toFixed(2)} )</span></div>
-                <div className="flex justify-between"><span>Taxable Amount</span><span>{curr}{taxableAmount.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>CGST @ {cgst}%</span><span>{curr}{(tax / 2).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>SGST @ {cgst}%</span><span>{curr}{(tax / 2).toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Rounding</span><span>( + {curr}0.00 )</span></div>
-              </div>
-              <div className="border-t border-slate-200 my-2"></div>
-              <div className="flex justify-between text-[12px] font-bold uppercase text-slate-900">
-                <span>TOTAL</span>
-                <span>{curr}{grandTotal.toFixed(2)}</span>
-              </div>
-
-              <div className="border-t border-slate-200 my-3"></div>
-              <div className="text-center text-[10px] uppercase tracking-[0.2em] font-bold">THANKS FOR YOUR VISIT!</div>
-              <div className="text-center text-[9px] text-slate-600 mt-1">HAPPY JOURNEY</div>
             </div>
+
+            {/* Dashed Line */}
+            <div className="border-b border-dashed border-black my-2"></div>
+
+            {/* Subtotal & Calculations */}
+            <div className="space-y-1 text-[11px]">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>{subtotal.toFixed(2)}</span>
+              </div>
+
+              {discount > 0 && (
+                <div className="flex justify-between">
+                  <span>Discount</span>
+                  <span>-{discount.toFixed(2)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end my-1">
+                <div className="border-b border-dashed border-black w-24"></div>
+              </div>
+
+              <div className="flex justify-between">
+                <span>Taxable Amount</span>
+                <span>{taxableAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>CGST ({cgstRate}%)</span>
+                <span>{cgstAmt.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>SGST ({sgstRate}%)</span>
+                <span>{sgstAmt.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Round Off</span>
+                <span>{roundOff >= 0 ? `${roundOff.toFixed(2)}` : `${roundOff.toFixed(2)}`}</span>
+              </div>
+            </div>
+
+            {/* Dashed Line */}
+            <div className="border-b border-dashed border-black my-2"></div>
+
+            {/* Grand Total Box with double line */}
+            <div className="border-y-[3px] border-double border-black py-1.5 my-2 flex justify-between items-center text-sm font-black tracking-wide">
+              <span>GRAND TOTAL</span>
+              <span className="text-base">{curr} {finalTotal.toFixed(2)}</span>
+            </div>
+
+            {/* Dashed Line */}
+            <div className="border-b border-dashed border-black my-2"></div>
+
+            {/* Footer Text */}
+            <div className="text-center mt-3 pt-1">
+              <div className="font-serif italic font-bold text-sm text-black leading-snug">
+                Thank You!<br />
+                Visit Again.
+              </div>
+              <div className="flex items-center justify-center gap-2 my-2">
+                <div className="h-[1px] bg-black w-10"></div>
+                <span className="text-[10px]">★</span>
+                <div className="h-[1px] bg-black w-10"></div>
+              </div>
+              <div className="text-[10px] text-slate-800 leading-tight">
+                Goods once sold cannot be returned.<br />
+                Please visit again.
+              </div>
+            </div>
+
+            {/* Sawtooth Jagged Bottom */}
+            <div
+              className="absolute -bottom-3 left-0 w-full h-3"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 10' width='20' height='10'%3E%3Cpolygon points='0,0 10,10 20,0' fill='%23ffffff'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'repeat-x',
+                backgroundSize: '15px 10px'
+              }}
+            />
           </div>
         </div>
 
-        <div className="flex gap-3 p-4 border-t border-slate-200 bg-slate-50 flex-shrink-0">
-          <button onClick={onCancel} className="flex-1 py-2.5 border border-slate-300 text-slate-700 rounded-xl text-sm font-semibold hover:bg-slate-100 transition-colors">
-            Cancel
-          </button>
+        {/* Modal Controls */}
+        <div className="flex gap-2.5 p-4 border-t border-slate-800 bg-slate-950 flex-shrink-0">
           <button
-            onClick={onConfirm}
+            onClick={onCancel}
             disabled={isLoading}
-            className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-extrabold shadow-sm hover:bg-slate-800 transition-colors disabled:opacity-60"
-          >
-            {isLoading ? 'Saving...' : 'Confirm & Print Receipt'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ProfessionalInvoiceModal: React.FC<{
-  data: any;
-  restaurantDetails: any;
-  onClose: () => void;
-  onPrint: (isKot?: boolean) => void;
-}> = ({ data, restaurantDetails, onClose, onPrint }) => {
-  const curr = restaurantDetails?.currency || '₹';
-  const storeName = restaurantDetails?.companyName || 'Kish Mandhi';
-  const address = restaurantDetails?.address || '';
-  const phone = restaurantDetails?.phone || '';
-  const email = restaurantDetails?.email || '';
-  const gst = restaurantDetails?.gstNumber || '';
-  const notes = restaurantDetails?.footerNote || 'Goods once sold cannot be returned.';
-  const invoiceDate = data.orderDate || new Date().toISOString().split('T')[0];
-  const dueDate = data.dueDate || '';
-  const taxRate = restaurantDetails?.taxRate ?? 5;
-  const cgst = taxRate / 2;
-  const shippingCharges = data.shippingCharges ?? 0;
-  const roundOff = data.roundOff ?? 0;
-
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-olive-900 border border-gold-500/40 rounded-3xl shadow-2xl shadow-black/60 w-full max-w-[820px] overflow-hidden">
-        <div className="p-6 text-[12px] text-white">
-          <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr] mb-4">
-            <div className="space-y-3">
-              <div className="text-center lg:text-left">
-                <h2 className="text-3xl font-extrabold tracking-[0.2em] uppercase">{storeName}</h2>
-                {restaurantDetails?.tagline && <p className="text-sm text-olive-300 mt-1">{restaurantDetails.tagline}</p>}
-              </div>
-              {address && <p className="text-sm text-olive-300">{address}</p>}
-              <div className="flex flex-wrap gap-3 text-[11px] text-olive-300">
-                {phone && <span>Phone: {phone}</span>}
-                {email && <span>Email: {email}</span>}
-                {gst && <span>GSTIN: {gst}</span>}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-gold-500/20 bg-olive-950/60 p-4 text-[11px]">
-              <h3 className="font-bold text-gold-300 uppercase tracking-[0.2em] text-xs mb-3">Invoice Details</h3>
-              <div className="space-y-2 text-olive-300">
-                <div className="flex justify-between"><span>Invoice #</span><span className="text-white font-semibold">{data.orderNumber}</span></div>
-                <div className="flex justify-between"><span>Invoice Date</span><span className="text-white font-semibold">{invoiceDate}</span></div>
-                {dueDate && <div className="flex justify-between"><span>Due Date</span><span className="text-white font-semibold">{dueDate}</span></div>}
-                <div className="flex justify-between"><span>Order Type</span><span className="text-white font-semibold">{data.orderType}</span></div>
-                <div className="flex justify-between"><span>Payment</span><span className="text-white font-semibold">{data.paymentMode}</span></div>
-                <div className="flex justify-between"><span>Token #</span><span className="text-white font-semibold">{data.tokenNumber}</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto mb-4">
-            <table className="w-full border-collapse text-[11px]">
-              <thead>
-                <tr className="border-b border-gold-500/20 text-left text-olive-300 text-[10px] uppercase tracking-[0.08em]">
-                  <th className="p-2">S.No.</th>
-                  <th className="p-2">Product</th>
-                  <th className="p-2">Unit</th>
-                  <th className="p-2 text-right">Qty</th>
-                  <th className="p-2 text-right">Rate</th>
-                  <th className="p-2 text-right">Disc</th>
-                  <th className="p-2 text-right">Tax</th>
-                  <th className="p-2 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((item: any, idx: number) => {
-                  const unit = item.unit || 'Plate';
-                  const lineDiscount = item.discount ?? 0;
-                  const lineTax = ((item.totalPrice || 0) - lineDiscount) * (taxRate / 100);
-                  return (
-                    <tr key={idx} className="border-b border-gold-500/10">
-                      <td className="py-2 px-2 text-olive-300">{idx + 1}</td>
-                      <td className="py-2 px-2">
-                        <div className="font-semibold text-white truncate">{item.name}</div>
-                        {item.hsnSac && <div className="text-[10px] text-olive-400">HSN/SAC: {item.hsnSac}</div>}
-                      </td>
-                      <td className="py-2 px-2 text-olive-300">{unit}</td>
-                      <td className="py-2 px-2 text-right text-olive-300">{item.quantity}</td>
-                      <td className="py-2 px-2 text-right text-olive-300">{curr}{item.unitPrice.toFixed(2)}</td>
-                      <td className="py-2 px-2 text-right text-olive-300">{curr}{lineDiscount.toFixed(2)}</td>
-                      <td className="py-2 px-2 text-right text-olive-300">{taxRate}%</td>
-                      <td className="py-2 px-2 text-right font-semibold text-gold-300">{curr}{(item.totalPrice - lineDiscount + lineTax).toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[1fr_300px] mb-4">
-            <div className="rounded-3xl border border-gold-500/20 bg-olive-950/60 p-4 text-[11px]">
-              <h5 className="font-semibold text-gold-300 uppercase tracking-[0.15em] mb-2">Notes</h5>
-              <p className="text-olive-300 leading-6">{notes}</p>
-            </div>
-            <div className="rounded-3xl border border-gold-500/20 bg-olive-950/60 p-4 text-[11px] space-y-2">
-              <div className="flex justify-between"><span>Subtotal</span><span>{curr}{data.subtotal.toFixed(2)}</span></div>
-              {data.discount > 0 && <div className="flex justify-between"><span>Discount</span><span>-{curr}{data.discount.toFixed(2)}</span></div>}
-              <div className="flex justify-between"><span>CGST @ {cgst}%</span><span>{curr}{((data.tax ?? 0) / 2).toFixed(2)}</span></div>
-              <div className="flex justify-between"><span>SGST @ {cgst}%</span><span>{curr}{((data.tax ?? 0) / 2).toFixed(2)}</span></div>
-              {shippingCharges > 0 && <div className="flex justify-between"><span>Shipping</span><span>{curr}{shippingCharges.toFixed(2)}</span></div>}
-              {roundOff !== 0 && <div className="flex justify-between"><span>Round Off</span><span>{curr}{roundOff.toFixed(2)}</span></div>}
-              <div className="border-t border-gold-500/20 pt-3 font-bold text-white text-base flex justify-between"><span>Grand Total</span><span>{curr}{data.grandTotal.toFixed(2)}</span></div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2 mb-4">
-            <div className="rounded-3xl border border-gold-500/20 bg-olive-950/60 p-4 text-[11px]">
-              <p className="font-semibold text-gold-300 uppercase tracking-[0.15em] mb-2">Authorized Signature</p>
-              <div className="h-12 border-b border-gold-500/20"></div>
-            </div>
-            <div className="rounded-3xl border border-gold-500/20 bg-olive-950/60 p-4 text-[11px]">
-              <p className="font-semibold text-gold-300 uppercase tracking-[0.15em] mb-2">Customer Signature</p>
-              <div className="h-12 border-b border-gold-500/20"></div>
-            </div>
-          </div>
-
-          <div className="border-t border-gold-500/20 pt-4 text-center text-[10px] text-olive-400">
-            <p>Thank you for your business!</p>
-            <p>{phone ? `Phone: ${phone}` : ''}{phone && email ? ' | ' : ''}{email ? `Email: ${email}` : ''}</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2 p-3 bg-olive-950 border-t border-gold-500/10">
-          <button
-            onClick={() => onPrint(false)}
-            className="flex-1 py-2 rounded-xl bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 font-bold text-xs"
-          >
-            Print Compact Bill
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 rounded-xl bg-olive-800 border border-gold-500/20 text-white text-xs"
+            className="flex-1 py-2.5 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
           >
             Close
+          </button>
+          <button
+            onClick={onSaveOnly}
+            disabled={isLoading}
+            className="flex-1 py-2.5 bg-slate-800 border border-slate-600 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            {isLoading ? 'Saving...' : 'Save Only'}
+          </button>
+          <button
+            onClick={onPrintAndSave}
+            disabled={isLoading}
+            className="flex-[1.3] py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-extrabold shadow-lg shadow-amber-500/20 hover:scale-[1.01] transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            {isLoading ? 'Processing...' : 'Print & Save'}
           </button>
         </div>
       </div>
@@ -298,8 +296,6 @@ export const BillingView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTokenNum, setSelectedTokenNum] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [receiptData, setReceiptData] = useState<any>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const curr = restaurantDetails?.currency || '₹';
@@ -347,7 +343,7 @@ export const BillingView: React.FC = () => {
     setShowConfirmModal(true);
   };
 
-  const handleConfirmedCheckout = async () => {
+  const handleSaveOrder = async (shouldPrint = true) => {
     setIsCheckingOut(true);
     const payload = {
       order_type: orderType,
@@ -376,118 +372,197 @@ export const BillingView: React.FC = () => {
       tableNumber: 'N/A',
     };
 
+    let createdData: any = null;
+
     if ((window as any).electronAPI) {
       const res = await (window as any).electronAPI.createOrder(payload);
       if (res.success) {
-        setReceiptData({ ...res.data, ...base });
-        setShowConfirmModal(false);
-        setShowInvoiceModal(true);
-        clearCart();
+        createdData = { ...res.data, ...base };
       } else {
         alert(res.message || 'Order failed. Try again.');
+        setIsCheckingOut(false);
+        return;
       }
     } else {
-      setReceiptData({
-        orderNumber: `KM-${Date.now().toString().slice(-6)}`,
-        tokenNumber: Math.floor(100 + Math.random() * 900),
+      const fallbackSeq = Math.floor(100 + Math.random() * 900);
+      createdData = {
+        orderNumber: `KMIV-${fallbackSeq}`,
         orderDate: payload.order_date,
         dueDate: payload.due_date,
         shippingCharges: payload.shipping_charges,
         roundOff: payload.round_off,
         ...base,
-      });
-      setShowConfirmModal(false);
-      setShowInvoiceModal(true);
-      clearCart();
+      };
     }
+
+    if (shouldPrint && createdData) {
+      await triggerPrintDirect(createdData, false);
+    }
+
+    setShowConfirmModal(false);
+    clearCart();
     setIsCheckingOut(false);
   };
 
-  const triggerPrint = async (isKot = false) => {
-    if (!receiptData) return;
-    const now = new Date().toLocaleString('en-IN');
+  const triggerPrintDirect = async (data: any, isKot = false) => {
+    if (!data) return;
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
     const rd = restaurantDetails;
-    const rName = rd?.companyName || 'Kish Mandhi';
-    const rAddr = rd?.address || '';
-    const rPhone = rd?.phone || '';
-    const rGst = rd?.gstNumber || '';
-    const rTagline = rd?.tagline || 'Arabic Grill & Fine Dining';
+    const rName = rd?.companyName || 'ROYAL SPICE RESTAURANT';
+    const rAddr = rd?.address || '123 Main Street, Chennai, Tamil Nadu';
+    const rawPhone = rd?.phone || '+91 98765 43210';
+    const rPhone = rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone.startsWith('+') ? rawPhone : `+91 ${rawPhone}`}`;
+    const rawGst = rd?.gstNumber || '33ABCDE1234F1Z5';
+    const rGst = rawGst.startsWith('GSTIN:') ? rawGst : `GSTIN: ${rawGst}`;
     const curr = rd?.currency || '₹';
-    const rFooter = rd?.footerNote || 'Thank you for visiting!';
     const tp = rd?.taxRate ?? 5;
-    const cgst = tp / 2; const sgst = tp / 2;
+    const cgstRate = (tp / 2).toFixed(1);
+    const sgstRate = (tp / 2).toFixed(1);
 
     const receiptStyles = `
       <style>
-        @page { size: 80mm auto; margin: 4mm; }
-        body { margin: 0; padding: 0; font-family: monospace, Arial, sans-serif; font-size: 10px; color: #000; background: #fff; }
-        .receipt { width: 76mm; margin: 0 auto; padding: 6px; }
+        @page { size: 80mm auto; margin: 2mm; }
+        body { margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
+        .receipt { width: 74mm; margin: 0 auto; padding: 4px; box-sizing: border-box; text-align: left; }
         .center { text-align: center; }
-        .divider { border-top: 1px dashed #000; margin: 8px 0; }
-        .tiny { font-size: 9px; }
-        .small { font-size: 10px; }
-        .bold { font-weight: 700; }
-        .row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-        .row span { display: inline-block; }
-        .label { width: 46%; text-align: left; }
-        .qty, .rate, .amt { width: 18%; text-align: right; }
-        .value { width: 54%; text-align: right; }
+        .bold { font-weight: 800; }
+        .divider { border-top: 1px dashed #000; margin: 6px 0; }
+        .double-divider { border-top: 3px double #000; border-bottom: 3px double #000; padding: 5px 0; margin: 6px 0; }
+        .table-header { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0; font-weight: bold; }
+        .row { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin: 2px 0; }
+        .col-item { flex: 2; text-align: left; word-break: break-word; font-weight: 500; }
+        .col-qty { width: 35px; text-align: center; }
+        .col-rate { width: 55px; text-align: right; }
+        .col-amt { width: 65px; text-align: right; }
       </style>
     `;
 
-    const billNumber = receiptData.orderNumber || `KM-${Date.now().toString().slice(-6)}`;
-    const tableNumber = receiptData.tableNumber || '96';
-    const customerName = receiptData.customerName || 'Walk-in';
-    const cashierName = receiptData.cashierName || (useAuthStore.getState().user?.name || 'Staff');
-    const taxableAmount = Math.max(0, receiptData.subtotal - receiptData.discount);
-    const rounding = receiptData.roundOff ?? 0;
-    const paidAmount = receiptData.grandTotal;
-    const changeDue = 0.00;
-    const totalGstIncluded = receiptData.tax;
-    const nonTaxableAmount = 0.00;
-    const invoiceDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-    const invoiceTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const billNumber = data.orderNumber || `KMIV-001`;
+    const tokenNumber = data.tokenNumber
+      ? (String(data.tokenNumber).startsWith('KMKOT-') ? data.tokenNumber : `KMKOT-${String(data.tokenNumber).padStart(3, '0')}`)
+      : `KMKOT-001`;
+    const taxableAmount = Math.max(0, data.subtotal - (data.discount || 0));
+    const rounding = data.roundOff ?? 0;
 
     const html = isKot
       ? `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-          <div class="center bold"><div>${rName}</div><div class="small">KITCHEN ORDER TICKET</div></div>
+          <div class="center bold"><div style="font-size:14px;">${rName}</div><div style="font-size:11px; letter-spacing:1px; margin-top:2px;">KITCHEN ORDER TICKET</div></div>
           <div class="divider"></div>
-          <div class="small"><div>Token: ${receiptData.tokenNumber}</div><div>Type: ${receiptData.orderType}</div><div>${invoiceDate} ${invoiceTime}</div></div>
+          <div style="font-size:11px;"><div>Token: <strong>#${tokenNumber}</strong></div><div>Type: ${data.orderType}</div><div>Date: ${formattedDate} ${formattedTime}</div></div>
           <div class="divider"></div>
-          <div class="row small bold"><span class="label">DESCRIPTION</span><span class="qty">QTY</span><span class="rate">RATE</span><span class="amt">AMOUNT</span></div>
-          ${receiptData.items.map((i: any) => {
+          <div class="row table-header"><span class="col-item">ITEM DESCRIPTION</span><span class="col-qty">QTY</span></div>
+          ${data.items.map((i: any) => {
         const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
-        return `<div class="row small"><span class="label">${label}</span><span class="qty">${i.quantity}</span><span class="rate">${curr}${i.unitPrice.toFixed(2)}</span><span class="amt">${curr}${i.totalPrice.toFixed(2)}</span></div>`;
+        return `<div class="row"><span class="col-item">${label}</span><span class="col-qty">${i.quantity}</span></div>`;
       }).join('')}
           <div class="divider"></div>
         </div></body></html>`
       : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-          <div class="center bold"><div>${rName}</div><div class="small">${rTagline}</div></div>
-          ${rAddr ? `<div class="center tiny">${rAddr}</div>` : ''}
-          ${rPhone ? `<div class="center tiny">Phone: ${rPhone}</div>` : ''}
-          ${rGst ? `<div class="center tiny">GSTIN: ${rGst}</div>` : ''}
+          <!-- Logo SVG -->
+          <div class="center" style="margin-bottom: 4px;">
+            <svg viewBox="0 0 240 70" width="160" height="46">
+              <path d="M 15 42 C 30 27, 50 47, 70 37 Q 48 32, 25 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="15" cy="42" r="2.5" fill="#000"/>
+              <path d="M 35 36 C 43 26, 55 30, 63 37" fill="none" stroke="#000" stroke-width="1.2"/>
+              <path d="M 225 42 C 210 27, 190 47, 170 37 Q 192 32, 215 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="225" cy="42" r="2.5" fill="#000"/>
+              <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" stroke-width="1.2"/>
+              <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000"/>
+              <circle cx="106" cy="6" r="2" fill="#000"/>
+              <circle cx="120" cy="4" r="2" fill="#000"/>
+              <circle cx="134" cy="6" r="2" fill="#000"/>
+              <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000"/>
+              <path d="M 106 30 L 132 56" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+              <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+              <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <!-- Restaurant Name & Details -->
+          <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
+          ${rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
+          ${rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
+          ${rGst ? `<div class="center" style="font-size: 10.5px;">${rGst}</div>` : ''}
+          
           <div class="divider"></div>
-          <div class="row small"><span class="label">BILL NO</span><span class="value">${billNumber}</span></div>
-          <div class="row small"><span class="label">DATE</span><span class="value">${invoiceDate}</span></div>
-          <div class="row small"><span class="label">TIME</span><span class="value">${invoiceTime}</span></div>
+          <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">*** TAX INVOICE ***</div>
+          
+          <div style="font-size: 10.5px; margin: 4px 0;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>Bill No &nbsp;: ${billNumber}</span>
+              <span>Date &nbsp;: ${formattedDate}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Time &nbsp;&nbsp;&nbsp;: ${formattedTime}</span>
+            </div>
+          </div>
+          
           <div class="divider"></div>
-          <div class="row small bold"><span class="col-desc">DESCRIPTION</span><span class="col-qty">QTY</span><span class="col-rate">RATE</span><span class="col-amt">AMOUNT</span></div>
-          ${receiptData.items.map((i: any) => {
+          
+          <!-- Table Header -->
+          <div class="row table-header" style="font-size: 10.5px;">
+            <span class="col-item">Item</span>
+            <span class="col-qty">Qty</span>
+            <span class="col-rate">Rate (${curr})</span>
+            <span class="col-amt">Amount (${curr})</span>
+          </div>
+          
+          <!-- Items List -->
+          ${data.items.map((i: any) => {
         const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
-        return `<div class="row small"><span class="label">${label}</span><span class="qty">${i.quantity}</span><span class="rate">${curr}${i.unitPrice.toFixed(2)}</span><span class="amt">${curr}${i.totalPrice.toFixed(2)}</span></div>`;
+        return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity}</span><span class="col-rate">${i.unitPrice.toFixed(2)}</span><span class="col-amt">${i.totalPrice.toFixed(2)}</span></div>`;
       }).join('')}
+          
           <div class="divider"></div>
-          <div class="row small"><span class="label">SUB TOTAL</span><span class="value">${curr}${receiptData.subtotal.toFixed(2)}</span></div>
-          <div class="row small"><span class="label">Discount (${tp}%)</span><span class="value">( - ${curr}${receiptData.discount.toFixed(2)} )</span></div>
-          <div class="row small"><span class="label">Taxable Amount</span><span class="value">${curr}${taxableAmount.toFixed(2)}</span></div>
-          <div class="row small"><span class="label">CGST @ ${cgst}%</span><span class="value">${curr}${(receiptData.tax / 2).toFixed(2)}</span></div>
-          <div class="row small"><span class="label">SGST @ ${sgst}%</span><span class="value">${curr}${(receiptData.tax / 2).toFixed(2)}</span></div>
-          <div class="row small"><span class="label">Rounding</span><span class="value">( + ${curr}${rounding.toFixed(2)} )</span></div>
+          
+          <!-- Calculation Section -->
+          <div style="font-size: 10.5px;">
+            <div class="row"><span>Subtotal</span><span>${data.subtotal.toFixed(2)}</span></div>
+            ${data.discount > 0 ? `<div class="row"><span>Discount</span><span>-${data.discount.toFixed(2)}</span></div>` : ''}
+            <div style="display: flex; justify-content: flex-end; margin: 3px 0;"><div style="border-top: 1px dashed #000; width: 80px;"></div></div>
+            <div class="row"><span>Taxable Amount</span><span>${taxableAmount.toFixed(2)}</span></div>
+            <div class="row"><span>CGST (${cgstRate}%)</span><span>${((data.tax || 0) / 2).toFixed(2)}</span></div>
+            <div class="row"><span>SGST (${sgstRate}%)</span><span>${((data.tax || 0) / 2).toFixed(2)}</span></div>
+            <div class="row"><span>Round Off</span><span>${rounding >= 0 ? rounding.toFixed(2) : rounding.toFixed(2)}</span></div>
+          </div>
+          
           <div class="divider"></div>
-          <div class="row bold"><span class="label">TOTAL</span><span class="value">${curr}${receiptData.grandTotal.toFixed(2)}</span></div>
+          
+          <!-- Grand Total Banner -->
+          <div class="row double-divider bold" style="font-size: 15px;">
+            <span>GRAND TOTAL</span>
+            <span>${curr} ${data.grandTotal.toFixed(2)}</span>
+          </div>
+          
           <div class="divider"></div>
-          <div class="center bold">THANKS FOR YOUR VISIT!</div>
-          <div class="center tiny">HAPPY JOURNEY</div>
+          
+          <!-- Footer -->
+          <div class="center" style="margin-top: 8px;">
+            <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: bold; font-size: 14px;">
+              Thank You!<br/>Visit Again.
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0;">
+              <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
+              <span style="font-size: 9px;">★</span>
+              <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
+            </div>
+            <div style="font-size: 9.5px; line-height: 1.3;">
+              Goods once sold cannot be returned.<br/>
+              Please visit again.
+            </div>
+          </div>
         </div></body></html>`;
     if ((window as any).electronAPI) {
       await (window as any).electronAPI.printReceipt(html);
@@ -649,25 +724,16 @@ export const BillingView: React.FC = () => {
         </div>
       </div>
 
-      {/* Confirm Modal */}
+      {/* Confirm Modal (Thermal Bill Preview) */}
       {showConfirmModal && (
         <ConfirmOrderModal
           cart={cart} orderType={orderType} paymentMode={paymentMode}
           subtotal={subtotal} tax={taxAmt} discount={discount} grandTotal={grandTotal}
-          taxRate={taxRate} curr={curr}
-          onConfirm={handleConfirmedCheckout}
+          taxRate={taxRate} curr={curr} restaurantDetails={restaurantDetails}
+          onSaveOnly={() => handleSaveOrder(false)}
+          onPrintAndSave={() => handleSaveOrder(true)}
           onCancel={() => setShowConfirmModal(false)}
           isLoading={isCheckingOut}
-        />
-      )}
-
-      {/* Professional Invoice Modal */}
-      {showInvoiceModal && receiptData && (
-        <ProfessionalInvoiceModal
-          data={receiptData}
-          restaurantDetails={restaurantDetails}
-          onClose={() => setShowInvoiceModal(false)}
-          onPrint={triggerPrint}
         />
       )}
     </div>

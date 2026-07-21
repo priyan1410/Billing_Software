@@ -82,14 +82,14 @@ ipcMain.handle('menu:deleteItem', async (_evt: any, id: any) => {
 });
 
 ipcMain.handle('orders:create', async (_evt: any, orderData: any) => {
-  const timestamp = Date.now().toString().slice(-4);
-  const tokenNumber = Math.floor(100 + Math.random() * 900);
-  const orderNumber = `KM-${timestamp}`;
+  const nextSeq = db.orders.length + 1;
+  const seqStr = String(nextSeq).padStart(3, '0');
+
+  const orderNumber = orderData.order_number || orderData.orderNumber || `KMIV-${seqStr}`;
 
   const newOrder = {
     id: db.orders.length + 101,
     orderNumber,
-    tokenNumber,
     orderType: orderData.order_type || orderData.orderType || 'Dine-In',
     subtotal: orderData.subtotal,
     taxAmount: orderData.tax_amount || orderData.taxAmount,

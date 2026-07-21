@@ -37,14 +37,13 @@ const Dashboard = {
     if (!tbody) return;
 
     if (!orders || orders.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="loading-td">No recent transactions recorded today.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="loading-td">No recent transactions recorded today.</td></tr>';
       return;
     }
 
     tbody.innerHTML = orders.map(o => `
       <tr>
         <td><strong>${o.order_number}</strong></td>
-        <td><span class="badge" style="background:#e5a93c; color:#12141a; font-weight:700;">#${o.token_number}</span></td>
         <td>${o.order_type}</td>
         <td><strong>₹${Number(o.grand_total).toFixed(2)}</strong></td>
         <td><span class="trend positive">${o.payment_mode}</span></td>

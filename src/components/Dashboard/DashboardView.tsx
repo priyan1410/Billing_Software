@@ -162,7 +162,6 @@ export const DashboardView: React.FC = () => {
             <thead className="bg-olive-800 text-olive-300 font-semibold border-b border-gold-500/20">
               <tr>
                 <th className="p-3">Bill #</th>
-                <th className="p-3">Token #</th>
                 <th className="p-3">Type</th>
                 <th className="p-3">Amount</th>
                 <th className="p-3">Payment</th>
@@ -173,11 +172,6 @@ export const DashboardView: React.FC = () => {
               {stats.recentOrders.map((order: any) => (
                 <tr key={order.id} className="hover:bg-olive-800/40 transition-colors">
                   <td className="p-3 font-bold text-white">{order.orderNumber}</td>
-                  <td className="p-3">
-                    <span className="px-2 py-0.5 bg-gold-500 text-olive-950 rounded-md font-bold text-xs">
-                      #{order.tokenNumber}
-                    </span>
-                  </td>
                   <td className="p-3 text-olive-300">{order.orderType}</td>
                   <td className="p-3 font-bold text-gold-400">₹{order.grandTotal.toFixed(2)}</td>
                   <td className="p-3 text-emerald-400 font-medium">{order.paymentMode}</td>

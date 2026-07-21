@@ -14,7 +14,6 @@ export interface DbStore {
   orders: Array<{
     id: number;
     orderNumber: string;
-    tokenNumber: number;
     orderType: string;
     subtotal: number;
     taxAmount: number;

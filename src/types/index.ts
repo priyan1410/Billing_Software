@@ -37,7 +37,6 @@ export interface CartItem {
 export interface Order {
   id: number;
   orderNumber: string;
-  tokenNumber: number;
   orderType: OrderType;
   subtotal: number;
   taxAmount: number;
@@ -70,7 +69,7 @@ export interface OrderPayload {
 }
 
 export interface TokenItem {
-  tokenNumber: number;
+  tokenNumber: number | string;
   orderType: OrderType;
   items: {
     itemId: number;

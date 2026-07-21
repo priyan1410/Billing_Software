@@ -135,16 +135,17 @@ ipcMain.handle('menu:deleteItem', async (evt, id) => {
 // ORDERS
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('orders:create', async (evt, orderData) => {
-  const timestamp = Date.now().toString().slice(-6);
-  const tokenNumber = Math.floor(100 + Math.random() * 900);
-  const orderNumber = `KM-${timestamp}`;
+  const maxIdRes = await query('SELECT MAX(id) as maxId FROM orders');
+  const nextSeq = ((maxIdRes.data && maxIdRes.data[0] && maxIdRes.data[0].maxId) || 0) + 1;
+  const seqStr = String(nextSeq).padStart(3, '0');
+
+  const orderNumber = orderData.order_number || orderData.orderNumber || `KMIV-${seqStr}`;
 
   const insertOrder = await query(
-    `INSERT INTO orders (order_number, token_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+    `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'Completed')`,
     [
       orderNumber,
-      tokenNumber,
       orderData.order_type || orderData.orderType || 'Dine-In',
       Number(orderData.subtotal || 0),
       Number(orderData.tax_amount || orderData.taxAmount || 0),
@@ -167,7 +168,7 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
     }
   }
 
-  return { success: true, data: { id: orderId, orderNumber, tokenNumber } };
+  return { success: true, data: { id: orderId, orderNumber } };
 });
 
 ipcMain.handle('orders:getAll', async () => {
@@ -176,7 +177,6 @@ ipcMain.handle('orders:getAll', async () => {
   return { success: true, data: result.data.map(r => ({
     id: r.id,
     orderNumber: r.order_number,
-    tokenNumber: r.token_number,
     orderType: r.order_type,
     subtotal: Number(r.subtotal),
     taxAmount: Number(r.tax_amount),
@@ -221,7 +221,6 @@ ipcMain.handle('dashboard:getStats', async () => {
   const recentOrders = recentResult.success ? recentResult.data.map(r => ({
     id: r.id,
     orderNumber: r.order_number,
-    tokenNumber: r.token_number,
     orderType: r.order_type,
     grandTotal: Number(r.grand_total),
     paymentMode: r.payment_mode,

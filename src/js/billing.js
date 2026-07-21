@@ -422,71 +422,125 @@ const Billing = {
     if (!modal || !paper || !this.currentReceiptData) return;
 
     const data = this.currentReceiptData;
-    const now = new Date().toLocaleString();
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+    const taxableAmount = Math.max(0, data.subtotal - (data.discount_amount || 0));
+    const taxAmt = data.tax_amount || 0;
+    const cgstAmt = (taxAmt / 2).toFixed(2);
+    const sgstAmt = (taxAmt / 2).toFixed(2);
+    const calculatedTotal = taxableAmount + taxAmt;
+    const roundedGrandTotal = Math.round(calculatedTotal);
+    const roundOff = (roundedGrandTotal - calculatedTotal).toFixed(2);
 
     paper.innerHTML = `
-      <div style="text-align:center; border-bottom:1px dashed #444; padding-bottom:8px; margin-bottom:8px;">
-        <h2 style="margin:0; font-size:1.4rem;">KISH MANDHI</h2>
-        <p style="margin:2px 0; font-size:0.75rem;">Authentic Arabian Grill & Mandhi</p>
-        <p style="margin:2px 0; font-size:0.7rem;">Ph: +91 98765 43210 | GSTIN: 32AAAAA0000A1Z5</p>
-      </div>
-
-      <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:6px;">
-        <span>Bill #: <strong>${data.order_number}</strong></span>
-        <span>TOKEN #: <strong style="font-size:1.1rem; color:#d9822b;">${data.token_number}</strong></span>
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:8px;">
-        <span>Type: ${data.order_type}</span>
-        <span>${now}</span>
-      </div>
-
-      <table style="width:100%; text-align:left; border-collapse:collapse; margin-bottom:8px; font-size:0.75rem;">
-        <thead>
-          <tr style="border-bottom:1px solid #111;">
-            <th>Item</th>
-            <th style="text-align:center;">Qty</th>
-            <th style="text-align:right;">Amt</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.items.map(i => `
-            <tr>
-              <td>${i.name} (${i.variant})</td>
-              <td style="text-align:center;">${i.quantity}</td>
-              <td style="text-align:right;">₹${i.total_price.toFixed(2)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div style="border-top:1px dashed #444; padding-top:6px; font-size:0.75rem; display:flex; flex-direction:column; gap:3px;">
-        <div style="display:flex; justify-content:space-between;">
-          <span>Subtotal:</span>
-          <span>₹${data.subtotal.toFixed(2)}</span>
+      <div style="font-family: 'Courier New', monospace; font-size: 11px; color: #000; background: #fff; padding: 12px; position: relative; text-align: left;">
+        <!-- Logo SVG -->
+        <div style="text-align: center; margin-bottom: 4px;">
+          <svg viewBox="0 0 240 70" width="160" height="46" style="margin: 0 auto; display: block;">
+            <path d="M 15 42 C 30 27, 50 47, 70 37 Q 48 32, 25 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="15" cy="42" r="2.5" fill="#000"/>
+            <path d="M 35 36 C 43 26, 55 30, 63 37" fill="none" stroke="#000" stroke-width="1.2"/>
+            <path d="M 225 42 C 210 27, 190 47, 170 37 Q 192 32, 215 44" fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="225" cy="42" r="2.5" fill="#000"/>
+            <path d="M 205 36 C 197 26, 185 30, 177 37" fill="none" stroke="#000" stroke-width="1.2"/>
+            <path d="M 106 8 L 111 17 L 120 6 L 129 17 L 134 8 L 132 21 L 108 21 Z" fill="#000"/>
+            <circle cx="106" cy="6" r="2" fill="#000"/>
+            <circle cx="120" cy="4" r="2" fill="#000"/>
+            <circle cx="134" cy="6" r="2" fill="#000"/>
+            <ellipse cx="103" cy="27" rx="4.5" ry="7" transform="rotate(-40 103 27)" fill="#000"/>
+            <path d="M 106 30 L 132 56" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 133 22 Q 132 29 127 32 L 108 56" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 132 20 L 138 27 M 135 18 L 141 25 M 138 16 L 144 23" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+          </svg>
         </div>
-        <div style="display:flex; justify-content:space-between;">
-          <span>GST (5%):</span>
-          <span>₹${data.tax_amount.toFixed(2)}</span>
-        </div>
-        ${data.discount_amount > 0 ? `
-          <div style="display:flex; justify-content:space-between; color:green;">
-            <span>Discount:</span>
-            <span>-₹${data.discount_amount.toFixed(2)}</span>
+
+        <div style="text-align: center; font-weight: bold; font-size: 15px; text-transform: uppercase;">ROYAL SPICE RESTAURANT</div>
+        <div style="text-align: center; font-size: 10px;">123 Main Street, Chennai, Tamil Nadu</div>
+        <div style="text-align: center; font-size: 10px;">Phone: +91 98765 43210</div>
+        <div style="text-align: center; font-size: 10px;">GSTIN: 33ABCDE1234F1Z5</div>
+
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+        <div style="text-align: center; font-weight: bold; font-size: 11px; letter-spacing: 1px;">*** TAX INVOICE ***</div>
+
+        <div style="font-size: 10.5px; margin: 4px 0;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Bill No &nbsp;: ${data.order_number || 'RS-000125'}</span>
+            <span>Date &nbsp;: ${formattedDate}</span>
           </div>
-        ` : ''}
-        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:0.9rem; border-top:1px solid #111; padding-top:4px; margin-top:2px;">
-          <span>GRAND TOTAL:</span>
-          <span>₹${data.grand_total.toFixed(2)}</span>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Time &nbsp;&nbsp;&nbsp;: ${formattedTime}</span>
+          </div>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#555; margin-top:4px;">
-          <span>Payment Mode: ${data.payment_mode}</span>
-          <span>Status: PAID</span>
-        </div>
-      </div>
 
-      <div style="text-align:center; margin-top:12px; font-size:0.7rem; border-top:1px dashed #444; padding-top:6px;">
-        <p style="margin:0;">Thank you for dining at Kish Mandhi!</p>
-        <p style="margin:0;">Visit Again!</p>
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+        <div style="border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0; font-weight: bold; display: flex; justify-content: space-between;">
+          <span style="flex: 2; text-align: left;">Item</span>
+          <span style="width: 35px; text-align: center;">Qty</span>
+          <span style="width: 60px; text-align: right;">Rate (₹)</span>
+          <span style="width: 70px; text-align: right;">Amount (₹)</span>
+        </div>
+
+        <div style="margin: 4px 0;">
+          ${data.items.map(i => `
+            <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin: 2px 0;">
+              <span style="flex: 2; text-align: left; font-weight: 500;">${i.name} (${i.variant})</span>
+              <span style="width: 35px; text-align: center;">${i.quantity}</span>
+              <span style="width: 60px; text-align: right;">${(i.unit_price || i.total_price / i.quantity).toFixed(2)}</span>
+              <span style="width: 70px; text-align: right;">${i.total_price.toFixed(2)}</span>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+        <div style="font-size: 10.5px;">
+          <div style="display: flex; justify-content: space-between;"><span>Subtotal</span><span>${data.subtotal.toFixed(2)}</span></div>
+          ${data.discount_amount > 0 ? `
+            <div style="display: flex; justify-content: space-between;"><span>Discount</span><span>-${data.discount_amount.toFixed(2)}</span></div>
+          ` : ''}
+          <div style="display: flex; justify-content: flex-end; margin: 3px 0;"><div style="border-top: 1px dashed #000; width: 80px;"></div></div>
+          <div style="display: flex; justify-content: space-between;"><span>Taxable Amount</span><span>${taxableAmount.toFixed(2)}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>CGST (2.5%)</span><span>${cgstAmt}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>SGST (2.5%)</span><span>${sgstAmt}</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Round Off</span><span>${roundOff}</span></div>
+        </div>
+
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+        <div style="border-top: 3px double #000; border-bottom: 3px double #000; padding: 5px 0; margin: 6px 0; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;">
+          <span>GRAND TOTAL</span>
+          <span>₹ ${data.grand_total.toFixed(2)}</span>
+        </div>
+
+        <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
+
+        <div style="text-align: center; margin-top: 8px;">
+          <div style="font-family: Georgia, serif; font-style: italic; font-weight: bold; font-size: 14px;">
+            Thank You!<br/>Visit Again.
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0;">
+            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
+            <span style="font-size: 9px;">★</span>
+            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
+          </div>
+          <div style="font-size: 9.5px;">
+            Goods once sold cannot be returned.<br/>
+            Please visit again.
+          </div>
+        </div>
       </div>
     `;
 

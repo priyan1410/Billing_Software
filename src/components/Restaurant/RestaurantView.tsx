@@ -387,7 +387,6 @@ export const RestaurantView: React.FC = () => {
                 <thead className="bg-olive-800 text-olive-300 font-semibold border-b border-gold-500/20">
                   <tr>
                     <th className="p-3">Bill #</th>
-                    <th className="p-3">Token</th>
                     <th className="p-3">Amount</th>
                     <th className="p-3">Payment</th>
                     <th className="p-3">Date</th>
@@ -396,13 +395,12 @@ export const RestaurantView: React.FC = () => {
                 <tbody className="divide-y divide-gold-500/10">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-olive-300">No bills found for this period.</td>
+                      <td colSpan={4} className="py-8 text-center text-olive-300">No bills found for this period.</td>
                     </tr>
                   ) : (
                     filteredOrders.map((order) => (
                       <tr key={order.id} className="hover:bg-olive-800/30 transition-colors">
                         <td className="p-3 font-semibold text-white">{order.orderNumber || `KM-${order.id}`}</td>
-                        <td className="p-3 text-olive-300">#{order.tokenNumber || '-'}</td>
                         <td className="p-3 font-bold text-gold-400">₹{Number(order.grandTotal || order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                         <td className="p-3 text-emerald-300">{order.paymentMode || order.payment_mode || 'Cash'}</td>
                         <td className="p-3 text-olive-300">{new Date(order.createdAt || order.orderDate || order.created_at || Date.now()).toLocaleDateString('en-IN')}</td>
