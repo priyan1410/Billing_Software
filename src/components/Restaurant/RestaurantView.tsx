@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Utensils, TrendingUp, Store, Plus, Edit2, Trash2, Calendar, Receipt, Printer } from 'lucide-react';
 import { Dish, PnLPeriod } from '../../types';
 import { BillDetailModal } from './BillDetailModal';
+import { useAuthStore } from '../../store/useAuthStore';
 
 export const RestaurantView: React.FC = () => {
+  const { restaurantDetails } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'dishes' | 'pnl' | 'about'>('dishes');
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -448,28 +450,44 @@ export const RestaurantView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: ABOUT KISH MANDHI */}
+      {/* TAB 3: RESTAURANT PROFILE */}
       {activeTab === 'about' && (
         <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6 space-y-4">
           <h3 className="text-lg font-bold text-gold-500 flex items-center gap-2">
-            <Store className="w-5 h-5" /> Kish Mandhi Profile
+            <Store className="w-5 h-5" /> Restaurant Profile
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
               <span className="text-olive-300">Restaurant Name</span>
-              <p className="font-bold text-white text-sm">Kish Mandhi Arabic Restaurant</p>
+              <p className="font-bold text-white text-sm">{restaurantDetails?.companyName || 'Not Specified'}</p>
             </div>
             <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Cuisine Specialty</span>
-              <p className="font-bold text-white text-sm">Authentic Yemeni & Malabar Mandhi Grill</p>
+              <span className="text-olive-300">Tagline / Specialty</span>
+              <p className="font-bold text-white text-sm">{restaurantDetails?.tagline || 'Not Specified'}</p>
+            </div>
+            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
+              <span className="text-olive-300">Owner Name</span>
+              <p className="font-bold text-white text-sm">{restaurantDetails?.ownerName || 'Not Specified'}</p>
             </div>
             <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
               <span className="text-olive-300">GSTIN Tax Code</span>
-              <p className="font-bold text-gold-400 text-sm">33AAACK8901M1Z5 (5% GST)</p>
+              <p className="font-bold text-gold-400 text-sm">{restaurantDetails?.gstNumber ? `${restaurantDetails.gstNumber} (${restaurantDetails.taxRate ?? 5}% Tax)` : 'Not Specified'}</p>
             </div>
             <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Outlet Location</span>
-              <p className="font-bold text-white text-sm">Main Branch Highway Outlet</p>
+              <span className="text-olive-300">FSSAI License No.</span>
+              <p className="font-bold text-white text-sm">{restaurantDetails?.fssaiNumber || 'Not Specified'}</p>
+            </div>
+            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
+              <span className="text-olive-300">Contact Phone</span>
+              <p className="font-bold text-white text-sm">{restaurantDetails?.phone || 'Not Specified'}</p>
+            </div>
+            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
+              <span className="text-olive-300">Email Address</span>
+              <p className="font-bold text-white text-sm">{restaurantDetails?.email || 'Not Specified'}</p>
+            </div>
+            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
+              <span className="text-olive-300">Address</span>
+              <p className="font-bold text-white text-sm">{restaurantDetails?.address || 'Not Specified'}</p>
             </div>
           </div>
         </div>

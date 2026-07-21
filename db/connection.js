@@ -46,7 +46,8 @@ function getPool() {
 async function query(sql, params = []) {
   try {
     const p = getPool();
-    const [rows] = await p.execute(sql, params);
+    const isDDL = /^\s*(SHOW|ALTER|CREATE|TRUNCATE|DROP)\b/i.test(sql);
+    const [rows] = isDDL ? await p.query(sql, params) : await p.execute(sql, params);
     return { success: true, data: rows };
   } catch (err) {
     console.error('[DB ERROR]', err.message, '| SQL:', sql.substring(0, 80));

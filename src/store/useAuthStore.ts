@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { User, RestaurantDetails } from '../types';
 
 export const defaultRestaurant: RestaurantDetails = {
-  companyName: 'Kish Mandhi',
+  companyName: '',
   tagline: '',
   ownerName: '',
   gstNumber: '',
@@ -275,8 +275,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('km_registered_users', JSON.stringify(users));
 
         const newRestDetails: RestaurantDetails = {
-          companyName: restaurantData.companyName || 'Kish Mandhi',
-          tagline: restaurantData.tagline || 'Arabic Grill & Fine Dining',
+          companyName: restaurantData.companyName || '',
+          tagline: restaurantData.tagline || '',
           ownerName: restaurantData.ownerName || userData.name,
           gstNumber: restaurantData.gstNumber || '',
           fssaiNumber: restaurantData.fssaiNumber || '',
@@ -285,8 +285,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           address: restaurantData.address || '',
           taxRate: Number(restaurantData.taxRate ?? 5.0),
           currency: restaurantData.currency || '₹',
-          headerNote: restaurantData.headerNote || 'Welcome to ' + (restaurantData.companyName || 'Kish Mandhi'),
-          footerNote: restaurantData.footerNote || 'Thank you for visiting! Please visit again.'
+          headerNote: restaurantData.headerNote || '',
+          footerNote: restaurantData.footerNote || ''
         };
 
         localStorage.setItem('km_user', JSON.stringify(newUser));
@@ -323,7 +323,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
 
       if ((window as any).electronAPI) {
-        await (window as any).electronAPI.saveRestaurantDetails(updatedRest);
+        const res = await (window as any).electronAPI.saveRestaurantDetails(updatedRest);
+        if (res && res.success === false) {
+          set({ isLoading: false });
+          return { success: false, message: res.message || res.error || 'Failed to save to database' };
+        }
       }
 
       localStorage.setItem('km_restaurant', JSON.stringify(updatedRest));

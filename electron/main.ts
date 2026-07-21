@@ -363,3 +363,12 @@ ipcMain.handle('db:importBackup', async (_evt: any, backupData: any) => {
   }
   return { success: true };
 });
+
+ipcMain.handle('restaurant:getDetails', async () => {
+  return { success: true, data: (db as any).restaurantDetails || null };
+});
+
+ipcMain.handle('restaurant:saveDetails', async (_evt: any, data: any) => {
+  (db as any).restaurantDetails = { ...data };
+  return { success: true };
+});

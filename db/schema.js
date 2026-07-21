@@ -142,9 +142,17 @@ async function initializeDatabase() {
         currency VARCHAR(10) DEFAULT '₹',
         header_note TEXT,
         footer_note TEXT,
+        print_config TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
+
+    const restColsRes = await query(`SHOW COLUMNS FROM restaurant_details`);
+    const existingRestCols = restColsRes.success ? restColsRes.data.map(c => c.Field) : [];
+    if (!existingRestCols.includes('print_config')) {
+      await query(`ALTER TABLE restaurant_details ADD COLUMN print_config TEXT`);
+      console.log('✓ Added print_config column to restaurant_details table.');
+    }
 
     console.log('✓ All tables ready in kish_mandhi database.');
     return { success: true, message: 'Database ready!' };

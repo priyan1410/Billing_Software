@@ -531,9 +531,15 @@ ipcMain.handle('auth:verifyUser', async (evt, userId) => {
   }
 });
 
-ipcMain.handle('auth:register', async (evt, { userData, restaurantData }) => {
+ipcMain.handle('auth:register', async (evt, payload) => {
   try {
-    const { name, email, phone, password } = userData || {};
+    const userData = payload?.userData || payload || {};
+    const restaurantData = payload?.restaurantData || {};
+    const name = userData.name || '';
+    const email = userData.email || '';
+    const phone = userData.phone || '';
+    const password = userData.password || '';
+
     if (!password || !name) {
       return { success: false, message: 'Name and password are required.' };
     }
@@ -565,7 +571,7 @@ ipcMain.handle('auth:register', async (evt, { userData, restaurantData }) => {
         [username, name.trim(), password, 'admin']
       );
       if (!fallback.success) {
-        return { success: false, message: fallback.error || 'Failed to create user account.' };
+        return { success: false, message: fallback.error || 'Failed to create user account in database.' };
       }
       userInsert.data = fallback.data;
     }
@@ -575,8 +581,8 @@ ipcMain.handle('auth:register', async (evt, { userData, restaurantData }) => {
 
     // Save initial restaurant details if provided
     let restObj = null;
-    if (restaurantData) {
-      await query(
+    if (restaurantData && (restaurantData.companyName || restaurantData.ownerName)) {
+      const restInsert = await query(
         `INSERT INTO restaurant_details (id, company_name, tagline, owner_name, gst_number, fssai_number, phone, email, address, tax_rate, currency, header_note, footer_note)
          VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
@@ -593,34 +599,38 @@ ipcMain.handle('auth:register', async (evt, { userData, restaurantData }) => {
            header_note = VALUES(header_note),
            footer_note = VALUES(footer_note)`,
         [
-          restaurantData.companyName || 'Kish Mandhi',
-          restaurantData.tagline || 'Arabic Grill & Fine Dining',
+          restaurantData.companyName || '',
+          restaurantData.tagline || '',
           restaurantData.ownerName || name.trim(),
           restaurantData.gstNumber || '',
           restaurantData.fssaiNumber || '',
-          restaurantData.phone || phone || '',
-          restaurantData.email || email || '',
+          restaurantData.phone || phoneVal || '',
+          restaurantData.email || emailVal || '',
           restaurantData.address || '',
           Number(restaurantData.taxRate ?? 5.0),
           restaurantData.currency || '₹',
-          restaurantData.headerNote || 'Welcome to Kish Mandhi',
-          restaurantData.footerNote || 'Thank you! Visit again.'
+          restaurantData.headerNote || '',
+          restaurantData.footerNote || ''
         ]
       );
 
+      if (!restInsert.success) {
+        return { success: false, message: 'Failed to save restaurant details: ' + restInsert.error };
+      }
+
       restObj = {
-        companyName: restaurantData.companyName || 'Kish Mandhi',
-        tagline: restaurantData.tagline || 'Arabic Grill & Fine Dining',
+        companyName: restaurantData.companyName || '',
+        tagline: restaurantData.tagline || '',
         ownerName: restaurantData.ownerName || name.trim(),
         gstNumber: restaurantData.gstNumber || '',
         fssaiNumber: restaurantData.fssaiNumber || '',
-        phone: restaurantData.phone || phone || '',
-        email: restaurantData.email || email || '',
+        phone: restaurantData.phone || phoneVal || '',
+        email: restaurantData.email || emailVal || '',
         address: restaurantData.address || '',
         taxRate: Number(restaurantData.taxRate ?? 5.0),
         currency: restaurantData.currency || '₹',
-        headerNote: restaurantData.headerNote || 'Welcome to Kish Mandhi',
-        footerNote: restaurantData.footerNote || 'Thank you! Visit again.'
+        headerNote: restaurantData.headerNote || '',
+        footerNote: restaurantData.footerNote || ''
       };
     }
 
@@ -630,24 +640,31 @@ ipcMain.handle('auth:register', async (evt, { userData, restaurantData }) => {
   }
 });
 
-ipcMain.handle('auth:login', async (evt, { emailOrPhone, password }) => {
+ipcMain.handle('auth:login', async (evt, payload) => {
   try {
+    const emailOrPhone = payload?.emailOrPhone || (typeof payload === 'string' ? payload : '');
+    const password = payload?.password || '';
+
     if (!emailOrPhone || !password) {
       return { success: false, message: 'Please enter your username/email and password.' };
     }
-    const cleanInput = emailOrPhone.trim().toLowerCase();
+    const cleanInput = String(emailOrPhone).trim().toLowerCase();
 
-    // Search by username OR email OR phone — compatible with both old and new user records
+    // Search by username OR email OR name OR phone — compatible with all user records
     const userRes = await query(
       `SELECT * FROM users
        WHERE LOWER(username) = ?
           OR LOWER(email) = ?
+          OR LOWER(name) = ?
           OR phone = ?
        LIMIT 1`,
-      [cleanInput, cleanInput, emailOrPhone.trim()]
+      [cleanInput, cleanInput, cleanInput, String(emailOrPhone).trim()]
     );
 
-    if (!userRes.success || userRes.data.length === 0) {
+    if (!userRes.success) {
+      return { success: false, message: 'Database login query error: ' + userRes.error };
+    }
+    if (userRes.data.length === 0) {
       return { success: false, message: 'User not found. Please check your username/email.' };
     }
 
@@ -670,6 +687,8 @@ ipcMain.handle('auth:login', async (evt, { emailOrPhone, password }) => {
     let restObj = null;
     if (restRes.success && restRes.data.length > 0) {
       const r = restRes.data[0];
+      let parsedPrintConfig = {};
+      try { if (r.print_config) parsedPrintConfig = JSON.parse(r.print_config); } catch (e) { }
       restObj = {
         companyName: r.company_name,
         tagline: r.tagline,
@@ -682,7 +701,8 @@ ipcMain.handle('auth:login', async (evt, { emailOrPhone, password }) => {
         taxRate: Number(r.tax_rate),
         currency: r.currency,
         headerNote: r.header_note,
-        footerNote: r.footer_note
+        footerNote: r.footer_note,
+        ...parsedPrintConfig
       };
     }
 
@@ -699,6 +719,8 @@ ipcMain.handle('restaurant:getDetails', async () => {
       return { success: true, data: null };
     }
     const r = res.data[0];
+    let parsedPrintConfig = {};
+    try { if (r.print_config) parsedPrintConfig = JSON.parse(r.print_config); } catch (e) { }
     return {
       success: true,
       data: {
@@ -713,7 +735,8 @@ ipcMain.handle('restaurant:getDetails', async () => {
         taxRate: Number(r.tax_rate),
         currency: r.currency,
         headerNote: r.header_note,
-        footerNote: r.footer_note
+        footerNote: r.footer_note,
+        ...parsedPrintConfig
       }
     };
   } catch (err) {
@@ -723,9 +746,20 @@ ipcMain.handle('restaurant:getDetails', async () => {
 
 ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
   try {
+    const printConfigObj = {
+      printShowLogo: data.printShowLogo ?? true,
+      printShowAddress: data.printShowAddress ?? true,
+      printShowPhone: data.printShowPhone ?? true,
+      printShowGst: data.printShowGst ?? true,
+      printShowHeaderNote: data.printShowHeaderNote ?? true,
+      printShowTime: data.printShowTime ?? true,
+      printShowTaxBreakdown: data.printShowTaxBreakdown ?? true,
+      printShowRoundOff: data.printShowRoundOff ?? true,
+      printShowFooterNote: data.printShowFooterNote ?? true
+    };
     const res = await query(
-      `INSERT INTO restaurant_details (id, company_name, tagline, owner_name, gst_number, fssai_number, phone, email, address, tax_rate, currency, header_note, footer_note)
-       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO restaurant_details (id, company_name, tagline, owner_name, gst_number, fssai_number, phone, email, address, tax_rate, currency, header_note, footer_note, print_config)
+       VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          company_name = VALUES(company_name),
          tagline = VALUES(tagline),
@@ -738,7 +772,8 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
          tax_rate = VALUES(tax_rate),
          currency = VALUES(currency),
          header_note = VALUES(header_note),
-         footer_note = VALUES(footer_note)`,
+         footer_note = VALUES(footer_note),
+         print_config = VALUES(print_config)`,
       [
         data.companyName || 'Kish Mandhi',
         data.tagline || '',
@@ -751,7 +786,8 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
         Number(data.taxRate ?? 5.0),
         data.currency || '₹',
         data.headerNote || '',
-        data.footerNote || ''
+        data.footerNote || '',
+        JSON.stringify(printConfigObj)
       ]
     );
 

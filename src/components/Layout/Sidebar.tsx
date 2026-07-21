@@ -26,10 +26,10 @@ export const Sidebar: React.FC = () => {
           </div>
           <div className="min-w-0">
             <h1 className="font-heading text-base font-bold text-gold-500 tracking-wide truncate">
-              {restaurantDetails?.companyName || 'KISH MANDHI'}
+              {restaurantDetails?.companyName || 'Restaurant'}
             </h1>
             <span className="text-[10px] text-olive-300 uppercase tracking-widest font-medium truncate block">
-              {restaurantDetails?.tagline || 'Arabic Grill & Dining'}
+              {restaurantDetails?.tagline || ''}
             </span>
           </div>
         </div>

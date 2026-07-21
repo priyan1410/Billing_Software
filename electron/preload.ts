@@ -32,6 +32,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearOrders: () => ipcRenderer.invoke('db:clearOrders'),
   clearExpenses: () => ipcRenderer.invoke('db:clearExpenses'),
   resetDefaults: () => ipcRenderer.invoke('db:resetDefaults'),
-  importBackup: (backupData: any) => ipcRenderer.invoke('db:importBackup', backupData)
+  importBackup: (backupData: any) => ipcRenderer.invoke('db:importBackup', backupData),
+
+  // Restaurant Settings
+  getRestaurantDetails: () => ipcRenderer.invoke('restaurant:getDetails'),
+  saveRestaurantDetails: (data: any) => ipcRenderer.invoke('restaurant:saveDetails', data),
+
+  // Auth
+  register: (userData: any, restaurantData: any) => ipcRenderer.invoke('auth:register', { userData, restaurantData }),
+  login: (emailOrPhone: string, password: string) => ipcRenderer.invoke('auth:login', { emailOrPhone, password }),
+  hasUsers: () => ipcRenderer.invoke('auth:hasUsers'),
+  verifyUser: (userId: number) => ipcRenderer.invoke('auth:verifyUser', userId)
 });
 
