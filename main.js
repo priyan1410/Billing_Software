@@ -65,9 +65,11 @@ app.on('window-all-closed', () => {
 ipcMain.handle('menu:getCategories', async () => {
   const result = await query('SELECT * FROM categories ORDER BY id ASC');
   if (!result.success) return { success: false, message: result.error };
-  return { success: true, data: result.data.map(r => ({
-    id: r.id, name: r.name, icon: r.icon
-  })) };
+  return {
+    success: true, data: result.data.map(r => ({
+      id: r.id, name: r.name, icon: r.icon
+    }))
+  };
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -83,15 +85,17 @@ ipcMain.handle('menu:getItems', async (evt, categoryId) => {
   sql += ' ORDER BY id ASC';
   const result = await query(sql, params);
   if (!result.success) return { success: false, message: result.error };
-  return { success: true, data: result.data.map(r => ({
-    id: r.id,
-    categoryId: r.category_id,
-    name: r.name,
-    priceQuarter: Number(r.price_quarter),
-    priceHalf: Number(r.price_half),
-    priceFull: Number(r.price_full),
-    isAvailable: !!r.is_available
-  })) };
+  return {
+    success: true, data: result.data.map(r => ({
+      id: r.id,
+      categoryId: r.category_id,
+      name: r.name,
+      priceQuarter: Number(r.price_quarter),
+      priceHalf: Number(r.price_half),
+      priceFull: Number(r.price_full),
+      isAvailable: !!r.is_available
+    }))
+  };
 });
 
 ipcMain.handle('menu:saveItem', async (evt, itemData) => {
@@ -101,8 +105,8 @@ ipcMain.handle('menu:saveItem', async (evt, itemData) => {
       Number(itemData.category_id || itemData.categoryId),
       itemData.name,
       Number(itemData.price_quarter || itemData.priceQuarter || 0),
-      Number(itemData.price_half   || itemData.priceHalf   || 0),
-      Number(itemData.price_full   || itemData.priceFull   || 0)
+      Number(itemData.price_half || itemData.priceHalf || 0),
+      Number(itemData.price_full || itemData.priceFull || 0)
     ]
   );
   if (!result.success) return { success: false, message: result.error };
@@ -116,8 +120,8 @@ ipcMain.handle('menu:updateItem', async (evt, itemData) => {
       itemData.name,
       Number(itemData.category_id || itemData.categoryId),
       Number(itemData.price_quarter || itemData.priceQuarter || 0),
-      Number(itemData.price_half   || itemData.priceHalf   || 0),
-      Number(itemData.price_full   || itemData.priceFull   || 0),
+      Number(itemData.price_half || itemData.priceHalf || 0),
+      Number(itemData.price_full || itemData.priceFull || 0),
       Number(itemData.id)
     ]
   );
@@ -206,18 +210,20 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
 ipcMain.handle('orders:getAll', async () => {
   const result = await query('SELECT * FROM orders ORDER BY created_at DESC');
   if (!result.success) return { success: false, message: result.error };
-  return { success: true, data: result.data.map(r => ({
-    id: r.id,
-    orderNumber: r.order_number,
-    orderType: r.order_type,
-    subtotal: Number(r.subtotal),
-    taxAmount: Number(r.tax_amount),
-    discountAmount: Number(r.discount_amount),
-    grandTotal: Number(r.grand_total),
-    paymentMode: r.payment_mode,
-    status: r.status,
-    createdAt: r.created_at
-  })) };
+  return {
+    success: true, data: result.data.map(r => ({
+      id: r.id,
+      orderNumber: r.order_number,
+      orderType: r.order_type,
+      subtotal: Number(r.subtotal),
+      taxAmount: Number(r.tax_amount),
+      discountAmount: Number(r.discount_amount),
+      grandTotal: Number(r.grand_total),
+      paymentMode: r.payment_mode,
+      status: r.status,
+      createdAt: r.created_at
+    }))
+  };
 });
 
 ipcMain.handle('orders:getItems', async (evt, orderId) => {
@@ -243,15 +249,17 @@ ipcMain.handle('orders:getItems', async (evt, orderId) => {
     searchTokens
   );
   if (!result.success) return { success: false, message: result.error };
-  return { success: true, data: result.data.map(r => ({
-    id: r.id,
-    name: r.item_name,
-    dishName: r.item_name,
-    variant: r.variant,
-    quantity: Number(r.quantity),
-    unitPrice: Number(r.unit_price),
-    totalPrice: Number(r.total_price)
-  })) };
+  return {
+    success: true, data: result.data.map(r => ({
+      id: r.id,
+      name: r.item_name,
+      dishName: r.item_name,
+      variant: r.variant,
+      quantity: Number(r.quantity),
+      unitPrice: Number(r.unit_price),
+      totalPrice: Number(r.total_price)
+    }))
+  };
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -301,22 +309,24 @@ function formatDateOnly(d) {
 ipcMain.handle('expenses:getAll', async () => {
   const result = await query('SELECT * FROM expenses ORDER BY created_at DESC');
   if (!result.success) return { success: false, message: result.error };
-  return { success: true, data: result.data.map(r => {
-    const formattedDate = formatDateOnly(r.expense_date);
-    return {
-      id: r.id,
-      category: r.category,
-      description: r.description,
-      amount: Number(r.amount),
-      expenseDate: formattedDate,
-      expense_date: formattedDate,
-      paidTo: r.paid_to,
-      paid_to: r.paid_to,
-      paymentMode: r.payment_mode,
-      payment_mode: r.payment_mode,
-      createdAt: r.created_at
-    };
-  }) };
+  return {
+    success: true, data: result.data.map(r => {
+      const formattedDate = formatDateOnly(r.expense_date);
+      return {
+        id: r.id,
+        category: r.category,
+        description: r.description,
+        amount: Number(r.amount),
+        expenseDate: formattedDate,
+        expense_date: formattedDate,
+        paidTo: r.paid_to,
+        paid_to: r.paid_to,
+        paymentMode: r.payment_mode,
+        payment_mode: r.payment_mode,
+        createdAt: r.created_at
+      };
+    })
+  };
 });
 
 ipcMain.handle('expenses:add', async (evt, expData) => {
@@ -346,6 +356,51 @@ ipcMain.handle('expenses:add', async (evt, expData) => {
 
 ipcMain.handle('expenses:delete', async (evt, id) => {
   const result = await query('DELETE FROM expenses WHERE id = ?', [Number(id)]);
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true };
+});
+
+// ─────────────────────────────────────────────────────────────
+// TOKENS (KOT & active tokens)
+// ─────────────────────────────────────────────────────────────
+ipcMain.handle('tokens:getActive', async () => {
+  const result = await query("SELECT * FROM tokens WHERE status = 'Active' ORDER BY id DESC");
+  if (!result.success) return { success: false, message: result.error, data: [] };
+  return {
+    success: true,
+    data: result.data.map(r => ({
+      id: r.id,
+      tokenNumber: r.token_number,
+      orderType: r.order_type,
+      items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
+      timestamp: r.created_at
+    }))
+  };
+});
+
+ipcMain.handle('tokens:save', async (evt, tokenData) => {
+  const itemsJson = JSON.stringify(tokenData.items || []);
+  const tokenNum = String(tokenData.tokenNumber);
+  const result = await query(
+    `INSERT INTO tokens (token_number, order_type, items, status)
+     VALUES (?, ?, ?, 'Active')
+     ON DUPLICATE KEY UPDATE order_type = VALUES(order_type), items = VALUES(items), status = 'Active'`,
+    [tokenNum, tokenData.orderType || 'Dine-In', itemsJson]
+  );
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, id: result.data.insertId };
+});
+
+ipcMain.handle('tokens:delete', async (evt, tokenNumber) => {
+  const rawNum = String(tokenNumber);
+  const formattedNum = !rawNum.startsWith('KMKOT-') && !isNaN(Number(rawNum))
+    ? `KMKOT-${String(rawNum).padStart(3, '0')}`
+    : rawNum;
+
+  const result = await query(
+    'DELETE FROM tokens WHERE token_number = ? OR token_number = ?',
+    [rawNum, formattedNum]
+  );
   if (!result.success) return { success: false, message: result.error };
   return { success: true };
 });

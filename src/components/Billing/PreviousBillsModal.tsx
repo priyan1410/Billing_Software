@@ -347,8 +347,8 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
                   key={mode}
                   onClick={() => setSelectedPaymentMode(mode)}
                   className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all ${selectedPaymentMode === mode
-                      ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40'
-                      : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-gold-500/20 text-gold-400 border border-gold-500/40'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
                     }`}
                 >
                   {mode === 'all' ? 'All Modes' : mode}
@@ -372,8 +372,8 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
                       key={order.id}
                       onClick={() => handleSelectOrder(order)}
                       className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${isSelected
-                          ? 'bg-gold-500/10 border-gold-500 text-white shadow-md'
-                          : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60'
+                        ? 'bg-gold-500/10 border-gold-500 text-white shadow-md'
+                        : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60'
                         }`}
                     >
                       <div className="flex justify-between items-center mb-1">

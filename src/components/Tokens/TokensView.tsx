@@ -5,7 +5,7 @@ import { usePosStore } from '../../store/usePosStore';
 import { Dish, OrderType, PortionVariant } from '../../types';
 
 export const TokensView: React.FC = () => {
-  const { activeTokensList, addActiveToken, setActiveSection } = useAppStore();
+  const { activeTokensList, addActiveToken, loadActiveTokens, setActiveSection } = useAppStore();
   const { loadTokenToCart } = usePosStore();
 
   const [dishes, setDishes] = useState<Dish[]>([]);
@@ -18,6 +18,7 @@ export const TokensView: React.FC = () => {
 
   useEffect(() => {
     loadDishes();
+    loadActiveTokens();
   }, [activeCategory]);
 
   const loadDishes = async () => {
@@ -78,7 +79,11 @@ export const TokensView: React.FC = () => {
       alert('Token cart is empty! Select dishes first.');
       return;
     }
-    const tokenNum = `KMKOT-${String(activeTokensList.length + 1).padStart(3, '0')}`;
+    const maxSeq = activeTokensList.reduce((max, t) => {
+      const num = parseInt(String(t.tokenNumber).replace('KMKOT-', ''), 10);
+      return !isNaN(num) && num > max ? num : max;
+    }, 0);
+    const tokenNum = `KMKOT-${String(maxSeq + 1).padStart(3, '0')}`;
     const newTokenObj = {
       tokenNumber: tokenNum,
       orderType,
@@ -150,25 +155,6 @@ export const TokensView: React.FC = () => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-110px)] select-none">
       {/* Menu Catalog Left (No Prices) */}
       <div className="lg:col-span-2 flex flex-col h-full min-h-0 space-y-4">
-        {/* Active Tokens Queue Bar */}
-        {activeTokensList.length > 0 && (
-          <div className="bg-olive-900 border border-gold-500/20 rounded-xl p-3">
-            <span className="text-[11px] font-bold text-gold-500 uppercase tracking-wider block mb-2">
-              Active Generated Tokens (Click to View / Print / Send to Billing):
-            </span>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {activeTokensList.map((token) => (
-                <button
-                  key={token.tokenNumber}
-                  onClick={() => handleSelectActiveToken(token)}
-                  className="px-3 py-1.5 bg-olive-800 border border-gold-500/30 rounded-lg text-xs font-bold text-white hover:bg-gold-500 hover:text-olive-950 transition-all flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  <Ticket className="w-3.5 h-3.5" /> Token #{token.tokenNumber} ({token.orderType})
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="space-y-3">
           <div className="relative">

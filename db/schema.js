@@ -53,11 +53,11 @@ async function initializeDatabase() {
     `);
 
     // Safely drop token_number column if it exists
-    await query(`ALTER TABLE orders DROP COLUMN token_number;`).catch(() => {});
+    await query(`ALTER TABLE orders DROP COLUMN token_number;`).catch(() => { });
 
     // Drop legacy foreign keys if present
-    await query(`ALTER TABLE order_items DROP FOREIGN KEY order_items_ibfk_1;`).catch(() => {});
-    await query(`ALTER TABLE order_items DROP FOREIGN KEY fk_order_items_orders;`).catch(() => {});
+    await query(`ALTER TABLE order_items DROP FOREIGN KEY order_items_ibfk_1;`).catch(() => { });
+    await query(`ALTER TABLE order_items DROP FOREIGN KEY fk_order_items_orders;`).catch(() => { });
 
     await query(`
       CREATE TABLE IF NOT EXISTS order_items (
@@ -78,9 +78,9 @@ async function initializeDatabase() {
     `);
     const oiCols = orderItemsCols.success ? orderItemsCols.data.map(r => r.COLUMN_NAME.toLowerCase()) : [];
     if (oiCols.includes('order_id') && !oiCols.includes('token_id')) {
-      await query(`ALTER TABLE order_items CHANGE COLUMN order_id token_id VARCHAR(50) NOT NULL;`).catch(() => {});
+      await query(`ALTER TABLE order_items CHANGE COLUMN order_id token_id VARCHAR(50) NOT NULL;`).catch(() => { });
     }
-    await query(`UPDATE order_items SET token_id = CONCAT('KMKOT-', LPAD(token_id, 3, '0')) WHERE token_id REGEXP '^[0-9]+$';`).catch(() => {});
+    await query(`UPDATE order_items SET token_id = CONCAT('KMKOT-', LPAD(token_id, 3, '0')) WHERE token_id REGEXP '^[0-9]+$';`).catch(() => { });
 
     await query(`
       CREATE TABLE IF NOT EXISTS expenses (
@@ -91,6 +91,17 @@ async function initializeDatabase() {
         expense_date DATE NOT NULL,
         paid_to VARCHAR(100) DEFAULT '',
         payment_mode VARCHAR(30) DEFAULT 'Cash',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB;
+    `);
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS tokens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        token_number VARCHAR(50) NOT NULL UNIQUE,
+        order_type VARCHAR(30) DEFAULT 'Dine-In',
+        items TEXT NOT NULL,
+        status VARCHAR(30) DEFAULT 'Active',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);

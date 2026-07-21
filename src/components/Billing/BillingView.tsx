@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, ShoppingCart, Trash2, Printer, Utensils, ShoppingBag,
-  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone, History
+  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone
 } from 'lucide-react';
 import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderPayload, PortionVariant } from '../../types';
-import { PreviousBillsModal } from './PreviousBillsModal';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n: number, curr = '₹') =>
@@ -307,7 +306,7 @@ const ConfirmOrderModal: React.FC<{
 // ─── Main BillingView ─────────────────────────────────────────────────────────
 export const BillingView: React.FC = () => {
   const { cart, orderType, paymentMode, discount, setOrderType, setPaymentMode, setDiscount, addToCart, updateQty, clearCart, loadTokenToCart } = usePosStore();
-  const { activeTokensList } = useAppStore();
+  const { activeTokensList, removeActiveToken, loadActiveTokens } = useAppStore();
   const { restaurantDetails } = useAuthStore();
 
   const [dishes, setDishes] = useState<Dish[]>([]);
@@ -315,7 +314,6 @@ export const BillingView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTokenNum, setSelectedTokenNum] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showPreviousBillsModal, setShowPreviousBillsModal] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [nextBillNumber, setNextBillNumber] = useState<string>('KMIV-001');
 
@@ -333,7 +331,7 @@ export const BillingView: React.FC = () => {
     return nextBillNumber;
   };
 
-  useEffect(() => { loadDishes(); }, [activeCategory]);
+  useEffect(() => { loadDishes(); loadActiveTokens(); }, [activeCategory]);
   useEffect(() => { fetchNextBillNumber(); }, []);
 
   const loadDishes = async () => {
@@ -421,6 +419,11 @@ export const BillingView: React.FC = () => {
 
     if (shouldPrint && createdData) {
       await triggerPrintDirect(createdData, false);
+    }
+
+    if (selectedTokenNum) {
+      removeActiveToken(selectedTokenNum);
+      setSelectedTokenNum('');
     }
 
     setShowConfirmModal(false);
@@ -678,25 +681,15 @@ export const BillingView: React.FC = () => {
       {/* ══ RIGHT: CART + BILL (scrollable) ══════════════════════════ */}
       <div className="w-80 xl:w-96 flex flex-col gap-3 flex-shrink-0 overflow-hidden">
 
-        {/* Token Import & Previous Bills */}
+        {/* Token Import */}
         <div className="flex gap-2 flex-shrink-0">
-          <div className="flex-1 flex gap-1.5 min-w-0">
-            <select value={selectedTokenNum} onChange={(e) => setSelectedTokenNum(e.target.value)}
-              className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none min-w-0"
-            >
-              <option value="">Import Token...</option>
-              {activeTokensList.map((t) => <option key={t.tokenNumber} value={t.tokenNumber}>Token #{t.tokenNumber}</option>)}
-            </select>
-            <button onClick={handleImportToken} className="px-3 py-2 bg-gold-500/20 border border-gold-500/40 text-gold-400 font-bold text-xs rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-all flex-shrink-0">Load</button>
-          </div>
-
-          <button
-            onClick={() => setShowPreviousBillsModal(true)}
-            className="px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 font-extrabold text-xs rounded-xl hover:scale-[1.03] transition-transform flex items-center gap-1.5 shadow-md shadow-gold-500/10 flex-shrink-0"
-            title="View & Print Custom Previous Bills"
+          <select value={selectedTokenNum} onChange={(e) => setSelectedTokenNum(e.target.value)}
+            className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none"
           >
-            <History className="w-3.5 h-3.5" /> Previous Bills
-          </button>
+            <option value="">Import from Token...</option>
+            {activeTokensList.map((t) => <option key={t.tokenNumber} value={t.tokenNumber}>Token #{t.tokenNumber}</option>)}
+          </select>
+          <button onClick={handleImportToken} className="px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl hover:scale-105 transition-transform">Load</button>
         </div>
 
         {/* Order Type */}
@@ -786,11 +779,6 @@ export const BillingView: React.FC = () => {
           onCancel={() => setShowConfirmModal(false)}
           isLoading={isCheckingOut}
         />
-      )}
-
-      {/* Previous Bills History & Custom Print Modal */}
-      {showPreviousBillsModal && (
-        <PreviousBillsModal onClose={() => setShowPreviousBillsModal(false)} />
       )}
     </div>
   );
