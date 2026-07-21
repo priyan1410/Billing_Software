@@ -18,12 +18,16 @@ export const useAppStore = create<AppState>((set: any) => ({
   activeTokensList: [],
   setActiveSection: (section: AppSection) => set({ activeSection: section }),
   setTokensList: (activeTokensList: TokenItem[]) => set({ activeTokensList }),
-  addActiveToken: (token: TokenItem) => {
+  addActiveToken: async (token: TokenItem) => {
     set((state: AppState) => ({
       activeTokensList: [token, ...state.activeTokensList.filter(t => String(t.tokenNumber) !== String(token.tokenNumber))]
     }));
     if ((window as any).electronAPI?.saveToken) {
-      (window as any).electronAPI.saveToken(token);
+      try {
+        await (window as any).electronAPI.saveToken(token);
+      } catch (err) {
+        console.error('Error saving token to DB:', err);
+      }
     }
   },
   removeActiveToken: (tokenNumber: string | number) => {

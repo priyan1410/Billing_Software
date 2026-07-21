@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Settings2, LogOut, ChevronDown } from 'lucide-react';
+import { Plus, Settings2 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { useAuthStore } from '../../store/useAuthStore';
 
 export const Header: React.FC = () => {
   const { activeSection, setActiveSection } = useAppStore();
-  const { user, restaurantDetails, logout } = useAuthStore();
   const [clock, setClock] = useState('');
-  const [showMenu, setShowMenu] = useState(false);
 
   useEffect(() => {
     const update = () => {
@@ -35,13 +32,6 @@ export const Header: React.FC = () => {
     restaurant: 'Restaurant Hub & Financial Analysis',
     'db-settings': 'Database Connection & Setup',
     settings: 'Restaurant Settings & Configuration'
-  };
-
-  const handleLogout = () => {
-    setShowMenu(false);
-    if (window.confirm('Are you sure you want to logout?')) {
-      logout();
-    }
   };
 
   return (

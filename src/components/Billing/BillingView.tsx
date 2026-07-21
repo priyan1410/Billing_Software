@@ -332,7 +332,7 @@ export const BillingView: React.FC = () => {
   };
 
   useEffect(() => { loadDishes(); loadActiveTokens(); }, [activeCategory]);
-  useEffect(() => { fetchNextBillNumber(); }, []);
+  useEffect(() => { fetchNextBillNumber(); loadActiveTokens(); }, []);
 
   const loadDishes = async () => {
     if ((window as any).electronAPI) {

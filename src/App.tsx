@@ -13,11 +13,12 @@ import { useAppStore } from './store/useAppStore';
 import { useAuthStore } from './store/useAuthStore';
 
 export const App: React.FC = () => {
-  const { activeSection } = useAppStore();
+  const { activeSection, loadActiveTokens } = useAppStore();
   const { isAuthenticated, isLoading, initializeAuth } = useAuthStore();
 
   useEffect(() => {
     initializeAuth();
+    loadActiveTokens();
   }, []);
 
   if (isLoading) {

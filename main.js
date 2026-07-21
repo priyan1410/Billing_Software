@@ -364,31 +364,50 @@ ipcMain.handle('expenses:delete', async (evt, id) => {
 // TOKENS (KOT & active tokens)
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('tokens:getActive', async () => {
-  const result = await query("SELECT * FROM tokens WHERE status = 'Active' ORDER BY id DESC");
-  if (!result.success) return { success: false, message: result.error, data: [] };
-  return {
-    success: true,
-    data: result.data.map(r => ({
-      id: r.id,
-      tokenNumber: r.token_number,
-      orderType: r.order_type,
-      items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
-      timestamp: r.created_at
-    }))
-  };
+  try {
+    const result = await query("SELECT * FROM tokens WHERE status = 'Active' OR status = 'Pending' ORDER BY id DESC");
+    if (!result.success) return { success: false, message: result.error, data: [] };
+    const tokens = result.data.map(r => {
+      const rawItems = r.items_summary || r.items || '[]';
+      let parsed = [];
+      try {
+        parsed = typeof rawItems === 'string' ? JSON.parse(rawItems) : (rawItems || []);
+      } catch(e) { parsed = []; }
+      return {
+        id: r.id,
+        tokenNumber: r.token_number,
+        orderType: r.order_type || 'Dine-In',
+        tableNo: r.table_no || 'N/A',
+        items: parsed,
+        timestamp: r.created_at
+      };
+    });
+    return { success: true, data: tokens };
+  } catch (err) {
+    console.error('tokens:getActive error:', err);
+    return { success: false, message: err.message, data: [] };
+  }
 });
 
 ipcMain.handle('tokens:save', async (evt, tokenData) => {
-  const itemsJson = JSON.stringify(tokenData.items || []);
-  const tokenNum = String(tokenData.tokenNumber);
-  const result = await query(
-    `INSERT INTO tokens (token_number, order_type, items, status)
-     VALUES (?, ?, ?, 'Active')
-     ON DUPLICATE KEY UPDATE order_type = VALUES(order_type), items = VALUES(items), status = 'Active'`,
-    [tokenNum, tokenData.orderType || 'Dine-In', itemsJson]
-  );
-  if (!result.success) return { success: false, message: result.error };
-  return { success: true, id: result.data.insertId };
+  try {
+    const itemsJson = JSON.stringify(tokenData.items || []);
+    const tokenNum = String(tokenData.tokenNumber);
+    const result = await query(
+      `INSERT INTO tokens (token_number, order_type, table_no, items_summary, status)
+       VALUES (?, ?, 'N/A', ?, 'Active')
+       ON DUPLICATE KEY UPDATE order_type = VALUES(order_type), items_summary = VALUES(items_summary), status = 'Active'`,
+      [tokenNum, tokenData.orderType || 'Dine-In', itemsJson]
+    );
+    if (!result.success) {
+      console.error('tokens:save SQL error:', result.error);
+      return { success: false, message: result.error };
+    }
+    return { success: true, id: result.data.insertId };
+  } catch (err) {
+    console.error('tokens:save error:', err);
+    return { success: false, message: err.message };
+  }
 });
 
 ipcMain.handle('tokens:delete', async (evt, tokenNumber) => {
@@ -397,6 +416,11 @@ ipcMain.handle('tokens:delete', async (evt, tokenNumber) => {
     ? `KMKOT-${String(rawNum).padStart(3, '0')}`
     : rawNum;
 
+  // Mark as Billed and delete
+  await query(
+    "UPDATE tokens SET status = 'Billed' WHERE token_number = ? OR token_number = ?",
+    [rawNum, formattedNum]
+  );
   const result = await query(
     'DELETE FROM tokens WHERE token_number = ? OR token_number = ?',
     [rawNum, formattedNum]
@@ -427,7 +451,7 @@ ipcMain.handle('db:resetDefaults', async () => {
 });
 
 ipcMain.handle('db:getTableData', async (evt, tableName) => {
-  const allowed = ['menu_items', 'orders', 'expenses', 'categories', 'order_items'];
+  const allowed = ['menu_items', 'orders', 'expenses', 'categories', 'order_items', 'tokens'];
   if (!allowed.includes(tableName)) return { success: false, message: 'Table not allowed' };
   const result = await query(`SELECT * FROM \`${tableName}\` ORDER BY id DESC`);
   if (!result.success) return { success: false, message: result.error };

@@ -98,13 +98,28 @@ async function initializeDatabase() {
     await query(`
       CREATE TABLE IF NOT EXISTS tokens (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT DEFAULT NULL,
         token_number VARCHAR(50) NOT NULL UNIQUE,
         order_type VARCHAR(30) DEFAULT 'Dine-In',
-        items TEXT NOT NULL,
+        table_no VARCHAR(30) DEFAULT 'N/A',
+        items_summary TEXT NOT NULL,
         status VARCHAR(30) DEFAULT 'Active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
+
+    // Ensure items_summary column exists on legacy table structures
+    const tokenCols = await query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'tokens'
+    `);
+    if (tokenCols.success) {
+      const existingTokenCols = tokenCols.data.map(r => r.COLUMN_NAME.toLowerCase());
+      if (!existingTokenCols.includes('items_summary') && existingTokenCols.includes('items')) {
+        await query("ALTER TABLE tokens CHANGE COLUMN items items_summary TEXT NOT NULL");
+      }
+    }
 
     // Users table — create if not exists (compatible with existing username-based schema)
     await query(`
