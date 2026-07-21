@@ -14,7 +14,8 @@ export const TokensView: React.FC = () => {
   const [orderType, setOrderType] = useState<OrderType>('Dine-In');
   const [tokenCart, setTokenCart] = useState<Array<{ itemId: number; name: string; variant: PortionVariant; quantity: number }>>([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; items: any[] } | null>(null);
+  const [paymentMode, setPaymentMode] = useState<string>('Cash');
+  const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; paymentMode: string; items: any[]; timestamp: string; date: string } | null>(null);
 
   useEffect(() => {
     loadDishes();
@@ -74,21 +75,39 @@ export const TokensView: React.FC = () => {
 
   const totalQty = tokenCart.reduce((sum, i) => sum + i.quantity, 0);
 
-  const handleOpenPreview = () => {
+  const handleOpenPreview = async () => {
     if (tokenCart.length === 0) {
       alert('Token cart is empty! Select dishes first.');
       return;
     }
-    const maxSeq = activeTokensList.reduce((max, t) => {
-      const num = parseInt(String(t.tokenNumber).replace('KMKOT-', ''), 10);
-      return !isNaN(num) && num > max ? num : max;
-    }, 0);
-    const tokenNum = `KMKOT-${String(maxSeq + 1).padStart(3, '0')}`;
+
+    let tokenNum: string;
+    if ((window as any).electronAPI?.getNextTokenSeq) {
+      // Get next seq from main process — never reuses deleted numbers
+      const res = await (window as any).electronAPI.getNextTokenSeq();
+      tokenNum = res.tokenNumber;
+    } else {
+      // Fallback for browser dev mode
+      const maxSeq = activeTokensList.reduce((max, t) => {
+        const num = parseInt(String(t.tokenNumber).replace('KMKOT', ''), 10);
+        return !isNaN(num) && num > max ? num : max;
+      }, 0);
+      tokenNum = `KMKOT${String(maxSeq + 1).padStart(3, '0')}`;
+    }
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateStr = `${day}/${month}/${year}`;
     const newTokenObj = {
       tokenNumber: tokenNum,
       orderType,
+      paymentMode,
       items: [...tokenCart],
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: timeStr,
+      date: dateStr,
     };
 
     setPreviewToken(newTokenObj);
@@ -96,7 +115,13 @@ export const TokensView: React.FC = () => {
   };
 
   const handleSelectActiveToken = (token: any) => {
-    setPreviewToken(token);
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateStr = `${day}/${month}/${year}`;
+    setPreviewToken({ ...token, paymentMode: token.paymentMode || 'Cash', timestamp: token.timestamp || timeStr, date: token.date || dateStr });
     setShowPreviewModal(true);
   };
 
@@ -241,6 +266,7 @@ export const TokensView: React.FC = () => {
           </button>
         </div>
 
+        {/* Order Type Toggle */}
         <div className="flex bg-olive-950 p-1 rounded-xl gap-1 my-3">
           <button
             onClick={() => setOrderType('Dine-In')}
@@ -256,6 +282,19 @@ export const TokensView: React.FC = () => {
           >
             <ShoppingBag className="w-3.5 h-3.5" /> Takeaway
           </button>
+        </div>
+
+        {/* Payment Mode */}
+        <div className="flex bg-olive-950 p-1 rounded-xl gap-1 mb-3">
+          {['Cash', 'Card', 'UPI'].map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setPaymentMode(mode)}
+              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${paymentMode === mode ? 'bg-olive-700 border border-gold-500/50 text-gold-400' : 'text-olive-400 hover:text-white'}`}
+            >
+              {mode}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto my-3 border-y border-gold-500/10 py-2 space-y-2">
@@ -298,47 +337,117 @@ export const TokensView: React.FC = () => {
 
       {/* Token Slip Modal Preview */}
       {showPreviewModal && previewToken && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[360px] space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-gold-500/20">
-              <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
-                <Ticket className="w-5 h-5" /> Token Slip Preview
-              </h4>
-              <button
-                onClick={() => setShowPreviewModal(false)}
-                className="text-olive-300 hover:text-white p-1 rounded-lg hover:bg-olive-800 transition-colors"
-                title="Close Receipt View"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="flex flex-col gap-3 w-[340px]">
 
-            <div className="bg-[#fcfbfa] text-black font-mono p-4 rounded-lg text-xs space-y-2">
-              <div className="text-center border-b-2 border-dashed border-black pb-2">
-                <h3 className="font-bold text-base">KISH MANDHI</h3>
-                <p className="text-[10px] font-bold">ORDER TOKEN</p>
-                <div className="text-3xl font-black text-amber-700 my-1">TOKEN #{previewToken.tokenNumber}</div>
+            {/* ── KOT Slip ── */}
+            <div
+              style={{
+                background: '#e8e0d0',
+                border: '2px solid #c8b88a',
+                borderRadius: '10px',
+                fontFamily: "'Courier New', Courier, monospace",
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+              }}
+            >
+              {/* Header */}
+              <div style={{ textAlign: 'center', padding: '16px 20px 12px', borderBottom: '2px solid #c8b88a' }}>
+                <div style={{ color: '#c17f24', fontWeight: 900, fontSize: '11px', letterSpacing: '1px', marginBottom: '4px' }}>
+                  [ SLIP 2: KITCHEN TOKEN ]
+                </div>
+                <div style={{ fontWeight: 900, fontSize: '22px', letterSpacing: '2px', color: '#1a1a1a', fontFamily: 'Georgia, serif' }}>
+                  KISH MANDHI
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '3px', color: '#333', marginTop: '4px', borderBottom: '2px solid #333', paddingBottom: '8px', display: 'inline-block' }}>
+                  ORDER TOKEN &nbsp;/&nbsp; KOT
+                </div>
               </div>
-              <div className="flex justify-between text-[11px] font-bold py-1">
-                <span>TYPE: {previewToken.orderType}</span>
-                <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+
+              {/* Token Number Box */}
+              <div style={{ margin: '14px 16px', background: '#111', borderRadius: '8px', padding: '14px 16px', textAlign: 'center' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', letterSpacing: '2px', fontWeight: 700, marginBottom: '4px' }}>
+                  BILL / TOKEN NO
+                </div>
+                <div style={{ color: '#f5b731', fontSize: '36px', fontWeight: 900, letterSpacing: '2px' }}>
+                  {previewToken.tokenNumber}
+                </div>
               </div>
-              <div className="border-t border-black pt-2 space-y-1">
-                {previewToken.items.map((i: any, idx: number) => (
-                  <div key={idx} className="font-bold text-sm">
-                    • {i.quantity}x {i.name} ({i.variant})
+
+              {/* Order Details Box */}
+              <div style={{ margin: '0 16px 14px', border: '1.5px solid #c8b88a', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: '#222', fontWeight: 700 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ letterSpacing: '1px' }}>ORDER TYPE:</span>
+                  <span style={{ background: '#111', color: '#fff', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '6px', letterSpacing: '1px' }}>
+                    {previewToken.orderType.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ letterSpacing: '1px' }}>PAYMENT MODE:</span>
+                  <span>{previewToken.paymentMode || 'Cash'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c17f24' }}>
+                  <span style={{ letterSpacing: '1px' }}>TIME: {previewToken.timestamp}</span>
+                  <span style={{ letterSpacing: '1px' }}>DATE: {previewToken.date}</span>
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div style={{ borderTop: '2px solid #333', margin: '0 16px', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 900, letterSpacing: '2px', color: '#333', marginBottom: '8px' }}>
+                  <span>ITEMS TO PREPARE</span>
+                  <span>QTY</span>
+                </div>
+                {previewToken.items.map((item: any, idx: number) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '9px 0',
+                      borderBottom: '1px dashed #b0a080',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: '#1a1a1a',
+                    }}
+                  >
+                    <span>• {item.name} ({item.variant})</span>
+                    <span
+                      style={{
+                        background: '#111',
+                        color: '#fff',
+                        fontWeight: 900,
+                        fontSize: '14px',
+                        minWidth: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '6px',
+                        flexShrink: 0,
+                        marginLeft: '10px',
+                      }}
+                    >
+                      {item.quantity}
+                    </span>
                   </div>
                 ))}
               </div>
+
+              {/* Footer */}
+              <div style={{ borderTop: '2px solid #333', margin: '10px 16px 0', padding: '12px 0', textAlign: 'center', fontSize: '11px', fontWeight: 900, letterSpacing: '2px', color: '#555' }}>
+                *** NON-BILLING KITCHEN SLIP ***
+              </div>
             </div>
 
-            {/* Modal Controls */}
-            <div className="flex gap-2.5 pt-2 border-t border-gold-500/20">
+            {/* ── Action Buttons ── */}
+            <div className="flex gap-2.5">
               <button
                 onClick={() => setShowPreviewModal(false)}
-                className="flex-1 py-2.5 border border-slate-700 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors"
+                className="flex-1 py-2.5 border border-slate-600 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
               >
-                Close
+                <X className="w-3.5 h-3.5" /> Close
               </button>
               <button
                 onClick={handleSaveTokenOnly}

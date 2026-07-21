@@ -222,7 +222,53 @@ ipcMain.handle('receipt:print', async (_evt: any, receiptHtml: string) => {
   }
 });
 
-// Database Management Controls
+// ─── Token IPC Handlers ───────────────────────────────────────────────────────
+
+// Returns the next sequence number (always increments, never reuses deleted)
+ipcMain.handle('tokens:getNextSeq', async () => {
+  db.lastTokenSeq = (db.lastTokenSeq || 0) + 1;
+  const tokenNumber = `KMKOT${String(db.lastTokenSeq).padStart(3, '0')}`;
+  // Decrement back — we only actually commit it when saving
+  db.lastTokenSeq = db.lastTokenSeq - 1;
+  return { success: true, nextSeq: (db.lastTokenSeq || 0) + 1, tokenNumber };
+});
+
+// Save a new token to the in-memory store
+ipcMain.handle('tokens:save', async (_evt: any, tokenData: any) => {
+  // Check for duplicate
+  const exists = db.tokens.find((t: any) => t.tokenNumber === tokenData.tokenNumber);
+  if (!exists) {
+    // Extract the numeric part and update lastTokenSeq if needed
+    const num = parseInt(String(tokenData.tokenNumber).replace('KMKOT', ''), 10);
+    if (!isNaN(num) && num > (db.lastTokenSeq || 0)) {
+      db.lastTokenSeq = num;
+    }
+    db.tokens.unshift({
+      tokenNumber: tokenData.tokenNumber,
+      orderType: tokenData.orderType || 'Dine-In',
+      paymentMode: tokenData.paymentMode || 'Cash',
+      items: tokenData.items || [],
+      timestamp: tokenData.timestamp || '',
+      date: tokenData.date || '',
+      createdAt: new Date().toISOString()
+    });
+  }
+  return { success: true };
+});
+
+// Get all active tokens
+ipcMain.handle('tokens:getActive', async () => {
+  return { success: true, data: db.tokens };
+});
+
+// Delete a token by tokenNumber (on billing confirm)
+ipcMain.handle('tokens:delete', async (_evt: any, tokenNumber: string) => {
+  db.tokens = db.tokens.filter((t: any) => t.tokenNumber !== tokenNumber);
+  // lastTokenSeq is NOT decremented — numbers are never reused
+  return { success: true };
+});
+
+// ─── Database Management Controls ────────────────────────────────────────────
 ipcMain.handle('db:clearOrders', async () => {
   db.orders = [];
   return { success: true };

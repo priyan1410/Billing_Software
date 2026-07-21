@@ -39,6 +39,16 @@ export interface DbStore {
     paymentMode: string;
     createdAt: string;
   }>;
+  tokens: Array<{
+    tokenNumber: string;
+    orderType: string;
+    paymentMode: string;
+    items: any[];
+    timestamp: string;
+    date: string;
+    createdAt: string;
+  }>;
+  lastTokenSeq: number;
 }
 
 export const initialDbStore: DbStore = {
@@ -62,5 +72,7 @@ export const initialDbStore: DbStore = {
     { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
   ],
   orders: [],
-  expenses: []
+  expenses: [],
+  tokens: [],
+  lastTokenSeq: 0
 };

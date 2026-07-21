@@ -14,6 +14,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getOrders: () => ipcRenderer.invoke('orders:getAll'),
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),
 
+  // Tokens (KOT)
+  getNextTokenSeq: () => ipcRenderer.invoke('tokens:getNextSeq'),
+  saveToken: (tokenData: any) => ipcRenderer.invoke('tokens:save', tokenData),
+  getActiveTokens: () => ipcRenderer.invoke('tokens:getActive'),
+  deleteToken: (tokenNumber: string) => ipcRenderer.invoke('tokens:delete', tokenNumber),
+
   // Expenses
   getExpenses: () => ipcRenderer.invoke('expenses:getAll'),
   addExpense: (expenseData: any) => ipcRenderer.invoke('expenses:add', expenseData),
@@ -28,3 +34,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   resetDefaults: () => ipcRenderer.invoke('db:resetDefaults'),
   importBackup: (backupData: any) => ipcRenderer.invoke('db:importBackup', backupData)
 });
+
