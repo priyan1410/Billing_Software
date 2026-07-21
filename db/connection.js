@@ -34,7 +34,8 @@ function getPool() {
       connectionLimit: 10,
       queueLimit: 0,
       connectTimeout: 10000,
-      multipleStatements: false
+      multipleStatements: false,
+      dateStrings: true
     });
     console.log('✓ MySQL connection pool created for database: ' + dbConfig.database);
   }

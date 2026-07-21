@@ -19,7 +19,11 @@ const Expenses = {
   setDefaultDate() {
     const dateInput = document.getElementById('exp-date');
     if (dateInput) {
-      dateInput.value = new Date().toISOString().split('T')[0];
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      dateInput.value = `${year}-${month}-${day}`;
     }
   },
 
@@ -54,7 +58,7 @@ const Expenses = {
 
     tbody.innerHTML = this.expenses.map(e => `
       <tr>
-        <td>${e.expense_date ? e.expense_date.split('T')[0] : 'N/A'}</td>
+        <td>${e.expense_date || e.expenseDate ? String(e.expense_date || e.expenseDate).split('T')[0].split(' ')[0] : 'N/A'}</td>
         <td><span class="badge" style="background:rgba(231,76,60,0.15); color:#e74c3c; border:1px solid rgba(231,76,60,0.3);">${e.category}</span></td>
         <td>${e.description}</td>
         <td>${e.paid_to || '-'}</td>

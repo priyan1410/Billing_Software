@@ -2,12 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, Trash2 } from 'lucide-react';
 import { Expense } from '../../types';
 
+const getTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const ExpensesView: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [category, setCategory] = useState('Raw Material');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expenseDate, setExpenseDate] = useState(getTodayString);
   const [paidTo, setPaidTo] = useState('');
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [saving, setSaving] = useState(false);
@@ -213,7 +221,9 @@ export const ExpensesView: React.FC = () => {
                   <td className="p-3 font-semibold text-white">{exp.description}</td>
                   <td className="p-3 text-olive-300">{exp.paidTo || '-'}</td>
                   <td className="p-3 text-olive-300">
-                    {typeof exp.expenseDate === 'string' ? exp.expenseDate : exp.expenseDate ? new Date(exp.expenseDate).toISOString().split('T')[0] : '-'}
+                    {exp.expenseDate || (exp as any).expense_date
+                      ? String(exp.expenseDate || (exp as any).expense_date).split('T')[0].split(' ')[0]
+                      : '-'}
                   </td>
                   <td className="p-3 font-bold text-rose-400">₹{Number(exp.amount).toFixed(2)}</td>
                   <td className="p-3">

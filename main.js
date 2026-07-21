@@ -266,32 +266,62 @@ ipcMain.handle('dashboard:getStats', async () => {
   return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders } };
 });
 
+// Helper for formatting date strings safely as YYYY-MM-DD
+function formatDateOnly(d) {
+  if (!d) return '';
+  if (d instanceof Date) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  if (typeof d === 'string') {
+    return d.split('T')[0].split(' ')[0];
+  }
+  return String(d);
+}
+
 // ─────────────────────────────────────────────────────────────
 // EXPENSES
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('expenses:getAll', async () => {
   const result = await query('SELECT * FROM expenses ORDER BY created_at DESC');
   if (!result.success) return { success: false, message: result.error };
-  return { success: true, data: result.data.map(r => ({
-    id: r.id,
-    category: r.category,
-    description: r.description,
-    amount: Number(r.amount),
-    expenseDate: r.expense_date,
-    paidTo: r.paid_to,
-    paymentMode: r.payment_mode,
-    createdAt: r.created_at
-  })) };
+  return { success: true, data: result.data.map(r => {
+    const formattedDate = formatDateOnly(r.expense_date);
+    return {
+      id: r.id,
+      category: r.category,
+      description: r.description,
+      amount: Number(r.amount),
+      expenseDate: formattedDate,
+      expense_date: formattedDate,
+      paidTo: r.paid_to,
+      paid_to: r.paid_to,
+      paymentMode: r.payment_mode,
+      payment_mode: r.payment_mode,
+      createdAt: r.created_at
+    };
+  }) };
 });
 
 ipcMain.handle('expenses:add', async (evt, expData) => {
+  let expDate = formatDateOnly(expData.expense_date || expData.expenseDate);
+  if (!expDate) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    expDate = `${year}-${month}-${day}`;
+  }
+
   const result = await query(
     'INSERT INTO expenses (category, description, amount, expense_date, paid_to, payment_mode) VALUES (?, ?, ?, ?, ?, ?)',
     [
       expData.category,
       expData.description,
       Number(expData.amount),
-      expData.expense_date || expData.expenseDate,
+      expDate,
       expData.paid_to || expData.paidTo || '',
       expData.payment_mode || expData.paymentMode || 'Cash'
     ]
