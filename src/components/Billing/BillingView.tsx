@@ -358,6 +358,14 @@ export const BillingView: React.FC = () => {
     if (target) loadTokenToCart(target, dishes);
   };
 
+  const handleSelectToken = (value: string) => {
+    setSelectedTokenNum(value);
+    if (value) {
+      const target = activeTokensList.find((t) => String(t.tokenNumber) === String(value));
+      if (target) loadTokenToCart(target, dishes);
+    }
+  };
+
   const handleCheckoutClick = async () => {
     if (cart.length === 0) { alert('Cart is empty! Add items first.'); return; }
     await fetchNextBillNumber();
@@ -489,8 +497,8 @@ export const BillingView: React.FC = () => {
 
     const billNumber = data.orderNumber || `KMIV-001`;
     const tokenNumber = data.tokenNumber
-      ? (String(data.tokenNumber).startsWith('KMKOT-') ? data.tokenNumber : `KMKOT-${String(data.tokenNumber).padStart(3, '0')}`)
-      : `KMKOT-001`;
+      ? (String(data.tokenNumber).startsWith('KMKOT') ? String(data.tokenNumber) : `KMKOT${String(data.tokenNumber).padStart(3, '0')}`)
+      : `KMKOT001`;
     const taxableAmount = Math.max(0, data.subtotal - (data.discount || 0));
     const rounding = data.roundOff ?? 0;
 
@@ -683,7 +691,7 @@ export const BillingView: React.FC = () => {
 
         {/* Token Import */}
         <div className="flex gap-2 flex-shrink-0">
-          <select value={selectedTokenNum} onChange={(e) => setSelectedTokenNum(e.target.value)}
+          <select value={selectedTokenNum} onChange={(e) => handleSelectToken(e.target.value)}
             className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none"
           >
             <option value="">Import from Token...</option>

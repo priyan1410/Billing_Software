@@ -1,9 +1,36 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const fs = require('fs');
 const path = require('path');
 const { initialDbStore } = require('./db');
+const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber } = require('./tokenUtils');
 
 let mainWindow;
 const db = initialDbStore;
+const tokenStatePath = path.join(app.getPath('userData'), 'token-state.json');
+
+function persistTokenState() {
+  try {
+    fs.mkdirSync(path.dirname(tokenStatePath), { recursive: true });
+    fs.writeFileSync(tokenStatePath, JSON.stringify({ lastTokenSeq: db.lastTokenSeq || 0, tokens: db.tokens }, null, 2));
+  } catch (err) {
+    console.error('Failed to persist token state:', err);
+  }
+}
+
+function loadPersistedTokenState() {
+  try {
+    if (fs.existsSync(tokenStatePath)) {
+      const raw = fs.readFileSync(tokenStatePath, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed.lastTokenSeq) db.lastTokenSeq = Number(parsed.lastTokenSeq) || 0;
+      if (Array.isArray(parsed.tokens)) db.tokens = parsed.tokens;
+    }
+  } catch (err) {
+    console.error('Failed to load token state:', err);
+  }
+}
+
+loadPersistedTokenState();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -224,27 +251,25 @@ ipcMain.handle('receipt:print', async (_evt: any, receiptHtml: string) => {
 
 // ─── Token IPC Handlers ───────────────────────────────────────────────────────
 
-// Returns the next sequence number (always increments, never reuses deleted)
 ipcMain.handle('tokens:getNextSeq', async () => {
-  db.lastTokenSeq = (db.lastTokenSeq || 0) + 1;
-  const tokenNumber = `KMKOT${String(db.lastTokenSeq).padStart(3, '0')}`;
-  // Decrement back — we only actually commit it when saving
-  db.lastTokenSeq = db.lastTokenSeq - 1;
-  return { success: true, nextSeq: (db.lastTokenSeq || 0) + 1, tokenNumber };
+  const currentSeq = Number(db.lastTokenSeq || 0);
+  const nextSeq = currentSeq + 1;
+  const tokenNumber = getNextTokenNumber(currentSeq);
+  db.lastTokenSeq = nextSeq;
+  persistTokenState();
+  return { success: true, nextSeq, tokenNumber };
 });
 
-// Save a new token to the in-memory store
 ipcMain.handle('tokens:save', async (_evt: any, tokenData: any) => {
-  // Check for duplicate
-  const exists = db.tokens.find((t: any) => t.tokenNumber === tokenData.tokenNumber);
+  const normalizedToken = normalizeTokenNumber(tokenData.tokenNumber || getNextTokenNumber(Number(db.lastTokenSeq || 0)));
+  const exists = db.tokens.find((t: any) => String(t.tokenNumber).toUpperCase() === normalizedToken.toUpperCase());
   if (!exists) {
-    // Extract the numeric part and update lastTokenSeq if needed
-    const num = parseInt(String(tokenData.tokenNumber).replace('KMKOT', ''), 10);
-    if (!isNaN(num) && num > (db.lastTokenSeq || 0)) {
-      db.lastTokenSeq = num;
+    const seqNum = parseTokenSequence(normalizedToken);
+    if (seqNum > (db.lastTokenSeq || 0)) {
+      db.lastTokenSeq = seqNum;
     }
     db.tokens.unshift({
-      tokenNumber: tokenData.tokenNumber,
+      tokenNumber: normalizedToken,
       orderType: tokenData.orderType || 'Dine-In',
       paymentMode: tokenData.paymentMode || 'Cash',
       items: tokenData.items || [],
@@ -252,19 +277,33 @@ ipcMain.handle('tokens:save', async (_evt: any, tokenData: any) => {
       date: tokenData.date || '',
       createdAt: new Date().toISOString()
     });
+    persistTokenState();
+  } else {
+    const existingIndex = db.tokens.findIndex((t: any) => String(t.tokenNumber).toUpperCase() === normalizedToken.toUpperCase());
+    if (existingIndex >= 0) {
+      db.tokens[existingIndex] = {
+        ...db.tokens[existingIndex],
+        orderType: tokenData.orderType || db.tokens[existingIndex].orderType || 'Dine-In',
+        paymentMode: tokenData.paymentMode || db.tokens[existingIndex].paymentMode || 'Cash',
+        items: tokenData.items || db.tokens[existingIndex].items || [],
+        timestamp: tokenData.timestamp || db.tokens[existingIndex].timestamp || '',
+        date: tokenData.date || db.tokens[existingIndex].date || '',
+        createdAt: db.tokens[existingIndex].createdAt || new Date().toISOString()
+      };
+    }
+    persistTokenState();
   }
-  return { success: true };
+  return { success: true, data: { tokenNumber: normalizedToken } };
 });
 
-// Get all active tokens
 ipcMain.handle('tokens:getActive', async () => {
-  return { success: true, data: db.tokens };
+  return { success: true, data: db.tokens.filter((t: any) => String(t.tokenNumber || '').trim()) };
 });
 
-// Delete a token by tokenNumber (on billing confirm)
 ipcMain.handle('tokens:delete', async (_evt: any, tokenNumber: string) => {
-  db.tokens = db.tokens.filter((t: any) => t.tokenNumber !== tokenNumber);
-  // lastTokenSeq is NOT decremented — numbers are never reused
+  const normalizedToken = normalizeTokenNumber(tokenNumber);
+  db.tokens = db.tokens.filter((t: any) => String(t.tokenNumber).toUpperCase() !== normalizedToken.toUpperCase());
+  persistTokenState();
   return { success: true };
 });
 

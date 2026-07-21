@@ -1,12 +1,39 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const fs = require('fs');
 const path = require('path');
 const { query, testConnection, saveConfig, loadConfig, dbConfig } = require('./db/connection');
 const { initializeDatabase } = require('./db/schema');
+const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber } = require('./electron/tokenUtils');
 
 // Fix GPU rendering on Windows
 app.disableHardwareAcceleration();
 
 let mainWindow;
+const tokenStatePath = path.join(app.getPath('userData'), 'token-state.json');
+const tokenState = { lastTokenSeq: 0, tokens: [] };
+
+function persistTokenState() {
+  try {
+    fs.mkdirSync(path.dirname(tokenStatePath), { recursive: true });
+    fs.writeFileSync(tokenStatePath, JSON.stringify(tokenState, null, 2));
+  } catch (err) {
+    console.error('Failed to persist token state:', err);
+  }
+}
+
+function loadPersistedTokenState() {
+  try {
+    if (fs.existsSync(tokenStatePath)) {
+      const parsed = JSON.parse(fs.readFileSync(tokenStatePath, 'utf8'));
+      if (parsed.lastTokenSeq) tokenState.lastTokenSeq = Number(parsed.lastTokenSeq) || 0;
+      if (Array.isArray(parsed.tokens)) tokenState.tokens = parsed.tokens;
+    }
+  } catch (err) {
+    console.error('Failed to load token state:', err);
+  }
+}
+
+loadPersistedTokenState();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -363,6 +390,15 @@ ipcMain.handle('expenses:delete', async (evt, id) => {
 // ─────────────────────────────────────────────────────────────
 // TOKENS (KOT & active tokens)
 // ─────────────────────────────────────────────────────────────
+ipcMain.handle('tokens:getNextSeq', async () => {
+  const currentSeq = Number(tokenState.lastTokenSeq || 0);
+  const nextSeq = currentSeq + 1;
+  const tokenNumber = getNextTokenNumber(currentSeq);
+  tokenState.lastTokenSeq = nextSeq;
+  persistTokenState();
+  return { success: true, nextSeq, tokenNumber };
+});
+
 ipcMain.handle('tokens:getActive', async () => {
   try {
     const result = await query("SELECT * FROM tokens WHERE status = 'Active' OR status = 'Pending' ORDER BY id DESC");
@@ -372,16 +408,18 @@ ipcMain.handle('tokens:getActive', async () => {
       let parsed = [];
       try {
         parsed = typeof rawItems === 'string' ? JSON.parse(rawItems) : (rawItems || []);
-      } catch(e) { parsed = []; }
+      } catch (e) { parsed = []; }
       return {
         id: r.id,
-        tokenNumber: r.token_number,
+        tokenNumber: normalizeTokenNumber(r.token_number),
         orderType: r.order_type || 'Dine-In',
         tableNo: r.table_no || 'N/A',
         items: parsed,
         timestamp: r.created_at
       };
     });
+    tokenState.tokens = tokens;
+    persistTokenState();
     return { success: true, data: tokens };
   } catch (err) {
     console.error('tokens:getActive error:', err);
@@ -392,18 +430,31 @@ ipcMain.handle('tokens:getActive', async () => {
 ipcMain.handle('tokens:save', async (evt, tokenData) => {
   try {
     const itemsJson = JSON.stringify(tokenData.items || []);
-    const tokenNum = String(tokenData.tokenNumber);
+    const normalizedToken = normalizeTokenNumber(tokenData.tokenNumber || getNextTokenNumber(Number(tokenState.lastTokenSeq || 0)));
+    const parsedSeq = parseTokenSequence(normalizedToken);
+    if (parsedSeq > tokenState.lastTokenSeq) tokenState.lastTokenSeq = parsedSeq;
+
     const result = await query(
       `INSERT INTO tokens (token_number, order_type, table_no, items_summary, status)
        VALUES (?, ?, 'N/A', ?, 'Active')
        ON DUPLICATE KEY UPDATE order_type = VALUES(order_type), items_summary = VALUES(items_summary), status = 'Active'`,
-      [tokenNum, tokenData.orderType || 'Dine-In', itemsJson]
+      [normalizedToken, tokenData.orderType || 'Dine-In', itemsJson]
     );
+
     if (!result.success) {
       console.error('tokens:save SQL error:', result.error);
       return { success: false, message: result.error };
     }
-    return { success: true, id: result.data.insertId };
+
+    tokenState.tokens = tokenState.tokens.filter(t => String(t.tokenNumber).toUpperCase() !== normalizedToken.toUpperCase());
+    tokenState.tokens.unshift({
+      tokenNumber: normalizedToken,
+      orderType: tokenData.orderType || 'Dine-In',
+      items: tokenData.items || [],
+      timestamp: tokenData.timestamp || new Date().toISOString()
+    });
+    persistTokenState();
+    return { success: true, id: result.data.insertId, data: { tokenNumber: normalizedToken } };
   } catch (err) {
     console.error('tokens:save error:', err);
     return { success: false, message: err.message };
@@ -411,21 +462,18 @@ ipcMain.handle('tokens:save', async (evt, tokenData) => {
 });
 
 ipcMain.handle('tokens:delete', async (evt, tokenNumber) => {
-  const rawNum = String(tokenNumber);
-  const formattedNum = !rawNum.startsWith('KMKOT-') && !isNaN(Number(rawNum))
-    ? `KMKOT-${String(rawNum).padStart(3, '0')}`
-    : rawNum;
-
-  // Mark as Billed and delete
+  const normalizedToken = normalizeTokenNumber(tokenNumber);
   await query(
     "UPDATE tokens SET status = 'Billed' WHERE token_number = ? OR token_number = ?",
-    [rawNum, formattedNum]
+    [normalizedToken, String(tokenNumber)]
   );
   const result = await query(
     'DELETE FROM tokens WHERE token_number = ? OR token_number = ?',
-    [rawNum, formattedNum]
+    [normalizedToken, String(tokenNumber)]
   );
   if (!result.success) return { success: false, message: result.error };
+  tokenState.tokens = tokenState.tokens.filter(t => String(t.tokenNumber).toUpperCase() !== normalizedToken.toUpperCase());
+  persistTokenState();
   return { success: true };
 });
 

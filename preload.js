@@ -17,6 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),
   getPnLSummary: (dateRange) => ipcRenderer.invoke('dashboard:getPnLSummary', dateRange),
 
+  // Tokens (KOT)
+  getNextTokenSeq: () => ipcRenderer.invoke('tokens:getNextSeq'),
+  saveToken: (tokenData) => ipcRenderer.invoke('tokens:save', tokenData),
+  getActiveTokens: () => ipcRenderer.invoke('tokens:getActive'),
+  deleteToken: (tokenNumber) => ipcRenderer.invoke('tokens:delete', tokenNumber),
+
   // Expenses
   getExpenses: () => ipcRenderer.invoke('expenses:getAll'),
   addExpense: (expenseData) => ipcRenderer.invoke('expenses:add', expenseData),
