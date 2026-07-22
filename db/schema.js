@@ -105,6 +105,20 @@ async function initializeDatabase() {
     await query(`ALTER TABLE orders ADD COLUMN token_number VARCHAR(50) DEFAULT NULL`).catch(() => { });
 
     await query(`
+      CREATE TABLE IF NOT EXISTS order_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT NOT NULL,
+        dish_name VARCHAR(200) NOT NULL,
+        variant VARCHAR(50) DEFAULT 'Full',
+        quantity INT NOT NULL DEFAULT 1,
+        unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+        total_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB;
+    `);
+
+
+    await query(`
       CREATE TABLE IF NOT EXISTS expenses (
         id INT AUTO_INCREMENT PRIMARY KEY,
         category VARCHAR(50) NOT NULL,

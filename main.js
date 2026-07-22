@@ -230,6 +230,24 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   if (!insertOrder.success) return { success: false, message: insertOrder.error };
   const orderId = insertOrder.data.insertId;
 
+  // Save line items into order_items table
+  if (Array.isArray(orderData.items)) {
+    for (const item of orderData.items) {
+      await query(
+        `INSERT INTO order_items (order_id, dish_name, variant, quantity, unit_price, total_price)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          item.name || item.dishName || 'Item',
+          item.variant || 'Full',
+          Number(item.quantity || 1),
+          Number(item.unitPrice || item.price || 0),
+          Number(item.totalPrice || (Number(item.unitPrice || item.price || 0) * Number(item.quantity || 1)))
+        ]
+      );
+    }
+  }
+
   const tokenRef = orderData.token_id || orderData.tokenId || orderData.tokenNumber || normalizedToken;
   const tokenId = tokenRef
     ? (String(tokenRef).startsWith('KMKOT-') ? String(tokenRef) : `KMKOT-${String(tokenRef).padStart(3, '0')}`)
@@ -257,6 +275,33 @@ ipcMain.handle('orders:getAll', async () => {
     }))
   };
 });
+
+ipcMain.handle('orders:getItems', async (evt, orderIdOrNumber) => {
+  try {
+    let sql = 'SELECT * FROM order_items WHERE order_id = ?';
+    let params = [orderIdOrNumber];
+    if (typeof orderIdOrNumber === 'string' && isNaN(Number(orderIdOrNumber))) {
+      sql = `SELECT oi.* FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.order_number = ?`;
+      params = [orderIdOrNumber];
+    }
+    const res = await query(sql, params);
+    if (!res.success) return { success: false, message: res.error };
+    return {
+      success: true,
+      data: res.data.map(r => ({
+        id: r.id,
+        name: r.dish_name,
+        variant: r.variant,
+        quantity: r.quantity,
+        unitPrice: Number(r.unit_price),
+        totalPrice: Number(r.total_price)
+      }))
+    };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
 
 // ─────────────────────────────────────────────────────────────
 // DASHBOARD STATS (live from MySQL)

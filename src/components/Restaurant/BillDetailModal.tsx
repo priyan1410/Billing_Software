@@ -36,7 +36,9 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
   const fetchItems = async () => {
     setLoadingItems(true);
     try {
-      if ((window as any).electronAPI?.getOrderItems) {
+      if (order && Array.isArray(order.items) && order.items.length > 0) {
+        setItems(order.items);
+      } else if ((window as any).electronAPI?.getOrderItems) {
         const res = await (window as any).electronAPI.getOrderItems(order.id || billNumber);
         if (res && res.success && Array.isArray(res.data)) {
           setItems(res.data);
@@ -48,6 +50,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
       setLoadingItems(false);
     }
   };
+
 
   const handlePrint = async () => {
     setIsPrinting(true);
@@ -73,6 +76,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
 
       const cgstRate = (taxRate / 2).toFixed(1);
       const sgstRate = (taxRate / 2).toFixed(1);
+      const roundOffVal = Number(order.roundOff ?? order.round_off ?? 0);
 
       const receiptStyles = `
         <style>
@@ -109,7 +113,6 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span>Time &nbsp;&nbsp;&nbsp;: ${formattedTime}</span>
-            <span>Pay Mode: ${paymentMode}</span>
           </div>
         </div>
         
@@ -138,6 +141,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
           <div class="row"><span>Taxable Amount</span><span>${Math.max(0, subtotal - discount).toFixed(2)}</span></div>
           <div class="row"><span>CGST (${cgstRate}%)</span><span>${(taxAmt / 2).toFixed(2)}</span></div>
           <div class="row"><span>SGST (${sgstRate}%)</span><span>${(taxAmt / 2).toFixed(2)}</span></div>
+          ${roundOffVal !== 0 ? `<div class="row"><span>Round Off</span><span>${roundOffVal.toFixed(2)}</span></div>` : ''}
         </div>
         
         <div class="divider"></div>
@@ -153,7 +157,12 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
           <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: bold; font-size: 14px;">
             Thank You!<br/>Visit Again.
           </div>
-          <div style="font-size: 9.5px; margin-top: 4px;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0;">
+            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
+            <span style="font-size: 9px;">★</span>
+            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
+          </div>
+          <div style="font-size: 9.5px; line-height: 1.3;">
             ${restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
           </div>
         </div>
@@ -171,6 +180,20 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
       setIsPrinting(false);
     }
   };
+
+  const rawGst = String(restaurantDetails?.gstNumber || restaurantDetails?.gstNo || '');
+  const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
+  const rawFssai = String(restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo || '');
+  const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
+  let rGstFssaiLine = '';
+  if (gstVal && fssaiVal) {
+    rGstFssaiLine = `GSTIN: ${gstVal}  |  FSSAI: ${fssaiVal}`;
+  } else if (gstVal) {
+    rGstFssaiLine = `GSTIN: ${gstVal}`;
+  } else if (fssaiVal) {
+    rGstFssaiLine = `FSSAI: ${fssaiVal}`;
+  }
+  const roundOffVal = Number(order.roundOff ?? order.round_off ?? 0);
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4 select-none">
@@ -200,9 +223,10 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
                 <h2 className="text-base font-extrabold tracking-tight uppercase leading-tight font-sans text-black">
                   {restaurantDetails?.companyName || 'KISH MANDHI'}
                 </h2>
+                {restaurantDetails?.tagline && <p className="text-[10.5px] font-semibold text-slate-900">{restaurantDetails.tagline}</p>}
                 {restaurantDetails?.address && <p className="text-[10px] text-slate-800">{restaurantDetails.address}</p>}
-                {restaurantDetails?.phone && <p className="text-[10px] text-slate-800">Phone: {restaurantDetails.phone}</p>}
-                {restaurantDetails?.gstNumber && <p className="text-[10px] text-slate-800">GSTIN: {restaurantDetails.gstNumber}</p>}
+                {restaurantDetails?.phone && <p className="text-[10px] text-slate-800">{restaurantDetails.phone.startsWith('Phone:') ? restaurantDetails.phone : `Phone: ${restaurantDetails.phone}`}</p>}
+                {rGstFssaiLine && <p className="text-[10px] text-slate-800">{rGstFssaiLine}</p>}
               </div>
 
               <div className="border-b border-dashed border-black my-2"></div>
@@ -210,16 +234,11 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
 
               <div className="text-[10px] leading-tight my-2 space-y-0.5">
                 <div className="flex justify-between">
-                  <span>Bill No: {billNumber}</span>
-                  <span>Type: {orderType}</span>
+                  <span>Bill No &nbsp;: {billNumber}</span>
+                  <span>Date &nbsp;: {formattedDate}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Date: {formattedDate}</span>
-                  <span>Time: {formattedTime}</span>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <span>Payment Mode:</span>
-                  <span>{paymentMode}</span>
+                  <span>Time &nbsp;&nbsp;&nbsp;: {formattedTime}</span>
                 </div>
               </div>
 
@@ -229,8 +248,8 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
               <div className="border-y border-black py-1 my-1 grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 text-[10px] font-bold">
                 <span>Item</span>
                 <span className="text-center">Qty</span>
-                <span className="text-right">Rate</span>
-                <span className="text-right">Amount</span>
+                <span className="text-right">Rate ({curr})</span>
+                <span className="text-right">Amount ({curr})</span>
               </div>
 
               <div className="space-y-1 my-1 text-[10px]">
@@ -244,8 +263,8 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
                     const tNum = Number(item.totalPrice || (uNum * (item.quantity || 1)));
                     return (
                       <div key={idx} className="grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 leading-tight">
-                        <span className="font-semibold break-words">{item.name || item.dishName} ({item.variant})</span>
-                        <span className="text-center">{item.quantity}</span>
+                        <span className="font-semibold break-words">{item.name || item.dishName}{item.variant ? ` (${item.variant})` : ''}</span>
+                        <span className="text-center">{item.quantity || 1}</span>
                         <span className="text-right">{uNum.toFixed(2)}</span>
                         <span className="text-right font-semibold">{tNum.toFixed(2)}</span>
                       </div>
@@ -262,6 +281,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
                 <div className="flex justify-between"><span>Taxable Amount</span><span>{Math.max(0, subtotal - discount).toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>CGST ({(taxRate / 2).toFixed(1)}%)</span><span>{(taxAmt / 2).toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>SGST ({(taxRate / 2).toFixed(1)}%)</span><span>{(taxAmt / 2).toFixed(2)}</span></div>
+                {roundOffVal !== 0 && <div className="flex justify-between"><span>Round Off</span><span>{roundOffVal.toFixed(2)}</span></div>}
               </div>
 
               <div className="border-y-2 border-double border-black py-1.5 my-2 flex justify-between items-center text-xs font-black">
@@ -269,12 +289,23 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
                 <span>{curr} {grandTotal.toFixed(2)}</span>
               </div>
 
-              <div className="text-center mt-2 text-[10px] italic">
-                Thank You! Visit Again.
+              <div className="text-center mt-3 pt-1">
+                <div className="font-serif italic font-bold text-sm text-black leading-snug">
+                  Thank You!<br />Visit Again.
+                </div>
+                <div className="flex items-center justify-center gap-2 my-2">
+                  <div className="h-[1px] bg-black w-10"></div>
+                  <span className="text-[9px]">★</span>
+                  <div className="h-[1px] bg-black w-10"></div>
+                </div>
+                <div className="text-[10px] text-slate-800 leading-tight">
+                  {restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
+                </div>
               </div>
             </div>
           </div>
         </div>
+
 
         {/* Footer Actions: Print and Close */}
         <div className="flex gap-3 p-4 border-t border-slate-800 bg-slate-950 flex-shrink-0">
