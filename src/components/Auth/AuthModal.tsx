@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Crown, Eye, EyeOff, ArrowRight, ArrowLeft,
   User, Mail, Phone, Lock, Building2, Receipt,
-  MapPin, Percent, FileText, CheckCircle2, LogIn
+  MapPin, Percent, FileText, CheckCircle2, LogIn,
+  HelpCircle, ChevronDown, ChevronUp, Database, Server
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -77,6 +78,7 @@ export const AuthModal: React.FC = () => {
   const [regStep, setRegStep] = useState<RegStep>('account');
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+  const [showDbGuide, setShowDbGuide] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -196,7 +198,7 @@ export const AuthModal: React.FC = () => {
 
           {/* Mode Tabs — hide login tab if no users exist yet */}
           {hasExistingUsers && (
-            <div className="flex mx-8 mb-6 bg-white/5 rounded-xl p-1 gap-1">
+            <div className="flex mx-8 mb-4 bg-white/5 rounded-xl p-1 gap-1">
               {(['login', 'register'] as AuthMode[]).map((m) => (
                 <button
                   key={m}
@@ -213,12 +215,48 @@ export const AuthModal: React.FC = () => {
             </div>
           )}
           {!hasExistingUsers && (
-            <div className="flex mx-8 mb-6">
+            <div className="flex mx-8 mb-4">
               <div className="flex-1 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/30 text-amber-400 text-center">
                 ✨ New Registration
               </div>
             </div>
           )}
+
+          {/* Database & MySQL Setup Guide Accordion */}
+          <div className="mx-8 mb-6 bg-white/5 border border-white/10 rounded-2xl overflow-hidden text-xs">
+            <button
+              type="button"
+              onClick={() => setShowDbGuide(!showDbGuide)}
+              className="w-full px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold flex items-center justify-between transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-amber-400" />
+                <span>Database & MySQL Installation Guide</span>
+              </div>
+              {showDbGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showDbGuide && (
+              <div className="p-4 space-y-3 text-white/80 bg-black/40 leading-relaxed border-t border-white/10">
+                <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-300">
+                  <p className="font-bold flex items-center gap-1.5"><Database className="w-3.5 h-3.5" /> 1. Embedded Local DB (Default)</p>
+                  <p className="text-[11px] text-emerald-200/80 mt-0.5">Works 100% offline out-of-the-box! All bills, menu items & data are automatically stored locally in your laptop's AppData.</p>
+                </div>
+
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 space-y-1.5">
+                  <p className="font-bold flex items-center gap-1.5"><Server className="w-3.5 h-3.5" /> 2. MySQL Step-by-Step Setup (Optional)</p>
+                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-amber-200/80">
+                    <li>Download <b>MySQL Installer</b> from <span className="text-amber-300 font-mono">dev.mysql.com/downloads/installer/</span></li>
+                    <li>Select <b>Server Only</b> (or Developer Default) &amp; click Next.</li>
+                    <li>Keep Port set to <code className="text-amber-300 font-mono">3306</code>.</li>
+                    <li>Set your Root Password (e.g. <code className="text-amber-300 font-mono">Suriy@24</code>).</li>
+                    <li>Ensure <i>Start MySQL at System Startup</i> is checked &amp; Finish setup.</li>
+                    <li>Inside the app, go to <b>Database Settings &gt; Configure MySQL</b>, enter credentials &amp; click <b>Save &amp; Connect</b>.</li>
+                  </ol>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* ─── LOGIN FORM ─── */}
           {mode === 'login' && (

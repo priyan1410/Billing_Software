@@ -476,8 +476,8 @@ ipcMain.handle('db:importBackup', async (evt, backupData) => {
   }
 });
 
-ipcMain.handle('db:testConnection', async () => {
-  return await testConnection();
+ipcMain.handle('db:testConnection', async (evt, customConfig) => {
+  return await testConnection(customConfig);
 });
 
 ipcMain.handle('db:getConfig', async () => {

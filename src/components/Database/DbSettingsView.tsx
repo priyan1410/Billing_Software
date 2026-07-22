@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Download, Upload, RefreshCw, CheckCircle2, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet } from 'lucide-react';
+import { Database, Download, Upload, RefreshCw, CheckCircle2, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Dish, Order, Expense } from '../../types';
 
 export const DbSettingsView: React.FC = () => {
@@ -12,9 +12,42 @@ export const DbSettingsView: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Dish>>({});
 
+  // MySQL Connection Settings State
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [dbConfig, setDbConfig] = useState({
+    host: 'localhost',
+    port: '3306',
+    user: 'root',
+    password: '',
+    database: 'kish_mandhi'
+  });
+  const [dbStatusMsg, setDbStatusMsg] = useState<string | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+
   useEffect(() => {
     loadAllData();
+    loadDbConfig();
   }, [activeTab]);
+
+  const loadDbConfig = async () => {
+    try {
+      if ((window as any).electronAPI?.getDbConfig) {
+        const res = await (window as any).electronAPI.getDbConfig();
+        if (res && res.success && res.data) {
+          setDbConfig(prev => ({
+            ...prev,
+            host: res.data.host || 'localhost',
+            port: String(res.data.port || 3306),
+            user: res.data.user || 'root',
+            database: res.data.database || 'kish_mandhi'
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('loadDbConfig error:', e);
+    }
+  };
 
   const loadAllData = async () => {
     try {
@@ -34,10 +67,63 @@ export const DbSettingsView: React.FC = () => {
 
   const handleTestConnection = async () => {
     setTesting(true);
-    setTimeout(() => {
+    try {
+      if ((window as any).electronAPI) {
+        const res = await (window as any).electronAPI.testDbConnection();
+        if (res && res.message) {
+          alert(res.message);
+        } else {
+          alert('✓ Database status check completed.');
+        }
+      } else {
+        alert('✓ Local Database active.');
+      }
+    } catch (e: any) {
+      alert('Database Ping Error: ' + e.message);
+    } finally {
       setTesting(false);
-      alert('✓ Database Connection Test Passed! Embedded SQLite engine response time is 0ms.');
-    }, 400);
+    }
+  };
+
+  const handleTestCustomDbConnection = async () => {
+    setTesting(true);
+    setDbStatusMsg('Connecting to MySQL server...');
+    try {
+      if ((window as any).electronAPI) {
+        const res = await (window as any).electronAPI.testDbConnection(dbConfig);
+        if (res && res.message) {
+          setDbStatusMsg(res.message);
+        } else {
+          setDbStatusMsg('Connection test completed.');
+        }
+      }
+    } catch (err: any) {
+      setDbStatusMsg('❌ Connection Failed: ' + err.message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleSaveDbConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    setDbStatusMsg('Connecting and saving MySQL credentials...');
+    try {
+      if ((window as any).electronAPI) {
+        const res = await (window as any).electronAPI.saveDbConfig(dbConfig);
+        if (res && res.success) {
+          alert(res.message || '✓ MySQL Connected & Saved Successfully!');
+          setShowConfigModal(false);
+          await loadAllData();
+        } else {
+          setDbStatusMsg(res?.message || '❌ Could not connect to MySQL with these credentials.');
+        }
+      }
+    } catch (err: any) {
+      setDbStatusMsg('❌ Error: ' + err.message);
+    } finally {
+      setSavingConfig(false);
+    }
   };
 
   // Helper to trigger Excel CSV download with UTF-8 BOM for Microsoft Excel compatibility
@@ -103,7 +189,6 @@ export const DbSettingsView: React.FC = () => {
           const line = lines[i].trim();
           if (!line) continue;
 
-          // Simple CSV splitter respecting quotes
           const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
           if (parts.length >= 6) {
             const id = parseInt(parts[0].replace(/"/g, '')) || (100 + i);
@@ -193,11 +278,22 @@ export const DbSettingsView: React.FC = () => {
                   <CheckCircle2 className="w-3 h-3" /> ACTIVE & HEALTHY
                 </span>
               </div>
-              <p className="text-xs text-olive-300 mt-1">Export & Import raw database tables as Microsoft Excel / CSV Spreadsheets</p>
+              <p className="text-xs text-olive-300 mt-1">Configure MySQL database server or export/import tables as Excel spreadsheets</p>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => {
+                setDbStatusMsg(null);
+                loadDbConfig();
+                setShowConfigModal(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 hover:opacity-90 font-extrabold text-xs rounded-xl shadow-md transition-all"
+            >
+              <Settings className="w-3.5 h-3.5" /> Configure MySQL
+            </button>
+
             <button
               onClick={handleTestConnection}
               disabled={testing}
@@ -474,6 +570,155 @@ export const DbSettingsView: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* MySQL Connection Configuration Modal */}
+      {showConfigModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-full max-w-lg space-y-4 relative shadow-2xl">
+            <div className="flex justify-between items-center pb-3 border-b border-gold-500/20">
+              <div className="flex items-center gap-2 text-gold-500">
+                <Server className="w-5 h-5" />
+                <h4 className="text-base font-bold">Configure MySQL Database Connection</h4>
+              </div>
+              <button onClick={() => setShowConfigModal(false)} className="text-olive-300 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {dbStatusMsg && (
+              <div className={`p-3 rounded-xl text-xs font-semibold ${dbStatusMsg.includes('✓') ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' : dbStatusMsg.includes('Connecting') ? 'bg-amber-500/20 border border-amber-500/30 text-amber-300 animate-pulse' : 'bg-rose-500/20 border border-rose-500/30 text-rose-300'}`}>
+                {dbStatusMsg}
+              </div>
+            )}
+
+            {/* Accordion Guide */}
+            <div className="bg-olive-950/80 border border-gold-500/20 rounded-xl overflow-hidden text-xs">
+              <button
+                type="button"
+                onClick={() => setShowGuide(!showGuide)}
+                className="w-full px-3.5 py-2 bg-gold-500/10 hover:bg-gold-500/20 text-gold-300 font-bold flex items-center justify-between transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="w-4 h-4 text-gold-400" />
+                  <span>How to install & setup MySQL Server</span>
+                </div>
+                {showGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showGuide && (
+                <div className="p-3.5 space-y-2 text-olive-200 bg-olive-950 leading-relaxed border-t border-gold-500/10 text-[11px] max-h-60 overflow-y-auto">
+                  <p className="font-bold text-gold-400">Step-by-Step MySQL Installation Guide:</p>
+                  <ol className="list-decimal list-inside space-y-1.5 text-olive-300">
+                    <li><b>Download Installer:</b> Go to <span className="text-gold-400 font-mono">dev.mysql.com/downloads/installer/</span> and download <i>mysql-installer-community</i>.</li>
+                    <li><b>Run Setup:</b> Select <b>Server Only</b> (or Developer Default) and click Next.</li>
+                    <li><b>Port Configuration:</b> Keep TCP/IP Port set to <code className="text-gold-400 font-mono">3306</code> and click Next.</li>
+                    <li><b>Set Password:</b> Enter a Root Password (e.g. <code className="text-gold-400 font-mono">Suriy@24</code>). Remember this password!</li>
+                    <li><b>Windows Service:</b> Ensure <i>Start MySQL at System Startup</i> is checked and click Execute.</li>
+                    <li><b>Connect App:</b> Enter Host (<code className="text-gold-400 font-mono">localhost</code>), Port (<code className="text-gold-400 font-mono">3306</code>), User (<code className="text-gold-400 font-mono">root</code>), and Password below, then click <b>Save & Connect</b>.</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveDbConfig} className="space-y-4 text-xs">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="text-olive-300 block mb-1 font-semibold">MySQL Host / IP</label>
+                  <input
+                    type="text"
+                    value={dbConfig.host}
+                    onChange={e => {
+                      setDbConfig({ ...dbConfig, host: e.target.value });
+                      setDbStatusMsg(null);
+                    }}
+                    placeholder="localhost or 192.168.1.50"
+                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white focus:outline-none focus:border-gold-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-olive-300 block mb-1 font-semibold">Port</label>
+                  <input
+                    type="number"
+                    value={dbConfig.port}
+                    onChange={e => {
+                      setDbConfig({ ...dbConfig, port: e.target.value });
+                      setDbStatusMsg(null);
+                    }}
+                    placeholder="3306"
+                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white focus:outline-none focus:border-gold-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-olive-300 block mb-1 font-semibold">Username</label>
+                  <input
+                    type="text"
+                    value={dbConfig.user}
+                    onChange={e => {
+                      setDbConfig({ ...dbConfig, user: e.target.value });
+                      setDbStatusMsg(null);
+                    }}
+                    placeholder="root"
+                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white focus:outline-none focus:border-gold-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-olive-300 block mb-1 font-semibold">Password</label>
+                  <input
+                    type="password"
+                    value={dbConfig.password}
+                    onChange={e => {
+                      setDbConfig({ ...dbConfig, password: e.target.value });
+                      setDbStatusMsg(null);
+                    }}
+                    placeholder="e.g. Suriy@24"
+                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white focus:outline-none focus:border-gold-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-olive-300 block mb-1 font-semibold">Database Name</label>
+                <input
+                  type="text"
+                  value={dbConfig.database}
+                  onChange={e => {
+                    setDbConfig({ ...dbConfig, database: e.target.value });
+                    setDbStatusMsg(null);
+                  }}
+                  placeholder="kish_mandhi"
+                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white focus:outline-none focus:border-gold-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleTestCustomDbConnection}
+                  disabled={testing}
+                  className="flex-1 py-2.5 bg-olive-800 border border-gold-500/30 text-gold-400 font-bold rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${testing ? 'animate-spin' : ''}`} /> Test Connection
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={savingConfig}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold rounded-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" /> Save & Connect
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

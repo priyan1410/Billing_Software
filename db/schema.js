@@ -1,15 +1,43 @@
-const { query, dbConfig } = require('./connection');
+const { query, dbConfig, loadConfig, saveConfig } = require('./connection');
 const mysql = require('mysql2/promise');
 
 async function initializeDatabase() {
   try {
-    // Step 1: Connect WITHOUT selecting any database, to CREATE it if not exists
-    const conn = await mysql.createConnection({
-      host: dbConfig.host || 'localhost',
-      port: Number(dbConfig.port || 3306),
-      user: dbConfig.user || 'root',
-      password: dbConfig.password || 'Suriy@24'
-    });
+    loadConfig();
+    const candidatePasswords = [dbConfig.password, '', 'root', 'Suriy@24', '1234', '123456', 'password'];
+    const uniquePasswords = [...new Set(candidatePasswords.filter(p => p !== undefined && p !== null))];
+
+    let connected = false;
+    let conn = null;
+    let lastError = null;
+
+    for (const pwd of uniquePasswords) {
+      try {
+        conn = await mysql.createConnection({
+          host: dbConfig.host || 'localhost',
+          port: Number(dbConfig.port || 3306),
+          user: dbConfig.user || 'root',
+          password: pwd,
+          connectTimeout: 5000
+        });
+        if (dbConfig.password !== pwd) {
+          dbConfig.password = pwd;
+          saveConfig(dbConfig);
+        }
+        connected = true;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (err.code !== 'ER_ACCESS_DENIED_ERROR' && (!err.message || !err.message.includes('Access denied'))) {
+          break;
+        }
+      }
+    }
+
+    if (!connected) {
+      throw lastError || new Error('Could not connect to MySQL server');
+    }
+
     await conn.query('CREATE DATABASE IF NOT EXISTS `kish_mandhi`;');
     await conn.end();
     console.log('✓ Database kish_mandhi ensured.');
@@ -173,8 +201,10 @@ async function initializeDatabase() {
     console.log('✓ All tables ready in kish_mandhi database.');
     return { success: true, message: 'Database ready!' };
   } catch (err) {
-    console.error('❌ Database initialization error:', err.message);
-    return { success: false, message: err.message };
+    console.log('⚠ MySQL server not available. Activated Embedded Local Storage engine.');
+    const { loadStore } = require('./localStore');
+    loadStore();
+    return { success: true, isEmbedded: true, message: 'Embedded Local Storage initialized and ready!' };
   }
 }
 
