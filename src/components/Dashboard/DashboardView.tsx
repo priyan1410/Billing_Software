@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, Printer } from 'lucide-react';
+import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -166,7 +166,6 @@ export const DashboardView: React.FC = () => {
                 <th className="p-3">Amount</th>
                 <th className="p-3">Payment</th>
                 <th className="p-3">Time</th>
-                <th className="p-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gold-500/10">
@@ -178,15 +177,6 @@ export const DashboardView: React.FC = () => {
                   <td className="p-3 text-emerald-400 font-medium">{order.paymentMode}</td>
                   <td className="p-3 text-xs text-olive-300">
                     {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </td>
-                  <td className="p-3 text-right">
-                    <button
-                      onClick={() => setActiveSection('billing')}
-                      className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-xs font-bold rounded-lg hover:bg-gold-500 hover:text-olive-950 transition-all flex items-center gap-1 ml-auto"
-                      title="Reprint Bill in POS"
-                    >
-                      <Printer className="w-3.5 h-3.5" /> Print
-                    </button>
                   </td>
                 </tr>
               ))}

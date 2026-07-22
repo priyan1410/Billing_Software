@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   // Menu & Dishes
   getCategories: () => ipcRenderer.invoke('menu:getCategories'),
+  saveCategory: (categoryData) => ipcRenderer.invoke('menu:saveCategory', categoryData),
+  updateCategory: (categoryData) => ipcRenderer.invoke('menu:updateCategory', categoryData),
+  deleteCategory: (id) => ipcRenderer.invoke('menu:deleteCategory', id),
   getMenuItems: (categoryId) => ipcRenderer.invoke('menu:getItems', categoryId),
   saveMenuItem: (itemData) => ipcRenderer.invoke('menu:saveItem', itemData),
   updateMenuItem: (itemData) => ipcRenderer.invoke('menu:updateItem', itemData),

@@ -270,47 +270,27 @@ export const DbSettingsView: React.FC = () => {
     <div className="space-y-6 select-none max-w-5xl pb-10">
       {/* Database Engine Header */}
       <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDbConnected ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'}`}>
               <Database className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white">Database Controller & Excel Spreadsheet Manager</h3>
-                {isDbConnected ? (
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded-md flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> MYSQL CONNECTED & ACTIVE
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-md flex items-center gap-1 animate-pulse">
-                    <AlertTriangle className="w-3 h-3 text-rose-400" /> MYSQL DISCONNECTED
-                  </span>
-                )}
-              </div>
+              <h3 className="text-base font-bold text-white">Database Controller & Excel Spreadsheet Manager</h3>
               <p className="text-xs text-olive-300 mt-1">Configure MySQL database server or export/import tables as Excel spreadsheets</p>
             </div>
           </div>
 
-
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               onClick={() => {
                 setDbStatusMsg(null);
                 loadDbConfig();
                 setShowConfigModal(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 hover:opacity-90 font-extrabold text-xs rounded-xl shadow-md transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 hover:opacity-90 font-extrabold text-xs rounded-xl shadow-md transition-all"
             >
               <Settings className="w-3.5 h-3.5" /> Configure MySQL
-            </button>
-
-            <button
-              onClick={handleTestConnection}
-              disabled={testing}
-              className="flex items-center gap-1.5 px-3 py-2 bg-olive-800 border border-gold-500/30 text-gold-400 hover:bg-gold-500 hover:text-olive-950 font-bold text-xs rounded-xl transition-all"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${testing ? 'animate-spin' : ''}`} /> Ping DB
             </button>
 
             <button
@@ -321,12 +301,12 @@ export const DbSettingsView: React.FC = () => {
                   ? handleExportOrdersExcel
                   : handleExportExpensesExcel
               }
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:scale-[1.02] transition-transform"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:scale-[1.02] transition-transform"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel (.CSV)
             </button>
 
-            <label className="flex items-center gap-1.5 px-3 py-2 bg-olive-800 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-olive-950 font-extrabold text-xs rounded-xl cursor-pointer transition-all">
+            <label className="flex items-center gap-1.5 px-3.5 py-2 bg-olive-800 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-olive-950 font-extrabold text-xs rounded-xl cursor-pointer transition-all">
               <Upload className="w-3.5 h-3.5" /> Import Excel (.CSV)
               <input type="file" accept=".csv, .xlsx" onChange={handleImportExcel} className="hidden" />
             </label>

@@ -110,6 +110,39 @@ ipcMain.handle('menu:getCategories', async () => {
   };
 });
 
+ipcMain.handle('menu:saveCategory', async (evt, categoryData) => {
+  const name = (categoryData.name || '').trim();
+  const icon = categoryData.icon || 'utensils';
+  if (!name) return { success: false, message: 'Category name is required' };
+
+  const result = await query('INSERT INTO categories (name, icon) VALUES (?, ?)', [name, icon]);
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: { id: result.data.insertId, name, icon } };
+});
+
+ipcMain.handle('menu:updateCategory', async (evt, categoryData) => {
+  const id = Number(categoryData.id);
+  const name = (categoryData.name || '').trim();
+  const icon = categoryData.icon || 'utensils';
+  if (!id || !name) return { success: false, message: 'Category ID and name are required' };
+
+  const result = await query('UPDATE categories SET name = ?, icon = ? WHERE id = ?', [name, icon, id]);
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true, data: { id, name, icon } };
+});
+
+ipcMain.handle('menu:deleteCategory', async (evt, id) => {
+  const catId = Number(id);
+  const checkDishes = await query('SELECT COUNT(*) as count FROM menu_items WHERE category_id = ?', [catId]);
+  if (checkDishes.success && checkDishes.data[0] && Number(checkDishes.data[0].count) > 0) {
+    return { success: false, message: 'Cannot delete category containing dishes. Reassign or delete dishes first.' };
+  }
+
+  const result = await query('DELETE FROM categories WHERE id = ?', [catId]);
+  if (!result.success) return { success: false, message: result.error };
+  return { success: true };
+});
+
 // ─────────────────────────────────────────────────────────────
 // MENU ITEMS
 // ─────────────────────────────────────────────────────────────

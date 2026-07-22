@@ -69,6 +69,35 @@ ipcMain.handle('menu:getCategories', async () => {
   return { success: true, data: db.categories };
 });
 
+ipcMain.handle('menu:saveCategory', async (_evt: any, categoryData: any) => {
+  const newCat = {
+    id: db.categories.length > 0 ? Math.max(...db.categories.map((c: any) => c.id)) + 1 : 1,
+    name: categoryData.name,
+    icon: categoryData.icon || 'utensils'
+  };
+  db.categories.push(newCat);
+  return { success: true, data: newCat };
+});
+
+ipcMain.handle('menu:updateCategory', async (_evt: any, categoryData: any) => {
+  const target = db.categories.find((c: any) => Number(c.id) === Number(categoryData.id));
+  if (target) {
+    target.name = categoryData.name;
+    if (categoryData.icon) target.icon = categoryData.icon;
+    return { success: true, data: target };
+  }
+  return { success: false, message: 'Category not found' };
+});
+
+ipcMain.handle('menu:deleteCategory', async (_evt: any, id: any) => {
+  const hasDishes = db.menuItems.some((i: any) => Number(i.categoryId) === Number(id));
+  if (hasDishes) {
+    return { success: false, message: 'Cannot delete category containing dishes. Reassign or delete dishes first.' };
+  }
+  db.categories = db.categories.filter((c: any) => Number(c.id) !== Number(id));
+  return { success: true };
+});
+
 ipcMain.handle('menu:getItems', async (_evt: any, categoryId: any) => {
   let filtered = db.menuItems.filter((i: any) => i.isAvailable);
   if (categoryId && categoryId !== 'all') {

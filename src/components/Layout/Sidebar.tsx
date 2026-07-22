@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, PieChart, Receipt, Ticket, Wallet, Store, Database, Settings2 } from 'lucide-react';
+import { Crown, PieChart, Receipt, Ticket, Wallet, Store, Database } from 'lucide-react';
 import { useAppStore, AppSection } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -13,7 +13,6 @@ export const Sidebar: React.FC = () => {
     { id: 'tokens', label: 'Tokens', icon: <Ticket className="w-5 h-5" /> },
     { id: 'expenses', label: 'Expenses', icon: <Wallet className="w-5 h-5" /> },
     { id: 'restaurant', label: 'Restaurant', icon: <Store className="w-5 h-5" /> },
-    { id: 'settings', label: 'Settings', icon: <Settings2 className="w-5 h-5" /> },
   ];
 
   return (

@@ -3,6 +3,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('electronAPI', {
   // Menu & Dishes
   getCategories: () => ipcRenderer.invoke('menu:getCategories'),
+  saveCategory: (categoryData: any) => ipcRenderer.invoke('menu:saveCategory', categoryData),
+  updateCategory: (categoryData: any) => ipcRenderer.invoke('menu:updateCategory', categoryData),
+  deleteCategory: (id: number) => ipcRenderer.invoke('menu:deleteCategory', id),
   getMenuItems: (categoryId: string | number) => ipcRenderer.invoke('menu:getItems', categoryId),
   saveMenuItem: (itemData: any) => ipcRenderer.invoke('menu:saveItem', itemData),
   updateMenuItem: (itemData: any) => ipcRenderer.invoke('menu:updateItem', itemData),

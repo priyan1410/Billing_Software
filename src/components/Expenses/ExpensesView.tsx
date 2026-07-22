@@ -13,6 +13,7 @@ const getTodayString = () => {
 export const ExpensesView: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [category, setCategory] = useState('Raw Material');
+  const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(getTodayString);
@@ -44,12 +45,17 @@ export const ExpensesView: React.FC = () => {
       setErrMsg('Please fill in description and amount.');
       return;
     }
+    const finalCategory = category === 'Custom' ? customCategory.trim() : category;
+    if (!finalCategory) {
+      setErrMsg('Please specify or enter a custom category name.');
+      return;
+    }
     setErrMsg('');
     setSaving(true);
 
     try {
       const payload = {
-        category,
+        category: finalCategory,
         description,
         amount: Number(amount),
         expense_date: expenseDate,
@@ -63,6 +69,8 @@ export const ExpensesView: React.FC = () => {
           setDescription('');
           setAmount('');
           setPaidTo('');
+          setCustomCategory('');
+          setCategory('Raw Material');
           await loadExpenses();
         } else {
           setErrMsg(res?.message || 'Failed to save expense. Please try again.');
@@ -111,7 +119,20 @@ export const ExpensesView: React.FC = () => {
               <option value="Maintenance">Maintenance & Repairs</option>
               <option value="Packaging">Packaging & Takeaway Boxes</option>
               <option value="Misc">Miscellaneous Expenses</option>
+              <option value="Custom">+ Add Custom Category...</option>
             </select>
+            {category === 'Custom' && (
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Enter custom category name (e.g., Marketing, Rent)"
+                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/30 rounded-lg text-xs text-white placeholder-olive-300 outline-none focus:border-gold-500"
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <div>

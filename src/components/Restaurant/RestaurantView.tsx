@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Utensils, TrendingUp, Store, Plus, Edit2, Trash2, Calendar, Receipt, Printer } from 'lucide-react';
+import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus } from 'lucide-react';
 import { Dish, PnLPeriod } from '../../types';
 import { BillDetailModal } from './BillDetailModal';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export const RestaurantView: React.FC = () => {
   const { restaurantDetails } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'dishes' | 'pnl' | 'about'>('dishes');
+  const [activeTab, setActiveTab] = useState<'dishes' | 'categories' | 'pnl'>('dishes');
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([
     { id: 1, name: 'Mandhi Special' },
@@ -19,9 +19,17 @@ export const RestaurantView: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPnlBill, setSelectedPnlBill] = useState<any | null>(null);
 
+  // Category Management State
+  const [showAddCatModal, setShowAddCatModal] = useState(false);
+  const [showEditCatModal, setShowEditCatModal] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [editCatId, setEditCatId] = useState<number | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+
   // Add Dish Form State
   const [addName, setAddName] = useState('');
   const [addCat, setAddCat] = useState('1');
+  const [addCustomCat, setAddCustomCat] = useState('');
   const [addQtr, setAddQtr] = useState('');
   const [addHalf, setAddHalf] = useState('');
   const [addFull, setAddFull] = useState('');
@@ -30,6 +38,7 @@ export const RestaurantView: React.FC = () => {
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editCat, setEditCat] = useState('1');
+  const [editCustomCat, setEditCustomCat] = useState('');
   const [editQtr, setEditQtr] = useState('');
   const [editHalf, setEditHalf] = useState('');
   const [editFull, setEditFull] = useState('');
@@ -107,14 +116,103 @@ export const RestaurantView: React.FC = () => {
     }
   };
 
+  // Category Management Handlers
+  const handleAddCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+
+    if ((window as any).electronAPI?.saveCategory) {
+      const res = await (window as any).electronAPI.saveCategory({ name: newCatName.trim() });
+      if (res && res.success === false) {
+        alert(res.message || 'Failed to save food category.');
+        return;
+      }
+      await loadCategories();
+    } else {
+      const nextId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1;
+      setCategories(prev => [...prev, { id: nextId, name: newCatName.trim() }]);
+    }
+
+    setNewCatName('');
+    setShowAddCatModal(false);
+  };
+
+  const handleOpenEditCategory = (cat: { id: number; name: string }) => {
+    setEditCatId(cat.id);
+    setEditCategoryName(cat.name);
+    setShowEditCatModal(true);
+  };
+
+  const handleEditCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCatId || !editCategoryName.trim()) return;
+
+    if ((window as any).electronAPI?.updateCategory) {
+      const res = await (window as any).electronAPI.updateCategory({ id: editCatId, name: editCategoryName.trim() });
+      if (res && res.success === false) {
+        alert(res.message || 'Failed to update food category.');
+        return;
+      }
+      await loadCategories();
+    } else {
+      setCategories(prev => prev.map(c => c.id === editCatId ? { ...c, name: editCategoryName.trim() } : c));
+    }
+
+    setShowEditCatModal(false);
+  };
+
+  const handleDeleteCategory = async (id: number, name: string) => {
+    const dishCount = dishes.filter(d => Number(d.categoryId) === Number(id)).length;
+    if (dishCount > 0) {
+      alert(`Cannot delete category "${name}" because it contains ${dishCount} menu dish(es). Please delete or reassign those dishes first.`);
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete category "${name}"?`)) return;
+
+    if ((window as any).electronAPI?.deleteCategory) {
+      const res = await (window as any).electronAPI.deleteCategory(id);
+      if (res && res.success === false) {
+        alert(res.message || 'Failed to delete category.');
+        return;
+      }
+      await loadCategories();
+    } else {
+      setCategories(prev => prev.filter(c => c.id !== id));
+    }
+  };
+
   // Add Dish Submit
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addName || !addFull) return;
 
+    let targetCatId = Number(addCat);
+    if (addCat === 'custom') {
+      if (!addCustomCat.trim()) {
+        alert('Please enter a custom category name');
+        return;
+      }
+      if ((window as any).electronAPI?.saveCategory) {
+        const catRes = await (window as any).electronAPI.saveCategory({ name: addCustomCat.trim() });
+        if (catRes && catRes.success && catRes.data?.id) {
+          targetCatId = Number(catRes.data.id);
+        } else if (catRes && catRes.success === false) {
+          alert(catRes.message || 'Failed to save custom category to database');
+          return;
+        }
+        await loadCategories();
+      } else {
+        const newId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) + 1 : 1;
+        const newCategoryObj = { id: newId, name: addCustomCat.trim() };
+        setCategories(prev => [...prev, newCategoryObj]);
+        targetCatId = newId;
+      }
+    }
+
     const payload = {
       name: addName,
-      category_id: Number(addCat),
+      category_id: targetCatId,
       price_quarter: Number(addQtr || 0),
       price_half: Number(addHalf || 0),
       price_full: Number(addFull)
@@ -276,20 +374,77 @@ export const RestaurantView: React.FC = () => {
           <Utensils className="w-4 h-4" /> Dishes & Menu
         </button>
         <button
+          onClick={() => setActiveTab('categories')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'categories' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
+            }`}
+        >
+          <Tags className="w-4 h-4" /> Food Categories
+        </button>
+        <button
           onClick={() => setActiveTab('pnl')}
           className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'pnl' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
             }`}
         >
           <TrendingUp className="w-4 h-4" /> Profit & Loss Statement
         </button>
-        <button
-          onClick={() => setActiveTab('about')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'about' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
-            }`}
-        >
-          <Store className="w-4 h-4" /> About Kish Mandhi
-        </button>
       </div>
+
+      {/* TAB: FOOD CATEGORIES MANAGEMENT */}
+      {activeTab === 'categories' && (
+        <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 space-y-4">
+          <div className="flex justify-between items-center pb-3 border-b border-gold-500/20">
+            <div>
+              <h3 className="text-base font-bold text-gold-500">Food Categories Management</h3>
+              <span className="text-xs text-olive-300">Add, edit, or remove menu categories across POS Billing & Tokens</span>
+            </div>
+            <button
+              onClick={() => {
+                setNewCatName('');
+                setShowAddCatModal(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl shadow-md hover:scale-105 transition-transform"
+            >
+              <FolderPlus className="w-4 h-4" /> Add Food Category
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map((cat) => {
+              const dishCount = dishes.filter(d => Number(d.categoryId) === Number(cat.id)).length;
+              return (
+                <div key={cat.id} className="bg-olive-950 border border-gold-500/20 rounded-xl p-4 flex justify-between items-center shadow-lg hover:border-gold-500/40 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400 font-bold">
+                      <Tags className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">{cat.name}</h4>
+                      <p className="text-xs text-olive-300 mt-0.5">{dishCount} dish{dishCount === 1 ? '' : 'es'} in menu</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleOpenEditCategory(cat)}
+                      className="p-2 bg-olive-800 text-gold-400 border border-gold-500/30 rounded-lg hover:bg-gold-500 hover:text-olive-950 transition-colors"
+                      title="Edit Category Name"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                      className="p-2 bg-olive-800 text-rose-400 border border-rose-500/30 rounded-lg hover:bg-rose-600 hover:text-white transition-colors"
+                      title="Delete Category"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: DISHES & MENU MANAGEMENT */}
       {activeTab === 'dishes' && (
@@ -481,48 +636,6 @@ export const RestaurantView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: RESTAURANT PROFILE */}
-      {activeTab === 'about' && (
-        <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-bold text-gold-500 flex items-center gap-2">
-            <Store className="w-5 h-5" /> Restaurant Profile
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Restaurant Name</span>
-              <p className="font-bold text-white text-sm">{restaurantDetails?.companyName || 'Not Specified'}</p>
-            </div>
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Tagline / Specialty</span>
-              <p className="font-bold text-white text-sm">{restaurantDetails?.tagline || 'Not Specified'}</p>
-            </div>
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Owner Name</span>
-              <p className="font-bold text-white text-sm">{restaurantDetails?.ownerName || 'Not Specified'}</p>
-            </div>
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">GSTIN Tax Code</span>
-              <p className="font-bold text-gold-400 text-sm">{restaurantDetails?.gstNumber ? `${restaurantDetails.gstNumber} (${restaurantDetails.taxRate ?? 5}% Tax)` : 'Not Specified'}</p>
-            </div>
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">FSSAI License No.</span>
-              <p className="font-bold text-white text-sm">{restaurantDetails?.fssaiNumber || 'Not Specified'}</p>
-            </div>
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Contact Phone</span>
-              <p className="font-bold text-white text-sm">{restaurantDetails?.phone || 'Not Specified'}</p>
-            </div>
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Email Address</span>
-              <p className="font-bold text-white text-sm">{restaurantDetails?.email || 'Not Specified'}</p>
-            </div>
-            <div className="p-4 bg-olive-800 border border-gold-500/20 rounded-xl space-y-1">
-              <span className="text-olive-300">Address</span>
-              <p className="font-bold text-white text-sm">{restaurantDetails?.address || 'Not Specified'}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Add Dish Modal */}
       {showAddModal && (
@@ -556,8 +669,20 @@ export const RestaurantView: React.FC = () => {
                       {cat.name}
                     </option>
                   ))}
+                  <option value="custom">+ Add Custom Category...</option>
                 </select>
-
+                {addCat === 'custom' && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={addCustomCat}
+                      onChange={(e) => setAddCustomCat(e.target.value)}
+                      placeholder="Enter new category name"
+                      className="w-full px-3 py-2 bg-olive-950 border border-gold-500/30 rounded-lg text-white outline-none focus:border-gold-500"
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -671,6 +796,85 @@ export const RestaurantView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Add Food Category Modal */}
+      {showAddCatModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[400px] space-y-4 shadow-2xl">
+            <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
+              <FolderPlus className="w-5 h-5" /> Add New Food Category
+            </h4>
+            <form onSubmit={handleAddCategorySubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="text-olive-300 block mb-1 font-medium">Category Name</label>
+                <input
+                  type="text"
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="e.g., Soups & Salads, Mandhi Combos"
+                  className="w-full px-3.5 py-2.5 bg-olive-950 border border-gold-500/20 rounded-xl text-white outline-none focus:border-gold-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCatModal(false)}
+                  className="flex-1 py-2.5 bg-olive-800 text-white rounded-xl font-bold hover:bg-olive-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 rounded-xl font-extrabold shadow-md hover:scale-[1.02] transition-transform"
+                >
+                  Save Category
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Food Category Modal */}
+      {showEditCatModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[400px] space-y-4 shadow-2xl">
+            <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
+              <Edit3 className="w-5 h-5" /> Edit Food Category
+            </h4>
+            <form onSubmit={handleEditCategorySubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="text-olive-300 block mb-1 font-medium">Category Name</label>
+                <input
+                  type="text"
+                  value={editCategoryName}
+                  onChange={(e) => setEditCategoryName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-olive-950 border border-gold-500/20 rounded-xl text-white outline-none focus:border-gold-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditCatModal(false)}
+                  className="flex-1 py-2.5 bg-olive-800 text-white rounded-xl font-bold hover:bg-olive-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 rounded-xl font-extrabold shadow-md hover:scale-[1.02] transition-transform"
+                >
+                  Update Category
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Bill Details & Print Modal for PnL Statement */}
       {selectedPnlBill && (
         <BillDetailModal order={selectedPnlBill} onClose={() => setSelectedPnlBill(null)} />
