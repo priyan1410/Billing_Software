@@ -8,6 +8,13 @@ export const RestaurantView: React.FC = () => {
   const { restaurantDetails } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'dishes' | 'pnl' | 'about'>('dishes');
   const [dishes, setDishes] = useState<Dish[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([
+    { id: 1, name: 'Mandhi Special' },
+    { id: 2, name: 'Alfaham & Grill' },
+    { id: 3, name: 'Starters & Sides' },
+    { id: 4, name: 'Beverages' },
+    { id: 5, name: 'Desserts' }
+  ]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPnlBill, setSelectedPnlBill] = useState<any | null>(null);
@@ -36,9 +43,23 @@ export const RestaurantView: React.FC = () => {
   const [allExpenses, setAllExpenses] = useState<any[]>([]);
 
   useEffect(() => {
+    loadCategories();
     loadDishes();
     loadFinancials();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      if ((window as any).electronAPI?.getCategories) {
+        const res = await (window as any).electronAPI.getCategories();
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setCategories(res.data.map((c: any) => ({ id: c.id, name: c.name })));
+        }
+      }
+    } catch (err: any) {
+      console.error('loadCategories error:', err.message);
+    }
+  };
 
   const loadDishes = async () => {
     try {
@@ -46,6 +67,7 @@ export const RestaurantView: React.FC = () => {
         const res = await (window as any).electronAPI.getMenuItems('all');
         if (res && res.success && Array.isArray(res.data)) setDishes(res.data);
       } else {
+
         setDishes([
           { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
           { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
@@ -99,7 +121,11 @@ export const RestaurantView: React.FC = () => {
     };
 
     if ((window as any).electronAPI) {
-      await (window as any).electronAPI.saveMenuItem(payload);
+      const res = await (window as any).electronAPI.saveMenuItem(payload);
+      if (res && res.success === false) {
+        alert(res.message || '❌ Failed to save dish to MySQL database. Please check MySQL connection.');
+        return;
+      }
       loadDishes();
     } else {
       setDishes([
@@ -148,7 +174,11 @@ export const RestaurantView: React.FC = () => {
     };
 
     if ((window as any).electronAPI) {
-      await (window as any).electronAPI.updateMenuItem(payload);
+      const res = await (window as any).electronAPI.updateMenuItem(payload);
+      if (res && res.success === false) {
+        alert(res.message || '❌ Failed to update dish in MySQL database.');
+        return;
+      }
       loadDishes();
     } else {
       setDishes(
@@ -168,6 +198,7 @@ export const RestaurantView: React.FC = () => {
     }
     setShowEditModal(false);
   };
+
 
   // Delete Dish
   const handleDeleteDish = async (id: number) => {
@@ -520,12 +551,13 @@ export const RestaurantView: React.FC = () => {
                   onChange={(e) => setAddCat(e.target.value)}
                   className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
                 >
-                  <option value="1">Mandhi Special</option>
-                  <option value="2">Alfaham & Grill</option>
-                  <option value="3">Starters & Sides</option>
-                  <option value="4">Beverages</option>
-                  <option value="5">Desserts</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
+
               </div>
 
               <div className="grid grid-cols-2 gap-3">

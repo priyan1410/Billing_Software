@@ -2,12 +2,11 @@ let mysql = null;
 try {
   mysql = require('mysql2/promise');
 } catch (e) {
-  console.log('mysql2 module not found, will use Embedded Local Database.');
+  console.error('mysql2 module not found:', e.message);
 }
 
 const fs = require('fs');
 const path = require('path');
-const { localQuery } = require('./localStore');
 
 let userDataPath = '';
 function getConfigPath() {
@@ -48,7 +47,6 @@ loadConfig();
 
 // ─── Connection Pool ─────────────────────────────────────────
 let pool = null;
-let useLocalFallback = false;
 
 function getPool() {
   if (!mysql) return null;
@@ -71,25 +69,19 @@ function getPool() {
   return pool;
 }
 
-// ─── Execute SQL Query (with Automatic Embedded Local DB Fallback) ──────
+// ─── Execute SQL Query (Strict MySQL Only) ───────────────────
 async function query(sql, params = []) {
-  if (useLocalFallback) {
-    return localQuery(sql, params);
-  }
-
   try {
     const p = getPool();
     if (!p) {
-      useLocalFallback = true;
-      return localQuery(sql, params);
+      return { success: false, error: 'MySQL driver unavailable or database not configured.' };
     }
     const isDDL = /^\s*(SHOW|ALTER|CREATE|TRUNCATE|DROP)\b/i.test(sql);
     const [rows] = isDDL ? await p.query(sql, params) : await p.execute(sql, params);
     return { success: true, data: rows };
   } catch (err) {
-    console.warn('[MySQL Unavailable - Switching to Embedded Local DB]:', err.message);
-    useLocalFallback = true;
-    return localQuery(sql, params);
+    console.error('[MySQL Query Error]:', err.message);
+    return { success: false, error: `MySQL Error: ${err.message}` };
   }
 }
 
@@ -99,55 +91,46 @@ async function testConnection(customConfig = null) {
   loadConfig();
   const cfg = customConfig || dbConfig;
 
-  if (mysql) {
-    try {
-      const conn = await mysql.createConnection({
-        host: cfg.host,
-        port: Number(cfg.port),
-        user: cfg.user,
-        password: cfg.password,
-        connectTimeout: 3000
-      });
-      const [rows] = await conn.query(`SHOW DATABASES LIKE '${cfg.database}'`);
-      const dbExists = rows.length > 0;
-      await conn.end();
-      useLocalFallback = false;
-      const responseTime = Date.now() - startTime;
-      return {
-        success: true,
-        isEmbedded: false,
-        engine: 'MySQL',
-        responseTime,
-        message: dbExists
-          ? `✓ Connected to MySQL Database ('${cfg.database}')! Response time: ${responseTime}ms`
-          : `✓ Connected to MySQL. Database '${cfg.database}' will be initialized.`,
-        dbExists
-      };
-    } catch (err) {
-      if (customConfig) {
-        return {
-          success: false,
-          isEmbedded: false,
-          error: err.message,
-          message: `❌ MySQL Connection Failed: ${err.message}`
-        };
-      }
-      useLocalFallback = true;
-      return {
-        success: false,
-        isEmbedded: true,
-        error: err.message,
-        message: `⚠ MySQL Disconnected (${err.message}). Using Embedded Local Database.`
-      };
-    }
+  if (!mysql) {
+    return {
+      success: false,
+      isConnected: false,
+      engine: 'MySQL',
+      message: '❌ mysql2 driver not available. MySQL connection required.'
+    };
   }
 
-  useLocalFallback = true;
-  return {
-    success: false,
-    isEmbedded: true,
-    message: `❌ mysql2 driver not available. Operating in Embedded Local Database mode.`
-  };
+  try {
+    const conn = await mysql.createConnection({
+      host: cfg.host,
+      port: Number(cfg.port),
+      user: cfg.user,
+      password: cfg.password,
+      connectTimeout: 3000
+    });
+    const [rows] = await conn.query(`SHOW DATABASES LIKE '${cfg.database}'`);
+    const dbExists = rows.length > 0;
+    await conn.end();
+    const responseTime = Date.now() - startTime;
+    return {
+      success: true,
+      isConnected: true,
+      engine: 'MySQL',
+      responseTime,
+      message: dbExists
+        ? `✓ Connected to MySQL Database ('${cfg.database}')! Response time: ${responseTime}ms`
+        : `✓ Connected to MySQL Server. Database '${cfg.database}' will be created/initialized.`,
+      dbExists
+    };
+  } catch (err) {
+    return {
+      success: false,
+      isConnected: false,
+      engine: 'MySQL',
+      error: err.message,
+      message: `❌ MySQL Connection Failed: ${err.message}`
+    };
+  }
 }
 
 // ─── Save/Load Config helpers ─────────────────────────────────
@@ -157,7 +140,6 @@ async function saveConfig(newConfig) {
     try { await pool.end(); } catch (e) {}
     pool = null;
   }
-  useLocalFallback = false;
   try {
     const cp = getConfigPath();
     const dir = path.dirname(cp);
@@ -186,3 +168,4 @@ module.exports = {
   query,
   getPool
 };
+

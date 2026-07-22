@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Settings2 } from 'lucide-react';
+import { Plus, Settings2, Database, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 
 export const Header: React.FC = () => {
-  const { activeSection, setActiveSection } = useAppStore();
+  const { activeSection, setActiveSection, isDbConnected, checkDbStatus } = useAppStore();
   const [clock, setClock] = useState('');
+
+  useEffect(() => {
+    checkDbStatus();
+    const intervalDb = setInterval(checkDbStatus, 10000);
+    return () => clearInterval(intervalDb);
+  }, []);
 
   useEffect(() => {
     const update = () => {
@@ -41,7 +47,30 @@ export const Header: React.FC = () => {
         <span className="text-xs text-olive-300 font-mono">{clock}</span>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {/* MySQL Database Status Badge */}
+        <button
+          onClick={() => setActiveSection('db-settings')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+            isDbConnected
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+              : 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30 animate-pulse'
+          }`}
+          title={isDbConnected ? 'MySQL Connected' : 'MySQL Disconnected - Click to configure connection'}
+        >
+          {isDbConnected ? (
+            <>
+              <Database className="w-3.5 h-3.5 text-emerald-400" />
+              <span>MySQL Connected</span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+              <span>MySQL Disconnected</span>
+            </>
+          )}
+        </button>
+
         <button
           onClick={() => setActiveSection('billing')}
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 rounded-lg text-sm font-bold shadow-md shadow-gold-500/20 hover:scale-105 transition-transform"
@@ -61,8 +90,8 @@ export const Header: React.FC = () => {
         >
           <Settings2 className="w-5 h-5" />
         </button>
-
       </div>
     </header>
   );
 };
+

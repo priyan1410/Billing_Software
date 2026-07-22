@@ -121,7 +121,9 @@ export interface RestaurantDetails {
   tagline?: string;
   ownerName?: string;
   gstNumber?: string;
+  gstNo?: string;
   fssaiNumber?: string;
+  fssaiNo?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -139,6 +141,7 @@ export interface RestaurantDetails {
   printShowRoundOff?: boolean;
   printShowFooterNote?: boolean;
 }
+
 
 export interface AuthResponse {
   success: boolean;

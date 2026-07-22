@@ -9,6 +9,14 @@ export const TokensView: React.FC = () => {
   const { loadTokenToCart } = usePosStore();
 
   const [dishes, setDishes] = useState<Dish[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; label: string }>>([
+    { id: 'all', label: 'All Items' },
+    { id: '1', label: 'Mandhi Special' },
+    { id: '2', label: 'Alfaham & Grill' },
+    { id: '3', label: 'Starters & Sides' },
+    { id: '4', label: 'Beverages' },
+    { id: '5', label: 'Desserts' }
+  ]);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [orderType, setOrderType] = useState<OrderType>('Dine-In');
@@ -18,9 +26,27 @@ export const TokensView: React.FC = () => {
   const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; paymentMode: string; items: any[]; timestamp: string; date: string } | null>(null);
 
   useEffect(() => {
+    loadCategories();
     loadDishes();
     loadActiveTokens();
   }, [activeCategory]);
+
+  const loadCategories = async () => {
+    try {
+      if ((window as any).electronAPI?.getCategories) {
+        const res = await (window as any).electronAPI.getCategories();
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const dynamicCats = res.data.map((c: any) => ({
+            id: String(c.id),
+            label: c.name
+          }));
+          setCategories([{ id: 'all', label: 'All Items' }, ...dynamicCats]);
+        }
+      }
+    } catch (err) {
+      console.error('loadCategories error:', err);
+    }
+  };
 
   const loadDishes = async () => {
     if ((window as any).electronAPI) {
@@ -41,6 +67,7 @@ export const TokensView: React.FC = () => {
       ]);
     }
   };
+
 
   const filteredDishes = dishes.filter((d) => {
     const matchesCat = activeCategory === 'all' || String(d.categoryId) === String(activeCategory);
@@ -194,14 +221,7 @@ export const TokensView: React.FC = () => {
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {[
-              { id: 'all', label: 'All Items' },
-              { id: '1', label: 'Mandhi Special' },
-              { id: '2', label: 'Alfaham & Grill' },
-              { id: '3', label: 'Starters & Sides' },
-              { id: '4', label: 'Beverages' },
-              { id: '5', label: 'Desserts' },
-            ].map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
@@ -214,6 +234,7 @@ export const TokensView: React.FC = () => {
               </button>
             ))}
           </div>
+
         </div>
 
         {/* Dishes Rows */}

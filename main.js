@@ -35,6 +35,14 @@ function loadPersistedTokenState() {
 
 loadPersistedTokenState();
 
+// Global Crash Prevention Handlers
+process.on('uncaughtException', (err) => {
+  console.error('[Main Process Uncaught Exception]:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Main Process Unhandled Rejection]:', reason);
+});
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1340,
@@ -46,7 +54,9 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      spellcheck: false,
+      backgroundThrottling: false
     },
     autoHideMenuBar: true
   });
@@ -67,6 +77,7 @@ function createWindow() {
     }
   });
 }
+
 
 app.whenReady().then(async () => {
   try {

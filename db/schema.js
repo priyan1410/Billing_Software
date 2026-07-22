@@ -51,6 +51,13 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB;
     `);
 
+    // Seed default categories if table is empty
+    const catCheck = await query('SELECT COUNT(*) AS cnt FROM categories');
+    if (catCheck.success && catCheck.data[0] && Number(catCheck.data[0].cnt) === 0) {
+      await query("INSERT INTO categories (id, name, icon) VALUES (1, 'Mandhi Special', 'utensils'), (2, 'Barbeque & Grills', 'flame'), (3, 'Starters & Sides', 'drumstick'), (4, 'Beverages & Juices', 'cup-soda'), (5, 'Desserts', 'ice-cream')");
+      console.log('✓ Default categories seeded into MySQL.');
+    }
+
     await query(`
       CREATE TABLE IF NOT EXISTS menu_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -64,6 +71,20 @@ async function initializeDatabase() {
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
       ) ENGINE=InnoDB;
     `);
+
+    // Seed default menu items if table is empty
+    const itemCheck = await query('SELECT COUNT(*) AS cnt FROM menu_items');
+    if (itemCheck.success && itemCheck.data[0] && Number(itemCheck.data[0].cnt) === 0) {
+      await query(`INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available) VALUES 
+        (1, 'Chicken Mandhi (சிக்கன் மந்தி)', 180, 340, 650, 1),
+        (1, 'Mutton Mandhi (ஆட்டு இறைச்சி மந்தி)', 260, 500, 980, 1),
+        (2, 'Alfaham Chicken (அல்ஃபாஹாம் சிக்கன்)', 150, 280, 540, 1),
+        (2, 'Pepper BBQ Chicken', 160, 300, 580, 1),
+        (4, 'Fresh Mint Lime', 0, 0, 50, 1),
+        (5, 'Kunafa Special', 0, 0, 180, 1)`);
+      console.log('✓ Default menu items seeded into MySQL.');
+    }
+
 
     await query(`
       CREATE TABLE IF NOT EXISTS orders (

@@ -33,6 +33,12 @@ body {
   background: rgba(212, 175, 55, 0.5);
 }
 
+/* Ensure text inputs are always selectable and editable even inside select-none containers */
+input, textarea, select, [contenteditable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
 /* Hide number input spinners (up and down arrows) */
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
@@ -43,3 +49,4 @@ input[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+

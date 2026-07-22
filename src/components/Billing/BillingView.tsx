@@ -294,6 +294,14 @@ export const BillingView: React.FC = () => {
   const { restaurantDetails } = useAuthStore();
 
   const [dishes, setDishes] = useState<Dish[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; label: string }>>([
+    { id: 'all', label: 'All Items' },
+    { id: '1', label: 'Mandhi Special' },
+    { id: '2', label: 'Alfaham & Grill' },
+    { id: '3', label: 'Starters & Sides' },
+    { id: '4', label: 'Beverages' },
+    { id: '5', label: 'Desserts' }
+  ]);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTokenNum, setSelectedTokenNum] = useState('');
@@ -315,8 +323,25 @@ export const BillingView: React.FC = () => {
     return nextBillNumber;
   };
 
-  useEffect(() => { loadDishes(); loadActiveTokens(); }, [activeCategory]);
+  useEffect(() => { loadCategories(); loadDishes(); loadActiveTokens(); }, [activeCategory]);
   useEffect(() => { fetchNextBillNumber(); loadActiveTokens(); }, []);
+
+  const loadCategories = async () => {
+    try {
+      if ((window as any).electronAPI?.getCategories) {
+        const res = await (window as any).electronAPI.getCategories();
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const dynamicCats = res.data.map((c: any) => ({
+            id: String(c.id),
+            label: c.name
+          }));
+          setCategories([{ id: 'all', label: 'All Items' }, ...dynamicCats]);
+        }
+      }
+    } catch (err) {
+      console.error('loadCategories error in BillingView:', err);
+    }
+  };
 
   const loadDishes = async () => {
     if ((window as any).electronAPI) {
@@ -326,6 +351,7 @@ export const BillingView: React.FC = () => {
       setDishes([]);
     }
   };
+
 
   const filteredDishes = dishes.filter((d) => {
     const matchesCat = activeCategory === 'all' || String(d.categoryId) === String(activeCategory);
@@ -408,12 +434,13 @@ export const BillingView: React.FC = () => {
       }
     } else {
       createdData = {
+        ...base,
         orderDate: payload.order_date,
         dueDate: payload.due_date,
         shippingCharges: payload.shipping_charges,
         roundOff: payload.round_off,
-        ...base,
       };
+
     }
 
     if (shouldPrint && createdData) {
@@ -628,7 +655,7 @@ export const BillingView: React.FC = () => {
 
         {/* Category tabs */}
         <div className="flex gap-1.5 overflow-x-auto pb-1 flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
-          {CATS.map((cat) => (
+          {categories.map((cat) => (
             <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${activeCategory === cat.id
                 ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md'
@@ -637,6 +664,7 @@ export const BillingView: React.FC = () => {
             >{cat.label}</button>
           ))}
         </div>
+
 
         {/* Dish grid — independently scrollable */}
         <div className="flex-1 overflow-y-auto pr-1 min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: '#b5882220 transparent' }}>

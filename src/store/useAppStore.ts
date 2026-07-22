@@ -6,17 +6,26 @@ export type AppSection = 'dashboard' | 'billing' | 'tokens' | 'expenses' | 'rest
 interface AppState {
   activeSection: AppSection;
   activeTokensList: TokenItem[];
+  isDbConnected: boolean | null;
+  dbErrorMessage: string | null;
+  showDbConfigModal: boolean;
   setActiveSection: (section: AppSection) => void;
   setTokensList: (tokens: TokenItem[]) => void;
   addActiveToken: (token: TokenItem) => void;
   removeActiveToken: (tokenNumber: string | number) => void;
   loadActiveTokens: () => Promise<void>;
+  checkDbStatus: () => Promise<boolean>;
+  setShowDbConfigModal: (show: boolean) => void;
 }
 
-export const useAppStore = create<AppState>((set: any) => ({
+export const useAppStore = create<AppState>((set: any, get: any) => ({
   activeSection: 'dashboard',
   activeTokensList: [],
+  isDbConnected: null,
+  dbErrorMessage: null,
+  showDbConfigModal: false,
   setActiveSection: (section: AppSection) => set({ activeSection: section }),
+  setShowDbConfigModal: (show: boolean) => set({ showDbConfigModal: show }),
   setTokensList: (activeTokensList: TokenItem[]) => set({ activeTokensList }),
   addActiveToken: async (token: TokenItem) => {
     set((state: AppState) => ({
@@ -49,5 +58,24 @@ export const useAppStore = create<AppState>((set: any) => ({
     } catch (err) {
       console.error('loadActiveTokens error:', err);
     }
+  },
+  checkDbStatus: async () => {
+    try {
+      if ((window as any).electronAPI?.testDbConnection) {
+        const res = await (window as any).electronAPI.testDbConnection();
+        const connected = !!(res && res.success);
+        set({
+          isDbConnected: connected,
+          dbErrorMessage: connected ? null : (res?.message || res?.error || 'MySQL database is disconnected.')
+        });
+        return connected;
+      }
+      set({ isDbConnected: false, dbErrorMessage: 'Electron API not available.' });
+      return false;
+    } catch (err: any) {
+      set({ isDbConnected: false, dbErrorMessage: err.message || 'Database connection error' });
+      return false;
+    }
   }
 }));
+

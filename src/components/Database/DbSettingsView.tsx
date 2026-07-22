@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Download, Upload, RefreshCw, CheckCircle2, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Database, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Dish, Order, Expense } from '../../types';
+import { useAppStore } from '../../store/useAppStore';
 
 export const DbSettingsView: React.FC = () => {
+  const { isDbConnected, dbErrorMessage, checkDbStatus } = useAppStore();
   const [activeTab, setActiveTab] = useState<'menu_items' | 'orders' | 'expenses'>('menu_items');
   const [menuItems, setMenuItems] = useState<Dish[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -29,6 +31,7 @@ export const DbSettingsView: React.FC = () => {
     loadAllData();
     loadDbConfig();
   }, [activeTab]);
+
 
   const loadDbConfig = async () => {
     try {
@@ -70,13 +73,12 @@ export const DbSettingsView: React.FC = () => {
     try {
       if ((window as any).electronAPI) {
         const res = await (window as any).electronAPI.testDbConnection();
+        await checkDbStatus();
         if (res && res.message) {
           alert(res.message);
         } else {
           alert('✓ Database status check completed.');
         }
-      } else {
-        alert('✓ Local Database active.');
       }
     } catch (e: any) {
       alert('Database Ping Error: ' + e.message);
@@ -91,6 +93,7 @@ export const DbSettingsView: React.FC = () => {
     try {
       if ((window as any).electronAPI) {
         const res = await (window as any).electronAPI.testDbConnection(dbConfig);
+        await checkDbStatus();
         if (res && res.message) {
           setDbStatusMsg(res.message);
         } else {
@@ -111,6 +114,7 @@ export const DbSettingsView: React.FC = () => {
     try {
       if ((window as any).electronAPI) {
         const res = await (window as any).electronAPI.saveDbConfig(dbConfig);
+        await checkDbStatus();
         if (res && res.success) {
           alert(res.message || '✓ MySQL Connected & Saved Successfully!');
           setShowConfigModal(false);
@@ -268,19 +272,26 @@ export const DbSettingsView: React.FC = () => {
       <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDbConnected ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'}`}>
               <Database className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white">Database Controller & Excel Spreadsheet Manager</h3>
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded-md flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> ACTIVE & HEALTHY
-                </span>
+                {isDbConnected ? (
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded-md flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> MYSQL CONNECTED & ACTIVE
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold rounded-md flex items-center gap-1 animate-pulse">
+                    <AlertTriangle className="w-3 h-3 text-rose-400" /> MYSQL DISCONNECTED
+                  </span>
+                )}
               </div>
               <p className="text-xs text-olive-300 mt-1">Configure MySQL database server or export/import tables as Excel spreadsheets</p>
             </div>
           </div>
+
 
           <div className="flex flex-wrap gap-2">
             <button
