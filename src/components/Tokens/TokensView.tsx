@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, X, CheckCircle2 } from 'lucide-react';
+import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, X, CheckCircle2, Receipt } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderType, PortionVariant } from '../../types';
 
 export const TokensView: React.FC = () => {
   const { activeTokensList, addActiveToken, loadActiveTokens, setActiveSection } = useAppStore();
   const { loadTokenToCart } = usePosStore();
+  const { restaurantDetails } = useAuthStore();
 
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; label: string }>>([
@@ -175,30 +177,79 @@ export const TokensView: React.FC = () => {
 
   const triggerTokenPrint = async () => {
     if (!previewToken) return;
-    const now = new Date().toLocaleString();
-    const tokenHtml = `
-      <div style="font-family:monospace; font-size:13px; width:280px; margin:0 auto; padding:10px;">
-        <div style="text-align:center; border-bottom:2px dashed #000; padding-bottom:8px;">
-          <h2 style="margin:0;">KISH MANDHI</h2>
-          <p style="margin:2px 0; font-weight:bold;">ORDER TOKEN</p>
-          <div style="font-size:2.5rem; font-weight:900; margin:5px 0;">TOKEN #${previewToken.tokenNumber}</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin:8px 0; font-size:12px;">
-          <span>ORDER TYPE: <strong>${previewToken.orderType}</strong></span>
-          <span>${now}</span>
-        </div>
-        <table style="width:100%; border-collapse:collapse; border-top:1px solid #000; margin-top:8px;">
-          <tbody>
-            ${previewToken.items.map((i: any) => `<tr><td style="padding:5px 0; font-weight:bold; font-size:14px;">• ${i.quantity}x ${i.name} (${i.variant})</td></tr>`).join('')}
-          </tbody>
-        </table>
-        <div style="border-top:2px dashed #000; margin-top:14px; padding-top:6px; text-align:center; font-size:11px;">
-          <p style="margin:0; font-weight:bold;">NON-BILLING KITCHEN TOKEN</p>
-        </div>
-      </div>
+    const rName = restaurantDetails?.companyName || 'KISH MANDHI';
+    const rTagline = restaurantDetails?.tagline || 'Arabic Grill & Fine Dining';
+    const rAddr = restaurantDetails?.address || '';
+    const rPhone = restaurantDetails?.phone || '';
+    const totalItemsCount = (previewToken.items || []).reduce((sum: number, i: any) => sum + Number(i.quantity || 1), 0);
+
+    const tokenHtml = `<!doctype html>
+      <html>
+        <head>
+          <style>
+            @page { size: 80mm auto; margin: 2mm; }
+            body { margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
+            .receipt { width: 74mm; margin: 0 auto; padding: 4px; box-sizing: border-box; text-align: left; }
+            .center { text-align: center; }
+            .bold { font-weight: 800; }
+            .divider { border-top: 1px dashed #000; margin: 6px 0; }
+            .double-divider { border-top: 3px double #000; border-bottom: 3px double #000; padding: 5px 0; margin: 6px 0; }
+            .row { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin: 3px 0; }
+            .col-item { flex: 1; text-align: left; word-break: break-word; font-weight: bold; font-size: 12px; }
+            .col-qty { width: 45px; text-align: right; font-weight: 900; font-size: 13px; }
+            .table-header { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="receipt">
+            <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
+            ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
+            ${rAddr ? `<div class="center" style="font-size: 10px;">${rAddr}</div>` : ''}
+            
+            <div class="divider"></div>
+            <div class="center bold" style="font-size: 11.5px; letter-spacing: 1px;">*** KITCHEN ORDER TOKEN ***</div>
+            
+            <div style="font-size: 10.5px; margin: 6px 0;">
+              <div class="row">
+                <span><strong>Token No :</strong> ${previewToken.tokenNumber}</span>
+                <span><strong>Date :</strong> ${previewToken.date}</span>
+              </div>
+              <div class="row">
+                <span><strong>Order Type :</strong> ${previewToken.orderType.toUpperCase()}</span>
+                <span><strong>Time :</strong> ${previewToken.timestamp}</span>
+              </div>
+            </div>
+            
+            <div class="row table-header" style="font-size: 11px;">
+              <span class="col-item">Item Description</span>
+              <span class="col-qty">Qty</span>
+            </div>
+            
+            ${(previewToken.items || []).map((i: any) => `
+              <div class="row" style="font-size: 11.5px; padding: 3px 0; border-bottom: 1px dashed #aaa;">
+                <span class="col-item">• ${i.name} (${i.variant})</span>
+                <span class="col-qty">[ ${i.quantity} ]</span>
+              </div>
+            `).join('')}
+            
+            <div class="divider"></div>
+            
+            <div class="row bold" style="font-size: 11.5px;">
+              <span>Total Items</span>
+              <span>${totalItemsCount} Pcs</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="center bold" style="font-size: 10px; margin-top: 8px; letter-spacing: 1px;">
+              *** NON-BILLING KITCHEN SLIP ***
+            </div>
+          </div>
+        </body>
+      </html>
     `;
 
-    if ((window as any).electronAPI) {
+    if ((window as any).electronAPI?.printReceipt) {
       await (window as any).electronAPI.printReceipt(tokenHtml);
     }
   };
@@ -359,111 +410,86 @@ export const TokensView: React.FC = () => {
       {/* Token Slip Modal Preview */}
       {showPreviewModal && previewToken && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="flex flex-col gap-3 w-[340px]">
+          <div className="flex flex-col gap-3 w-full max-w-[370px] max-h-[92vh]">
 
-            {/* ── KOT Slip ── */}
-            <div
-              style={{
-                background: '#e8e0d0',
-                border: '2px solid #c8b88a',
-                borderRadius: '10px',
-                fontFamily: "'Courier New', Courier, monospace",
-                overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
-              }}
-            >
-              {/* Header */}
-              <div style={{ textAlign: 'center', padding: '16px 20px 12px', borderBottom: '2px solid #c8b88a' }}>
-                <div style={{ color: '#c17f24', fontWeight: 900, fontSize: '11px', letterSpacing: '1px', marginBottom: '4px' }}>
-                  [ SLIP 2: KITCHEN TOKEN ]
-                </div>
-                <div style={{ fontWeight: 900, fontSize: '22px', letterSpacing: '2px', color: '#1a1a1a', fontFamily: 'Georgia, serif' }}>
-                  KISH MANDHI
-                </div>
-                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '3px', color: '#333', marginTop: '4px', borderBottom: '2px solid #333', paddingBottom: '8px', display: 'inline-block' }}>
-                  ORDER TOKEN &nbsp;/&nbsp; KOT
-                </div>
+            {/* Modal Header */}
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-3 px-4 flex items-center justify-between flex-shrink-0 text-white">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-amber-400" />
+                <span className="font-bold text-xs uppercase tracking-wider">Kitchen Token Slip Preview</span>
               </div>
+              <button onClick={() => setShowPreviewModal(false)} className="text-slate-400 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-              {/* Token Number Box */}
-              <div style={{ margin: '14px 16px', background: '#111', borderRadius: '8px', padding: '14px 16px', textAlign: 'center' }}>
-                <div style={{ color: '#aaa', fontSize: '11px', letterSpacing: '2px', fontWeight: 700, marginBottom: '4px' }}>
-                  BILL / TOKEN NO
-                </div>
-                <div style={{ color: '#f5b731', fontSize: '36px', fontWeight: 900, letterSpacing: '2px' }}>
-                  {previewToken.tokenNumber}
-                </div>
-              </div>
+            {/* ── Thermal Paper Slip Preview ── */}
+            <div className="flex-1 overflow-y-auto bg-slate-950/80 p-4 rounded-2xl flex justify-center max-h-[72vh]">
+              <div className="w-full bg-white text-black font-mono shadow-2xl p-5 rounded-sm select-text border border-slate-300 text-left h-fit text-[11px] leading-relaxed">
 
-              {/* Order Details Box */}
-              <div style={{ margin: '0 16px 14px', border: '1.5px solid #c8b88a', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: '#222', fontWeight: 700 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ letterSpacing: '1px' }}>ORDER TYPE:</span>
-                  <span style={{ background: '#111', color: '#fff', fontSize: '11px', fontWeight: 900, padding: '4px 12px', borderRadius: '6px', letterSpacing: '1px' }}>
-                    {previewToken.orderType.toUpperCase()}
-                  </span>
+                {/* Store Header */}
+                <div className="text-center">
+                  <h2 className="text-lg font-extrabold tracking-tight uppercase leading-tight font-sans text-black">
+                    {restaurantDetails?.companyName || 'KISH MANDHI'}
+                  </h2>
+                  {restaurantDetails?.tagline && <p className="text-[10px] text-slate-700 font-semibold mt-0.5">{restaurantDetails.tagline}</p>}
+                  {restaurantDetails?.address && <p className="text-[10px] text-slate-800 font-medium mt-0.5">{restaurantDetails.address}</p>}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ letterSpacing: '1px' }}>PAYMENT MODE:</span>
-                  <span>{previewToken.paymentMode || 'Cash'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c17f24' }}>
-                  <span style={{ letterSpacing: '1px' }}>TIME: {previewToken.timestamp}</span>
-                  <span style={{ letterSpacing: '1px' }}>DATE: {previewToken.date}</span>
-                </div>
-              </div>
 
-              {/* Items List */}
-              <div style={{ borderTop: '2px solid #333', margin: '0 16px', paddingTop: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 900, letterSpacing: '2px', color: '#333', marginBottom: '8px' }}>
-                  <span>ITEMS TO PREPARE</span>
-                  <span>QTY</span>
+                {/* Dashed Line */}
+                <div className="border-b border-dashed border-black my-2"></div>
+
+                <div className="text-center font-bold text-xs tracking-wider uppercase mb-2">
+                  *** KITCHEN ORDER TOKEN ***
                 </div>
-                {previewToken.items.map((item: any, idx: number) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '9px 0',
-                      borderBottom: '1px dashed #b0a080',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      color: '#1a1a1a',
-                    }}
-                  >
-                    <span>• {item.name} ({item.variant})</span>
-                    <span
-                      style={{
-                        background: '#111',
-                        color: '#fff',
-                        fontWeight: 900,
-                        fontSize: '14px',
-                        minWidth: '32px',
-                        height: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '6px',
-                        flexShrink: 0,
-                        marginLeft: '10px',
-                      }}
-                    >
-                      {item.quantity}
-                    </span>
+
+                {/* Token Metadata */}
+                <div className="text-[10.5px] space-y-1 mb-2">
+                  <div className="flex justify-between">
+                    <span>Token No &nbsp;: <strong>{previewToken.tokenNumber}</strong></span>
+                    <span>Date : {previewToken.date}</span>
                   </div>
-                ))}
-              </div>
+                  <div className="flex justify-between">
+                    <span>Order Type: <strong>{previewToken.orderType.toUpperCase()}</strong></span>
+                    <span>Time : {previewToken.timestamp}</span>
+                  </div>
+                </div>
 
-              {/* Footer */}
-              <div style={{ borderTop: '2px solid #333', margin: '10px 16px 0', padding: '12px 0', textAlign: 'center', fontSize: '11px', fontWeight: 900, letterSpacing: '2px', color: '#555' }}>
-                *** NON-BILLING KITCHEN SLIP ***
+                {/* Table Header */}
+                <div className="border-t-2 border-b-2 border-black py-1 my-2 flex justify-between font-bold text-[11px]">
+                  <span>Item Description</span>
+                  <span>Qty</span>
+                </div>
+
+                {/* Items List */}
+                <div className="space-y-1.5 py-1">
+                  {(previewToken.items || []).map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-start border-b border-dashed border-slate-300 pb-1 font-semibold text-[11px]">
+                      <span className="pr-2">• {item.name} ({item.variant})</span>
+                      <span className="font-extrabold shrink-0 text-xs">[ {item.quantity} ]</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Dashed Line */}
+                <div className="border-b border-dashed border-black my-2"></div>
+
+                <div className="flex justify-between font-extrabold text-xs">
+                  <span>Total Items</span>
+                  <span>{(previewToken.items || []).reduce((s: number, i: any) => s + Number(i.quantity || 1), 0)} Pcs</span>
+                </div>
+
+                <div className="border-b border-dashed border-black my-2"></div>
+
+                {/* Footer Note */}
+                <div className="text-center font-bold text-[9.5px] tracking-wider uppercase mt-3 text-slate-700">
+                  *** NON-BILLING KITCHEN SLIP ***
+                </div>
               </div>
             </div>
 
             {/* ── Action Buttons ── */}
-            <div className="flex gap-2.5">
+            <div className="flex gap-2.5 flex-shrink-0">
               <button
                 onClick={() => setShowPreviewModal(false)}
                 className="flex-1 py-2.5 border border-slate-600 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
