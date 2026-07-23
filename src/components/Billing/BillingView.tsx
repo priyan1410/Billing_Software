@@ -7,6 +7,7 @@ import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderPayload, PortionVariant } from '../../types';
+import { formatPosInvoiceHtml, formatPosTokenHtml } from '../../utils/posFormatter';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n: number, curr = '₹') =>
@@ -516,166 +517,60 @@ export const BillingView: React.FC = () => {
     const printShowFooterNote = rd?.printShowFooterNote ?? true;
     const printWithToken = rd?.printWithToken ?? true;
 
-    const receiptStyles = `
-      <style>
-        @page { size: 80mm auto; margin: 2mm; }
-        body { margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
-        .receipt { width: 74mm; margin: 0 auto; padding: 4px; box-sizing: border-box; text-align: left; }
-        .center { text-align: center; }
-        .bold { font-weight: 800; }
-        .divider { border-top: 1px dashed #000; margin: 6px 0; }
-        .double-divider { border-top: 3px double #000; border-bottom: 3px double #000; padding: 5px 0; margin: 6px 0; }
-        .table-header { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0; font-weight: bold; }
-        .row { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin: 2px 0; }
-        .col-item { flex: 2; text-align: left; word-break: break-word; font-weight: 500; }
-        .col-qty { width: 35px; text-align: center; }
-        .col-rate { width: 55px; text-align: right; }
-        .col-amt { width: 65px; text-align: right; }
-        .page-break { page-break-after: always; break-after: page; height: 0; display: block; clear: both; }
-      </style>
-    `;
-
     const billNumber = data.orderNumber || `KMIV-001`;
     const tokenNumber = data.tokenNumber
       ? (String(data.tokenNumber).startsWith('KMKOT') ? String(data.tokenNumber) : `KMKOT${String(data.tokenNumber).padStart(3, '0')}`)
       : `KMKOT001`;
-    const taxableAmount = Math.max(0, data.subtotal - (data.discount || 0));
-    const rounding = data.roundOff ?? 0;
 
-    const tokenSlipHtml = `
-      <div class="page-break"></div>
-      <div class="receipt">
-        <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-        <div class="center bold" style="font-size: 11px; letter-spacing: 1px; margin-top: 2px;">*** TOKEN / TICKET SLIP ***</div>
-        <div class="divider"></div>
-        <div style="font-size: 10.5px; margin: 4px 0;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Token No &nbsp;: <strong style="font-size: 14px;">#${tokenNumber}</strong></span>
-            <span>Date: ${formattedDate}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>Bill No &nbsp;&nbsp;&nbsp;: ${billNumber}</span>
-            <span>Type: ${data.orderType || 'Dine-In'}</span>
-          </div>
-          ${printShowTime ? `<div>Time &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${formattedTime}</div>` : ''}
-        </div>
-        <div class="divider"></div>
-        <div class="row table-header" style="font-size: 10.5px;">
-          <span class="col-item">ITEM DESCRIPTION</span>
-          <span class="col-qty">QTY</span>
-        </div>
-        ${(data.items || []).map((i: any) => {
-          const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
-          return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span></div>`;
-        }).join('')}
-        <div class="divider"></div>
-        <div class="center bold" style="font-size: 10px; margin-top: 6px;">*** END OF TOKEN ***</div>
-      </div>
-    `;
+    let html = '';
+    if (isKot) {
+      html = formatPosTokenHtml(
+        {
+          tokenNumber: tokenNumber,
+          orderType: data.orderType || 'Dine-In',
+          paymentMode: data.paymentMode || 'Cash',
+          items: data.items || [],
+          date: formattedDate,
+          timestamp: formattedTime
+        },
+        rd
+      );
+    } else {
+      const invoiceHtml = formatPosInvoiceHtml(
+        {
+          ...data,
+          orderNumber: billNumber,
+          tokenNumber: tokenNumber,
+          orderDate: formattedDate,
+          createdAt: new Date().toISOString()
+        },
+        rd
+      );
 
-    const html = isKot
-      ? `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-          <div class="center bold"><div style="font-size:14px;">${rName}</div><div style="font-size:11px; letter-spacing:1px; margin-top:2px;">KITCHEN ORDER TICKET</div></div>
-          <div class="divider"></div>
-          <div style="font-size:11px;"><div>Token: <strong>#${tokenNumber}</strong></div><div>Type: ${data.orderType}</div><div>Date: ${formattedDate} ${formattedTime}</div></div>
-          <div class="divider"></div>
-          <div class="row table-header"><span class="col-item">ITEM DESCRIPTION</span><span class="col-qty">QTY</span></div>
-          ${data.items.map((i: any) => {
-        const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
-        return `<div class="row"><span class="col-item">${label}</span><span class="col-qty">${i.quantity}</span></div>`;
-      }).join('')}
-          <div class="divider"></div>
-        </div></body></html>`
-      : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-          <!-- Restaurant Name & Details -->
-          ${printShowLogo && rd?.logoUrl ? `<div class="center" style="margin-bottom: 4px;"><img src="${rd.logoUrl}" style="max-height: 48px; max-width: 140px; filter: grayscale(100%); object-fit: contain;" /></div>` : ''}
-          <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-          ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
-          ${printShowAddress && rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
-          ${printShowPhone && rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
-          ${rGstFssaiLine ? `<div class="center" style="font-size: 10.5px;">${rGstFssaiLine}</div>` : ''}
-          ${printShowHeaderNote && rd?.headerNote ? `<div class="center" style="font-size: 10px; font-style: italic; margin-top: 2px;">${rd.headerNote}</div>` : ''}
-          
-          <div class="divider"></div>
-          <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">*** TAX INVOICE ***</div>
-          
-          <div style="font-size: 10.5px; margin: 4px 0;">
-            <div style="display: flex; justify-content: space-between;">
-              <span>Bill No &nbsp;: ${billNumber}</span>
-              <span>Date &nbsp;: ${formattedDate}</span>
-            </div>
-            ${printShowTime ? `<div style="display: flex; justify-content: space-between;">
-              <span>Time &nbsp;&nbsp;&nbsp;: ${formattedTime}</span>
-            </div>` : ''}
-          </div>
-          
-          <div class="divider"></div>
-          
-          <!-- Table Header -->
-          <div class="row table-header" style="font-size: 10.5px;">
-            <span class="col-item">Item</span>
-            <span class="col-qty">Qty</span>
-            <span class="col-rate">Rate (${curr})</span>
-            <span class="col-amt">Amount (${curr})</span>
-          </div>
-          
-          <!-- Items List -->
-          ${(data.items || []).map((i: any) => {
-        const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
-        const uNum = Number(i.unitPrice || i.price || 0);
-        const tNum = Number(i.totalPrice || (uNum * (i.quantity || 1)));
-        const uPrice = uNum.toFixed(2);
-        const tPrice = tNum.toFixed(2);
-        return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span><span class="col-rate">${uPrice}</span><span class="col-amt">${tPrice}</span></div>`;
-      }).join('')}
-          
-          <div class="divider"></div>
-          
-          <!-- Calculation Section -->
-          <div style="font-size: 10.5px;">
-            <div class="row"><span>Subtotal</span><span>${data.subtotal.toFixed(2)}</span></div>
-            ${data.discount > 0 ? `<div class="row"><span>Discount</span><span>-${data.discount.toFixed(2)}</span></div>` : ''}
-            <div style="display: flex; justify-content: flex-end; margin: 3px 0;"><div style="border-top: 1px dashed #000; width: 80px;"></div></div>
-            <div class="row"><span>Taxable Amount</span><span>${taxableAmount.toFixed(2)}</span></div>
-            ${printShowTaxBreakdown ? `
-            <div class="row"><span>CGST (${cgstRate}%)</span><span>${((data.tax || 0) / 2).toFixed(2)}</span></div>
-            <div class="row"><span>SGST (${sgstRate}%)</span><span>${((data.tax || 0) / 2).toFixed(2)}</span></div>
-            ` : ''}
-            ${printShowRoundOff ? `<div class="row"><span>Round Off</span><span>${rounding.toFixed(2)}</span></div>` : ''}
-          </div>
-          
-          <div class="divider"></div>
-          
-          <!-- Grand Total Banner -->
-          <div class="row double-divider bold" style="font-size: 15px;">
-            <span>GRAND TOTAL</span>
-            <span>${curr} ${data.grandTotal.toFixed(2)}</span>
-          </div>
-          
-          <div class="divider"></div>
-          
-          <!-- Footer -->
-          ${printShowFooterNote ? `<div class="center" style="margin-top: 8px;">
-            <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: bold; font-size: 14px;">
-              Thank You!<br/>Visit Again.
-            </div>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0;">
-              <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
-              <span style="font-size: 9px;">★</span>
-              <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
-            </div>
-            <div style="font-size: 9.5px; line-height: 1.3;">
-              ${rd?.footerNote || 'Goods once sold cannot be returned.'}
-            </div>
-          </div>` : ''}
-        </div>
-        ${printWithToken ? tokenSlipHtml : ''}
-        </body></html>`;
+      if (rd?.printWithToken !== false) {
+        const tokenHtml = formatPosTokenHtml(
+          {
+            tokenNumber: tokenNumber,
+            orderType: data.orderType || 'Dine-In',
+            paymentMode: data.paymentMode || 'Cash',
+            items: data.items || [],
+            date: formattedDate,
+            timestamp: formattedTime
+          },
+          rd
+        );
+        // Combine invoice + token slips
+        html = invoiceHtml.replace('</pre>', '\n\n' + tokenHtml.replace(/[\s\S]*?<pre class="pos-receipt">/, ''));
+      } else {
+        html = invoiceHtml;
+      }
+    }
+
     if ((window as any).electronAPI) {
       await (window as any).electronAPI.printReceipt(html);
     } else {
       const w = window.open('', '_blank', 'width=400,height=700');
-      if (w) { w.document.write(`<html><body>${html}</body></html>`); w.print(); }
+      if (w) { w.document.write(html); w.print(); }
     }
   };
 

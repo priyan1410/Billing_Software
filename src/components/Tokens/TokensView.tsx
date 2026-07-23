@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderType, PortionVariant } from '../../types';
+import { formatPosTokenHtml } from '../../utils/posFormatter';
 
 export const TokensView: React.FC = () => {
   const { activeTokensList, addActiveToken, loadActiveTokens, setActiveSection } = useAppStore();
@@ -177,77 +178,7 @@ export const TokensView: React.FC = () => {
 
   const triggerTokenPrint = async () => {
     if (!previewToken) return;
-    const rName = restaurantDetails?.companyName || 'KISH MANDHI';
-    const rTagline = restaurantDetails?.tagline || 'Arabic Grill & Fine Dining';
-    const rAddr = restaurantDetails?.address || '';
-    const rPhone = restaurantDetails?.phone || '';
-    const totalItemsCount = (previewToken.items || []).reduce((sum: number, i: any) => sum + Number(i.quantity || 1), 0);
-
-    const tokenHtml = `<!doctype html>
-      <html>
-        <head>
-          <style>
-            @page { size: 80mm auto; margin: 2mm; }
-            body { margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
-            .receipt { width: 74mm; margin: 0 auto; padding: 4px; box-sizing: border-box; text-align: left; }
-            .center { text-align: center; }
-            .bold { font-weight: 800; }
-            .divider { border-top: 1px dashed #000; margin: 6px 0; }
-            .double-divider { border-top: 3px double #000; border-bottom: 3px double #000; padding: 5px 0; margin: 6px 0; }
-            .row { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin: 3px 0; }
-            .col-item { flex: 1; text-align: left; word-break: break-word; font-weight: bold; font-size: 12px; }
-            .col-qty { width: 45px; text-align: right; font-weight: 900; font-size: 13px; }
-            .table-header { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0; font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <div class="receipt">
-            <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-            ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
-            ${rAddr ? `<div class="center" style="font-size: 10px;">${rAddr}</div>` : ''}
-            
-            <div class="divider"></div>
-            <div class="center bold" style="font-size: 11.5px; letter-spacing: 1px;">*** KITCHEN ORDER TOKEN ***</div>
-            
-            <div style="font-size: 10.5px; margin: 6px 0;">
-              <div class="row">
-                <span><strong>Token No :</strong> ${previewToken.tokenNumber}</span>
-                <span><strong>Date :</strong> ${previewToken.date}</span>
-              </div>
-              <div class="row">
-                <span><strong>Order Type :</strong> ${previewToken.orderType.toUpperCase()}</span>
-                <span><strong>Time :</strong> ${previewToken.timestamp}</span>
-              </div>
-            </div>
-            
-            <div class="row table-header" style="font-size: 11px;">
-              <span class="col-item">Item Description</span>
-              <span class="col-qty">Qty</span>
-            </div>
-            
-            ${(previewToken.items || []).map((i: any) => `
-              <div class="row" style="font-size: 11.5px; padding: 3px 0; border-bottom: 1px dashed #aaa;">
-                <span class="col-item">• ${i.name} (${i.variant})</span>
-                <span class="col-qty">[ ${i.quantity} ]</span>
-              </div>
-            `).join('')}
-            
-            <div class="divider"></div>
-            
-            <div class="row bold" style="font-size: 11.5px;">
-              <span>Total Items</span>
-              <span>${totalItemsCount} Pcs</span>
-            </div>
-            
-            <div class="divider"></div>
-            
-            <div class="center bold" style="font-size: 10px; margin-top: 8px; letter-spacing: 1px;">
-              *** NON-BILLING KITCHEN SLIP ***
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
+    const tokenHtml = formatPosTokenHtml(previewToken, restaurantDetails);
 
     if ((window as any).electronAPI?.printReceipt) {
       await (window as any).electronAPI.printReceipt(tokenHtml);

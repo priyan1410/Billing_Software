@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, Receipt, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
+import { formatPosInvoiceHtml, formatPosTokenHtml } from '../../utils/posFormatter';
 
 interface BillDetailModalProps {
   order: any;
@@ -79,138 +80,50 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
       const sgstRate = (taxRate / 2).toFixed(1);
       const roundOffVal = Number(order.roundOff ?? order.round_off ?? 0);
 
-      const receiptStyles = `
-        <style>
-          @page { size: 80mm auto; margin: 2mm; }
-          body { margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
-          .receipt { width: 74mm; margin: 0 auto; padding: 4px; box-sizing: border-box; text-align: left; }
-          .center { text-align: center; }
-          .bold { font-weight: 800; }
-          .divider { border-top: 1px dashed #000; margin: 6px 0; }
-          .double-divider { border-top: 3px double #000; border-bottom: 3px double #000; padding: 5px 0; margin: 6px 0; }
-          .table-header { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0; font-weight: bold; }
-          .row { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin: 2px 0; }
-          .col-item { flex: 2; text-align: left; word-break: break-word; font-weight: 500; }
-          .col-qty { width: 35px; text-align: center; }
-          .col-rate { width: 55px; text-align: right; }
-          .col-amt { width: 65px; text-align: right; }
-          .page-break { page-break-after: always; break-after: page; height: 0; display: block; clear: both; }
-        </style>
-      `;
-
       const printWithToken = restaurantDetails?.printWithToken ?? true;
       const tokenNumber = order.tokenNumber || order.token_number || `KMKOT001`;
 
-      const tokenSlipHtml = `
-        <div class="page-break"></div>
-        <div class="receipt">
-          <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-          <div class="center bold" style="font-size: 11px; letter-spacing: 1px; margin-top: 2px;">*** TOKEN / TICKET SLIP ***</div>
-          <div class="divider"></div>
-          <div style="font-size: 10.5px; margin: 4px 0;">
-            <div style="display: flex; justify-content: space-between;">
-              <span>Token No &nbsp;: <strong style="font-size: 14px;">#${tokenNumber}</strong></span>
-              <span>Date: ${formattedDate}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>Bill No &nbsp;&nbsp;&nbsp;: ${billNumber}</span>
-              <span>Type: ${order.orderType || order.order_type || 'Dine-In'}</span>
-            </div>
-            <div>Time &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${formattedTime}</div>
-          </div>
-          <div class="divider"></div>
-          <div class="row table-header" style="font-size: 10.5px;">
-            <span class="col-item">ITEM DESCRIPTION</span>
-            <span class="col-qty">QTY</span>
-          </div>
-          ${(items || []).map((i: any) => {
-            const label = `${i.name || i.dishName}${i.variant ? ` (${i.variant})` : ''}`;
-            return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span></div>`;
-          }).join('')}
-          <div class="divider"></div>
-          <div class="center bold" style="font-size: 10px; margin-top: 6px;">*** END OF TOKEN ***</div>
-        </div>
-      `;
+      const invoiceHtml = formatPosInvoiceHtml(
+        {
+          orderNumber: billNumber,
+          tokenNumber: tokenNumber,
+          orderType: order.orderType || order.order_type || 'Dine-In',
+          paymentMode: order.paymentMode || order.payment_mode || 'Cash',
+          items: items || [],
+          subtotal: subtotal,
+          discount: discount,
+          tax: taxAmt,
+          grandTotal: grandTotal,
+          roundOff: roundOffVal,
+          orderDate: formattedDate,
+          customerName: order.customerName || order.customer_name || '',
+          customerPhone: order.customerPhone || order.customer_phone || '',
+          createdAt: order.createdAt || order.created_at
+        },
+        restaurantDetails
+      );
 
-      const html = `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-        <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-        ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
-        ${rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
-        ${rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
-        ${rGstFssaiLine ? `<div class="center" style="font-size: 10.5px;">${rGstFssaiLine}</div>` : ''}
-        
-        <div class="divider"></div>
-        <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">*** TAX INVOICE ***</div>
-        
-        <div style="font-size: 10.5px; margin: 4px 0;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Bill No &nbsp;: ${billNumber}</span>
-            <span>Date &nbsp;: ${formattedDate}</span>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>Time &nbsp;&nbsp;&nbsp;: ${formattedTime}</span>
-          </div>
-        </div>
-        
-        <div class="divider"></div>
-        
-        <div class="row table-header" style="font-size: 10.5px;">
-          <span class="col-item">Item</span>
-          <span class="col-qty">Qty</span>
-          <span class="col-rate">Rate (${curr})</span>
-          <span class="col-amt">Amount (${curr})</span>
-        </div>
-        
-        ${(items || []).map((i: any) => {
-        const label = `${i.name || i.dishName}${i.variant ? ` (${i.variant})` : ''}`;
-        const uNum = Number(i.unitPrice || i.price || 0);
-        const tNum = Number(i.totalPrice || (uNum * (i.quantity || 1)));
-        return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span><span class="col-rate">${uNum.toFixed(2)}</span><span class="col-amt">${tNum.toFixed(2)}</span></div>`;
-      }).join('')}
-        
-        <div class="divider"></div>
-        
-        <div style="font-size: 10.5px;">
-          <div class="row"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-          ${discount > 0 ? `<div class="row"><span>Discount</span><span>-${discount.toFixed(2)}</span></div>` : ''}
-          <div style="display: flex; justify-content: flex-end; margin: 3px 0;"><div style="border-top: 1px dashed #000; width: 80px;"></div></div>
-          <div class="row"><span>Taxable Amount</span><span>${Math.max(0, subtotal - discount).toFixed(2)}</span></div>
-          <div class="row"><span>CGST (${cgstRate}%)</span><span>${(taxAmt / 2).toFixed(2)}</span></div>
-          <div class="row"><span>SGST (${sgstRate}%)</span><span>${(taxAmt / 2).toFixed(2)}</span></div>
-          ${roundOffVal !== 0 ? `<div class="row"><span>Round Off</span><span>${roundOffVal.toFixed(2)}</span></div>` : ''}
-        </div>
-        
-        <div class="divider"></div>
-        
-        <div class="row double-divider bold" style="font-size: 15px;">
-          <span>GRAND TOTAL</span>
-          <span>${curr} ${grandTotal.toFixed(2)}</span>
-        </div>
-        
-        <div class="divider"></div>
-        
-        <div class="center" style="margin-top: 8px;">
-          <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: bold; font-size: 14px;">
-            Thank You!<br/>Visit Again.
-          </div>
-          <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0;">
-            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
-            <span style="font-size: 9px;">★</span>
-            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
-          </div>
-          <div style="font-size: 9.5px; line-height: 1.3;">
-            ${restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
-          </div>
-        </div>
-      </div>
-      ${printWithToken ? tokenSlipHtml : ''}
-      </body></html>`;
+      let html = invoiceHtml;
+      if (printWithToken) {
+        const tokenHtml = formatPosTokenHtml(
+          {
+            tokenNumber: tokenNumber,
+            orderType: order.orderType || order.order_type || 'Dine-In',
+            paymentMode: order.paymentMode || order.payment_mode || 'Cash',
+            items: items || [],
+            date: formattedDate,
+            timestamp: formattedTime
+          },
+          restaurantDetails
+        );
+        html = invoiceHtml.replace('</pre>', '\n\n' + tokenHtml.replace(/[\s\S]*?<pre class="pos-receipt">/, ''));
+      }
 
       if ((window as any).electronAPI?.printReceipt) {
         await (window as any).electronAPI.printReceipt(html);
       } else {
         const w = window.open('', '_blank', 'width=400,height=700');
-        if (w) { w.document.write(`<html><body>${html}</body></html>`); w.print(); }
+        if (w) { w.document.write(html); w.print(); }
       }
     } catch (err: any) {
       alert('Error printing bill: ' + err.message);

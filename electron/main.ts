@@ -289,7 +289,7 @@ ipcMain.handle('receipt:print', async (_evt: any, receiptHtml: string) => {
     const printWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false } });
     printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml)}`);
     printWin.webContents.on('did-finish-load', () => {
-      printWin.webContents.print({ silent: false, printBackground: true }, () => {
+      printWin.webContents.print({ silent: false, printBackground: true, margins: { marginType: 'none' } }, () => {
         printWin.close();
       });
     });

@@ -7,6 +7,7 @@ import {
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePosStore } from '../../store/usePosStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
+import { formatPosInvoiceHtml, formatPosTokenHtml } from '../../utils/posFormatter';
 
 interface PreviousBillsModalProps {
   onClose: () => void;
@@ -270,151 +271,65 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
       const cgstRate = (taxRate / 2).toFixed(1);
       const sgstRate = (taxRate / 2).toFixed(1);
 
-      const receiptStyles = `
-        <style>
-          @page { size: 80mm auto; margin: 2mm; }
-          body { margin: 0; padding: 4px; font-family: 'Courier New', Courier, monospace, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
-          .receipt { width: 74mm; margin: 0 auto; padding: 4px; box-sizing: border-box; text-align: left; }
-          .center { text-align: center; }
-          .bold { font-weight: 800; }
-          .divider { border-top: 1px dashed #000; margin: 6px 0; }
-          .double-divider { border-top: 3px double #000; border-bottom: 3px double #000; padding: 5px 0; margin: 6px 0; }
-          .table-header { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; padding: 4px 0; margin: 4px 0; font-weight: bold; }
-          .row { display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin: 2px 0; }
-          .col-item { flex: 2; text-align: left; word-break: break-word; font-weight: 500; }
-          .col-qty { width: 35px; text-align: center; }
-          .col-rate { width: 55px; text-align: right; }
-          .col-amt { width: 65px; text-align: right; }
-          .page-break { page-break-after: always; break-after: page; height: 0; display: block; clear: both; }
-        </style>
-      `;
-
       const billNumber = selectedOrder.orderNumber || `KMIV-001`;
       const tokenNumber = selectedOrder.tokenNumber || `KMKOT001`;
 
-      const tokenSlipHtml = `
-        <div class="page-break"></div>
-        <div class="receipt">
-          <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-          <div class="center bold" style="font-size: 11px; letter-spacing: 1px; margin-top: 2px;">*** TOKEN / TICKET SLIP ***</div>
-          <div class="divider"></div>
-          <div style="font-size: 10.5px; margin: 4px 0;">
-            <div style="display: flex; justify-content: space-between;">
-              <span>Token No &nbsp;: <strong style="font-size: 14px;">#${tokenNumber}</strong></span>
-              <span>Date: ${printDateStr}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>Bill No &nbsp;&nbsp;&nbsp;: ${billNumber}</span>
-              <span>Type: ${selectedOrder.orderType || 'Dine-In'}</span>
-            </div>
-            <div>Time &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${printTimeStr}</div>
-          </div>
-          <div class="divider"></div>
-          <div class="row table-header" style="font-size: 10.5px;">
-            <span class="col-item">ITEM DESCRIPTION</span>
-            <span class="col-qty">QTY</span>
-          </div>
-          ${(orderItems || []).map((i: any) => {
-            const label = `${i.name || i.dishName}${i.variant ? ` (${i.variant})` : ''}`;
-            return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span></div>`;
-          }).join('')}
-          <div class="divider"></div>
-          <div class="center bold" style="font-size: 10px; margin-top: 6px;">*** END OF TOKEN ***</div>
-        </div>
-      `;
+      let html = '';
+      if (isKot) {
+        html = formatPosTokenHtml(
+          {
+            tokenNumber: tokenNumber,
+            orderType: selectedOrder.orderType || 'Dine-In',
+            paymentMode: selectedOrder.paymentMode || 'Cash',
+            items: orderItems || [],
+            date: printDateStr,
+            timestamp: printTimeStr
+          },
+          restaurantDetails
+        );
+      } else {
+        const invoiceHtml = formatPosInvoiceHtml(
+          {
+            orderNumber: billNumber,
+            tokenNumber: tokenNumber,
+            orderType: selectedOrder.orderType || 'Dine-In',
+            paymentMode: selectedOrder.paymentMode || 'Cash',
+            items: orderItems || [],
+            subtotal: rawSubtotal,
+            discount: effectiveDiscount,
+            tax: taxAmt,
+            grandTotal: calculatedGrandTotal,
+            orderDate: printDateStr,
+            customerName: selectedOrder.customerName || selectedOrder.customer_name || '',
+            customerPhone: selectedOrder.customerPhone || selectedOrder.customer_phone || '',
+            createdAt: selectedOrder.createdAt || selectedOrder.created_at
+          },
+          restaurantDetails
+        );
 
-      const html = isKot
-        ? `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-            <div class="center bold"><div style="font-size:14px;">${rName}</div><div style="font-size:11px; letter-spacing:1px; margin-top:2px;">KITCHEN ORDER TICKET (REPRINT)</div></div>
-            <div class="divider"></div>
-            <div style="font-size:11px;"><div>Bill No: <strong>${billNumber}</strong></div><div>Type: ${selectedOrder.orderType}</div><div>Date: ${printDateStr} ${printTimeStr}</div></div>
-            <div class="divider"></div>
-            <div class="row table-header"><span class="col-item">ITEM DESCRIPTION</span><span class="col-qty">QTY</span></div>
-            ${orderItems.map((i: any) => {
-          const label = `${i.name || i.dishName}${i.variant ? ` (${i.variant})` : ''}`;
-          return `<div class="row"><span class="col-item">${label}</span><span class="col-qty">${i.quantity}</span></div>`;
-        }).join('')}
-            <div class="divider"></div>
-          </div></body></html>`
-        : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
-            <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
-            ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
-            ${showAddress && rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}
-            ${showPhone && rPhone ? `<div class="center" style="font-size: 10.5px;">${rPhone}</div>` : ''}
-            ${rGstFssaiLine ? `<div class="center" style="font-size: 10.5px;">${rGstFssaiLine}</div>` : ''}
-
-            <div class="divider"></div>
-            <div class="center bold" style="font-size: 11px; letter-spacing: 1px;">${headerTag || '*** REPRINT TAX INVOICE ***'}</div>
-            ${customNote ? `<div class="center" style="font-size: 10px; font-weight: bold; margin-top: 2px;">[ ${customNote} ]</div>` : ''}
-
-            <div style="font-size: 10.5px; margin: 4px 0;">
-              <div style="display: flex; justify-content: space-between;">
-                <span>Bill No &nbsp;: ${billNumber}</span>
-                <span>Date &nbsp;: ${printDateStr}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between;">
-                <span>Time &nbsp;&nbsp;&nbsp;: ${printTimeStr}</span>
-                <span>Pay Mode: ${selectedOrder.paymentMode || 'Cash'}</span>
-              </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="row table-header" style="font-size: 10.5px;">
-              <span class="col-item">Item</span>
-              <span class="col-qty">Qty</span>
-              <span class="col-rate">Rate (${curr})</span>
-              <span class="col-amt">Amount (${curr})</span>
-            </div>
-
-            ${(orderItems || []).map((i: any) => {
-          const label = `${i.name || i.dishName}${i.variant ? ` (${i.variant})` : ''}`;
-          const uNum = Number(i.unitPrice || i.price || 0);
-          const tNum = Number(i.totalPrice || (uNum * (i.quantity || 1)));
-          const uPrice = uNum.toFixed(2);
-          const tPrice = tNum.toFixed(2);
-          return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span><span class="col-rate">${uPrice}</span><span class="col-amt">${tPrice}</span></div>`;
-        }).join('')}
-
-            <div class="divider"></div>
-
-            <div style="font-size: 10.5px;">
-              <div class="row"><span>Subtotal</span><span>${rawSubtotal.toFixed(2)}</span></div>
-              ${effectiveDiscount > 0 ? `<div class="row"><span>Discount</span><span>-${effectiveDiscount.toFixed(2)}</span></div>` : ''}
-              <div style="display: flex; justify-content: flex-end; margin: 3px 0;"><div style="border-top: 1px dashed #000; width: 80px;"></div></div>
-              <div class="row"><span>Taxable Amount</span><span>${taxableAmt.toFixed(2)}</span></div>
-              ${showTaxBreakdown ? `
-              <div class="row"><span>CGST (${cgstRate}%)</span><span>${(taxAmt / 2).toFixed(2)}</span></div>
-              <div class="row"><span>SGST (${sgstRate}%)</span><span>${(taxAmt / 2).toFixed(2)}</span></div>
-              ` : ''}
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="row double-divider bold" style="font-size: 15px;">
-              <span>GRAND TOTAL</span>
-              <span>${curr} ${calculatedGrandTotal.toFixed(2)}</span>
-            </div>
-
-            <div class="divider"></div>
-
-            ${showFooterNote ? `<div class="center" style="margin-top: 8px;">
-              <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: bold; font-size: 14px;">
-                Thank You!<br/>Visit Again.
-              </div>
-              <div style="font-size: 9.5px; margin-top: 4px;">
-                ${restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
-              </div>
-            </div>` : ''}
-          </div>
-          ${showTokenTicket ? tokenSlipHtml : ''}
-          </body></html>`;
+        if (showTokenTicket) {
+          const tokenHtml = formatPosTokenHtml(
+            {
+              tokenNumber: tokenNumber,
+              orderType: selectedOrder.orderType || 'Dine-In',
+              paymentMode: selectedOrder.paymentMode || 'Cash',
+              items: orderItems || [],
+              date: printDateStr,
+              timestamp: printTimeStr
+            },
+            restaurantDetails
+          );
+          html = invoiceHtml.replace('</pre>', '\n\n' + tokenHtml.replace(/[\s\S]*?<pre class="pos-receipt">/, ''));
+        } else {
+          html = invoiceHtml;
+        }
+      }
 
       if ((window as any).electronAPI?.printReceipt) {
         await (window as any).electronAPI.printReceipt(html);
       } else {
         const w = window.open('', '_blank', 'width=400,height=700');
-        if (w) { w.document.write(`<html><body>${html}</body></html>`); w.print(); }
+        if (w) { w.document.write(html); w.print(); }
       }
     } catch (err: any) {
       alert('Error printing bill: ' + err.message);
