@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, Receipt, Printer, X, Calendar, History, ShoppingCart,
-  FileText, Banknote, QrCode, CreditCard, Utensils, ShoppingBag, Check
+  FileText, Banknote, QrCode, CreditCard, Utensils, ShoppingBag, Check,
+  Upload, Download, RefreshCw, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePosStore } from '../../store/usePosStore';
@@ -40,6 +41,105 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
 
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 5;
+
+  // Import / Export State
+  const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle');
+  const [importMsg, setImportMsg] = useState('');
+
+  const handleImportBillsFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportStatus('importing');
+    setImportMsg(`Reading ${file.name}...`);
+
+    try {
+      const text = await file.text();
+      let importedOrdersList: any[] = [];
+
+      if (file.name.toLowerCase().endsWith('.json')) {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          importedOrdersList = parsed;
+        } else if (parsed.orders && Array.isArray(parsed.orders)) {
+          importedOrdersList = parsed.orders;
+        } else if (parsed.bills && Array.isArray(parsed.bills)) {
+          importedOrdersList = parsed.bills;
+        }
+      } else if (file.name.toLowerCase().endsWith('.csv')) {
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        if (lines.length > 1) {
+          const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+          for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            const getCol = (keys: string[]) => {
+              for (const k of keys) {
+                const idx = headers.findIndex(h => h.includes(k));
+                if (idx !== -1 && cols[idx] !== undefined) return cols[idx];
+              }
+              return '';
+            };
+            const orderNum = getCol(['order', 'bill', 'number', 'id']);
+            const grandTotal = getCol(['grand', 'total', 'amount']);
+            const payMode = getCol(['payment', 'mode', 'type']);
+            const orderType = getCol(['ordertype', 'service', 'type']);
+            const created = getCol(['date', 'created', 'time']);
+
+            if (orderNum || grandTotal) {
+              importedOrdersList.push({
+                orderNumber: orderNum || `KMIV-IMP-${i}`,
+                orderType: orderType || 'Dine-In',
+                grandTotal: Number(grandTotal.replace(/[^0-9.]/g, '')) || 0,
+                paymentMode: payMode || 'Cash',
+                createdAt: created || new Date().toISOString()
+              });
+            }
+          }
+        }
+      }
+
+      if (importedOrdersList.length === 0) {
+        setImportStatus('error');
+        setImportMsg('No valid orders found in file. Please ensure it is a JSON or CSV bill backup file.');
+        return;
+      }
+
+      setImportMsg(`Importing ${importedOrdersList.length} bills into database...`);
+
+      if ((window as any).electronAPI?.importBackup) {
+        const res = await (window as any).electronAPI.importBackup({ orders: importedOrdersList });
+        if (res && res.success) {
+          setImportStatus('success');
+          setImportMsg(`Successfully imported ${importedOrdersList.length} previous bills into database!`);
+          await loadOrders();
+        } else {
+          setImportStatus('error');
+          setImportMsg(res?.message || 'Failed to save imported bills into database.');
+        }
+      } else {
+        setImportStatus('error');
+        setImportMsg('Database API unavailable in browser mode.');
+      }
+    } catch (err: any) {
+      console.error('Import bills error:', err);
+      setImportStatus('error');
+      setImportMsg(err.message || 'Error parsing bill file.');
+    }
+  };
+
+  const handleExportBillsBackup = () => {
+    if (orders.length === 0) {
+      alert('No previous bills available to export.');
+      return;
+    }
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(orders, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', dataStr);
+    dlAnchor.setAttribute('download', `KishMandhi_Previous_Bills_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+  };
 
   useEffect(() => {
     loadOrders();
@@ -311,13 +411,38 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
               <History className="w-5 h-5 text-gold-400" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg tracking-wide">Previous Bills History & Custom Printing</h3>
-              <p className="text-xs text-slate-400">Search past customer bills, customize print notes, and reprint thermal receipts</p>
+              <h3 className="font-bold text-white text-lg tracking-wide">Previous Bills History & Import Tools</h3>
+              <p className="text-xs text-slate-400">Search past customer bills, import bill backups from computer, and reprint receipts</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-3">
+            {/* Import Bills from Computer Button */}
+            <label className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-xl hover:bg-amber-500 hover:text-slate-950 transition-all cursor-pointer shadow-md">
+              <Upload className="w-4 h-4" />
+              <span>Import Bills from Computer</span>
+              <input
+                type="file"
+                accept=".json,.csv"
+                onChange={handleImportBillsFileChange}
+                className="hidden"
+              />
+            </label>
+
+            {/* Export Bills Backup Button */}
+            <button
+              onClick={handleExportBillsBackup}
+              title="Export all previous bills as JSON backup"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs rounded-xl hover:bg-slate-700 hover:text-white transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Bills</span>
+            </button>
+
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body: 3-column Layout */}
@@ -353,12 +478,38 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
               ))}
             </div>
 
+            {/* Import Status Banner */}
+            {importStatus !== 'idle' && (
+              <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 flex-shrink-0 ${
+                importStatus === 'importing' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300' :
+                importStatus === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
+                'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+              }`}>
+                {importStatus === 'importing' && <RefreshCw className="w-4 h-4 animate-spin shrink-0" />}
+                {importStatus === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+                {importStatus === 'error' && <AlertTriangle className="w-4 h-4 shrink-0" />}
+                <span className="flex-1 leading-snug">{importMsg}</span>
+              </div>
+            )}
+
             {/* Orders List */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-2 min-h-0" style={{ scrollbarWidth: 'thin' }}>
               {loading ? (
                 <div className="text-center py-12 text-slate-500 text-xs">Loading previous bills...</div>
               ) : filteredOrders.length === 0 ? (
-                <div className="text-center py-12 text-slate-500 text-xs">No matching bills found.</div>
+                <div className="text-center py-12 px-4 space-y-3">
+                  <p className="text-slate-400 text-xs">No previous bills found in database.</p>
+                  <label className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold rounded-xl hover:bg-amber-500 hover:text-slate-950 transition-all cursor-pointer shadow-md">
+                    <Upload className="w-4 h-4" />
+                    <span>Import Bills from Computer (.JSON / .CSV)</span>
+                    <input
+                      type="file"
+                      accept=".json,.csv"
+                      onChange={handleImportBillsFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               ) : (
                 filteredOrders.map((order) => {
                   const isSelected = selectedOrder?.id === order.id;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus, Download, Upload, FileSpreadsheet, FileJson, X, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus, Download, FileSpreadsheet, FileJson, X } from 'lucide-react';
 import { Dish, PnLPeriod } from '../../types';
 import { BillDetailModal } from './BillDetailModal';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -537,107 +537,6 @@ export const RestaurantView: React.FC = () => {
     setShowExportModal(false);
   };
 
-  const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setImportStatus('importing');
-    setImportMsg('Reading financial data file...');
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const content = evt.target?.result as string;
-        let parsedOrders: any[] = [];
-        let parsedExpenses: any[] = [];
-
-        if (file.name.endsWith('.json')) {
-          const jsonObj = JSON.parse(content);
-          if (jsonObj.orders && Array.isArray(jsonObj.orders)) parsedOrders = jsonObj.orders;
-          if (jsonObj.expenses && Array.isArray(jsonObj.expenses)) parsedExpenses = jsonObj.expenses;
-          if (Array.isArray(jsonObj)) {
-            parsedOrders = jsonObj.filter(item => item.grandTotal || item.grand_total || item.orderNumber);
-            parsedExpenses = jsonObj.filter(item => item.amount && !item.grandTotal);
-          }
-        } else {
-          // CSV Parsing
-          const lines = content.split(/\r\n|\n/);
-          let currentSection: 'orders' | 'expenses' | null = null;
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
-
-            if (trimmed.includes('INVOICE ORDERS LEDGER')) {
-              currentSection = 'orders';
-              continue;
-            }
-            if (trimmed.includes('OPERATING EXPENSES LEDGER')) {
-              currentSection = 'expenses';
-              continue;
-            }
-
-            if (currentSection === 'orders' && !trimmed.startsWith('Order #')) {
-              const parts = trimmed.split(',').map(p => p.replace(/^"|"$/g, '').trim());
-              if (parts.length >= 7) {
-                parsedOrders.push({
-                  order_number: parts[0],
-                  created_at: parts[1],
-                  payment_mode: parts[2],
-                  subtotal: parseFloat(parts[3]) || 0,
-                  tax_amount: parseFloat(parts[4]) || 0,
-                  discount_amount: parseFloat(parts[5]) || 0,
-                  grand_total: parseFloat(parts[6]) || 0
-                });
-              }
-            } else if (currentSection === 'expenses' && !trimmed.startsWith('Expense ID')) {
-              const parts = trimmed.split(',').map(p => p.replace(/^"|"$/g, '').trim());
-              if (parts.length >= 6) {
-                parsedExpenses.push({
-                  expense_date: parts[1],
-                  description: parts[2],
-                  category: parts[3],
-                  payment_mode: parts[4],
-                  amount: parseFloat(parts[5]) || 0
-                });
-              }
-            }
-          }
-        }
-
-        if (parsedOrders.length === 0 && parsedExpenses.length === 0) {
-          setImportStatus('error');
-          setImportMsg('No valid orders or expenses found in the selected file.');
-          return;
-        }
-
-        if ((window as any).electronAPI?.importBackup) {
-          const res = await (window as any).electronAPI.importBackup({ orders: parsedOrders, expenses: parsedExpenses });
-          if (res && res.success) {
-            setImportStatus('success');
-            setImportMsg(`✓ Successfully imported ${res.data?.importedOrders || parsedOrders.length} Orders and ${res.data?.importedExpenses || parsedExpenses.length} Expenses!`);
-            await loadFinancials();
-            setTimeout(() => {
-              setShowImportModal(false);
-              setImportStatus('idle');
-            }, 2500);
-          } else {
-            setImportStatus('error');
-            setImportMsg(res?.message || 'Failed to save imported financial records.');
-          }
-        } else {
-          setImportStatus('error');
-          setImportMsg('Electron Database API not available in web preview mode.');
-        }
-      } catch (err: any) {
-        setImportStatus('error');
-        setImportMsg('Failed to parse file: ' + err.message);
-      }
-    };
-
-    reader.readAsText(file, 'UTF-8');
-  };
-
   return (
     <div className="space-y-6 select-none">
       {/* Sub Navigation Bar */}
@@ -872,7 +771,7 @@ export const RestaurantView: React.FC = () => {
                 )}
               </div>
 
-              {/* Data Import & Export Action Buttons */}
+              {/* Data Export Action Button */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -885,17 +784,6 @@ export const RestaurantView: React.FC = () => {
                   title="Export P&L Financial Statement Report"
                 >
                   <Download className="w-3.5 h-3.5" /> Export P&L Data
-                </button>
-                <button
-                  onClick={() => {
-                    setImportStatus('idle');
-                    setImportMsg('');
-                    setShowImportModal(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-olive-950 border border-gold-500/30 text-gold-400 font-bold text-xs rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-all"
-                  title="Import Financial Statement Records"
-                >
-                  <Upload className="w-3.5 h-3.5" /> Import P&L Data
                 </button>
               </div>
             </div>
@@ -1360,65 +1248,6 @@ export const RestaurantView: React.FC = () => {
                   className="flex-1 py-2.5 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 rounded-xl font-extrabold shadow-md hover:scale-[1.02] transition-transform flex items-center justify-center gap-1.5"
                 >
                   <Download className="w-4 h-4" /> Download P&L File
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Import PnL Data Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-full max-w-md space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-gold-500/20">
-              <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
-                <Upload className="w-5 h-5" /> Import Financial Statement Records
-              </h4>
-              <button
-                onClick={() => setShowImportModal(false)}
-                className="p-1 text-olive-300 hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <p className="text-olive-300">
-                Select a previously exported P&L JSON or CSV file to import orders & expense ledger items directly into your database.
-              </p>
-
-              <label className="border-2 border-dashed border-gold-500/30 hover:border-gold-500 bg-olive-950/60 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all group">
-                <Upload className="w-8 h-8 text-gold-400 group-hover:scale-110 transition-transform mb-2" />
-                <span className="font-bold text-white text-sm">Choose JSON or CSV File</span>
-                <span className="text-[11px] text-olive-400 mt-1">Supports PnL JSON backups & CSV exports</span>
-                <input
-                  type="file"
-                  accept=".json,.csv"
-                  onChange={handleImportFileChange}
-                  className="hidden"
-                />
-              </label>
-
-              {importStatus !== 'idle' && (
-                <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                  importStatus === 'importing' ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300' :
-                  importStatus === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' :
-                  'bg-rose-500/10 border border-rose-500/30 text-rose-400'
-                }`}>
-                  {importStatus === 'importing' && <RefreshCw className="w-4 h-4 animate-spin shrink-0" />}
-                  {importStatus === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
-                  <span>{importMsg}</span>
-                </div>
-              )}
-
-              <div className="flex justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowImportModal(false)}
-                  className="px-5 py-2.5 bg-olive-800 text-white rounded-xl font-bold hover:bg-olive-700 transition-colors"
-                >
-                  Close
                 </button>
               </div>
             </div>

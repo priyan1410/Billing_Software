@@ -323,11 +323,11 @@ ipcMain.handle('orders:getItems', async (evt, orderIdOrNumber) => {
       success: true,
       data: res.data.map(r => ({
         id: r.id,
-        name: r.dish_name,
-        variant: r.variant,
+        name: r.dish_name || r.item_name || 'Item',
+        variant: r.variant || 'Full',
         quantity: r.quantity,
-        unitPrice: Number(r.unit_price),
-        totalPrice: Number(r.total_price)
+        unitPrice: Number(r.unit_price || 0),
+        totalPrice: Number(r.total_price || 0)
       }))
     };
   } catch (err) {
@@ -548,6 +548,57 @@ ipcMain.handle('db:getTableData', async (evt, tableName) => {
   return { success: true, data: result.data };
 });
 
+const formatDateTimeForDB = (val) => {
+  if (!val) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  if (val instanceof Date) {
+    if (isNaN(val.getTime())) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+    return val.toISOString().slice(0, 19).replace('T', ' ');
+  }
+
+  const str = String(val).trim();
+
+  // If it's already YYYY-MM-DD or YYYY-MM-DD HH:MM:SS or ISO
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 19).replace('T', ' ');
+    }
+    return str.slice(0, 19).replace('T', ' ');
+  }
+
+  // If it's DD/MM/YYYY or DD-MM-YYYY (e.g. 23/07/2026 or 01/01/2020)
+  if (str.includes('/') || str.includes('-')) {
+    const sep = str.includes('/') ? '/' : '-';
+    const firstPart = str.split(' ')[0];
+    const parts = firstPart.split(sep);
+    if (parts.length === 3) {
+      let [d, m, y] = parts;
+      if (d.length === 4) {
+        [y, m, d] = [d, m, y];
+      }
+      if (y && m && d) {
+        const yNum = Number(y);
+        const mNum = Number(m);
+        const dNum = Number(d);
+        if (!isNaN(yNum) && !isNaN(mNum) && !isNaN(dNum)) {
+          const yStr = String(yNum).padStart(4, '20');
+          const mStr = String(mNum).padStart(2, '0');
+          const dStr = String(dNum).padStart(2, '0');
+          return `${yStr}-${mStr}-${dStr} 00:00:00`;
+        }
+      }
+    }
+  }
+
+  const fallback = new Date(str);
+  if (!isNaN(fallback.getTime())) {
+    return fallback.toISOString().slice(0, 19).replace('T', ' ');
+  }
+
+  return new Date().toISOString().slice(0, 19).replace('T', ' ');
+};
+
 ipcMain.handle('db:importBackup', async (evt, backupData) => {
   try {
     let importedMenu = 0;
@@ -573,7 +624,7 @@ ipcMain.handle('db:importBackup', async (evt, backupData) => {
         const disc = Number(o.discountAmount || o.discount_amount || 0);
         const grand = Number(o.grandTotal || o.grand_total || o.total || subtotal);
         const mode = o.paymentMode || o.payment_mode || 'Cash';
-        const created = o.createdAt || o.created_at || o.orderDate || new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const created = formatDateTimeForDB(o.createdAt || o.created_at || o.orderDate);
 
         const res = await query(
           `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status, created_at)
@@ -581,7 +632,26 @@ ipcMain.handle('db:importBackup', async (evt, backupData) => {
            ON DUPLICATE KEY UPDATE grand_total = VALUES(grand_total)`,
           [orderNum, orderType, subtotal, tax, disc, grand, mode, created]
         );
-        if (res.success) importedOrders++;
+        if (res.success) {
+          importedOrders++;
+          const orderId = res.insertId;
+
+          // Insert order items if present in backup record
+          const itemsList = o.items || o.orderItems || o.order_items || [];
+          if (orderId && Array.isArray(itemsList) && itemsList.length > 0) {
+            for (const item of itemsList) {
+              const name = item.name || item.itemName || item.item_name || item.dishName || 'Item';
+              const qty = Number(item.quantity || item.qty || 1);
+              const uPrice = Number(item.unitPrice || item.price || item.unit_price || 0);
+              const tPrice = Number(item.totalPrice || item.total_price || (qty * uPrice));
+              await query(
+                `INSERT INTO order_items (order_id, dish_name, item_name, quantity, unit_price, total_price)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [orderId, name, name, qty, uPrice, tPrice]
+              );
+            }
+          }
+        }
       }
     }
 
@@ -590,7 +660,7 @@ ipcMain.handle('db:importBackup', async (evt, backupData) => {
         const cat = e.category || 'General';
         const desc = e.description || e.title || e.name || 'Imported Expense';
         const amt = Number(e.amount || 0);
-        const expDate = formatDateOnly(e.expenseDate || e.expense_date || new Date());
+        const expDate = formatDateTimeForDB(e.expenseDate || e.expense_date).slice(0, 10);
         const paidTo = e.paidTo || e.paid_to || '';
         const mode = e.paymentMode || e.payment_mode || e.paymentMethod || 'Cash';
 
@@ -607,6 +677,284 @@ ipcMain.handle('db:importBackup', async (evt, backupData) => {
       success: true,
       data: { importedOrders, importedExpenses, importedMenu },
       message: `Successfully imported financial records: ${importedOrders} Orders, ${importedExpenses} Expenses!`
+    };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:exportFullSystem', async () => {
+  try {
+    const categoriesRes = await query('SELECT * FROM categories ORDER BY id ASC');
+    const menuRes = await query('SELECT * FROM menu_items ORDER BY id ASC');
+    const ordersRes = await query('SELECT * FROM orders ORDER BY id ASC');
+    const orderItemsRes = await query('SELECT * FROM order_items ORDER BY id ASC');
+    const expensesRes = await query('SELECT * FROM expenses ORDER BY id ASC');
+    const tokensRes = await query('SELECT * FROM tokens ORDER BY id ASC');
+    const usersRes = await query('SELECT id, username, role, created_at FROM users ORDER BY id ASC');
+
+    let settings = {};
+    const settingsRes = await query('SELECT * FROM restaurant_details LIMIT 1');
+    if (settingsRes.success && settingsRes.data && settingsRes.data[0]) {
+      settings = settingsRes.data[0];
+    }
+
+    const fullBackup = {
+      systemInfo: {
+        application: 'Kish Mandhi Billing POS',
+        exportDate: new Date().toISOString(),
+        version: '2.0.0',
+        dataType: 'FULL_SYSTEM_MIGRATION_BACKUP'
+      },
+      restaurantDetails: settings,
+      categories: categoriesRes.data || [],
+      menuItems: menuRes.data || [],
+      orders: ordersRes.data || [],
+      orderItems: orderItemsRes.data || [],
+      expenses: expensesRes.data || [],
+      tokens: tokensRes.data || [],
+      users: usersRes.data || []
+    };
+
+    return { success: true, data: fullBackup };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:importFullSystem', async (evt, fullBackup) => {
+  try {
+    if (!fullBackup || typeof fullBackup !== 'object') {
+      return { success: false, message: 'Invalid backup file payload' };
+    }
+
+    let importedMenu = 0;
+    let importedOrders = 0;
+    let importedExpenses = 0;
+    let importedCategories = 0;
+    let settingsRestored = false;
+
+    // 1. Restore Restaurant Settings & Branding
+    const rDetails = fullBackup.restaurantDetails || fullBackup.restaurant_details;
+    if (rDetails && typeof rDetails === 'object') {
+      const companyName = rDetails.companyName || rDetails.company_name || 'Kish Mandhi';
+      const tagline = rDetails.tagline || '';
+      const ownerName = rDetails.ownerName || rDetails.owner_name || '';
+      const gstNumber = rDetails.gstNumber || rDetails.gst_number || rDetails.gst_no || '';
+      const fssaiNumber = rDetails.fssaiNumber || rDetails.fssai_number || rDetails.fssai_no || '';
+      const phone = rDetails.phone || '';
+      const email = rDetails.email || '';
+      const address = rDetails.address || '';
+      const taxRate = Number(rDetails.taxRate || rDetails.tax_rate || 5);
+      const currency = rDetails.currency || '₹';
+      const headerNote = rDetails.headerNote || rDetails.header_note || '';
+      const footerNote = rDetails.footerNote || rDetails.footer_note || rDetails.receipt_footer || '';
+      const logoUrl = rDetails.logoUrl || rDetails.logo_url || '';
+      const softwareIconUrl = rDetails.softwareIconUrl || rDetails.software_icon_url || '';
+
+      // Update window icon if provided
+      if (softwareIconUrl && mainWindow) {
+        try {
+          const img = nativeImage.createFromDataURL(softwareIconUrl);
+          if (!img.isEmpty()) mainWindow.setIcon(img);
+        } catch (e) {}
+      }
+
+      const colsRes = await query('SHOW COLUMNS FROM restaurant_details');
+      const cols = colsRes.success ? colsRes.data.map(c => c.Field.toLowerCase()) : [];
+      const checkRes = await query('SELECT id FROM restaurant_details ORDER BY id ASC LIMIT 1');
+
+      if (checkRes.success && checkRes.data && checkRes.data.length > 0) {
+        const existingId = checkRes.data[0].id;
+        const setClauses = [
+          'company_name = ?', 'tagline = ?', 'phone = ?', 'email = ?',
+          'address = ?', 'tax_rate = ?', 'currency = ?'
+        ];
+        const params = [companyName, tagline, phone, email, address, taxRate, currency];
+
+        if (cols.includes('owner_name')) { setClauses.push('owner_name = ?'); params.push(ownerName); }
+        if (cols.includes('gst_number')) { setClauses.push('gst_number = ?'); params.push(gstNumber); }
+        if (cols.includes('fssai_number')) { setClauses.push('fssai_number = ?'); params.push(fssaiNumber); }
+        if (cols.includes('header_note')) { setClauses.push('header_note = ?'); params.push(headerNote); }
+        if (cols.includes('footer_note')) { setClauses.push('footer_note = ?'); params.push(footerNote); }
+        if (cols.includes('logo_url')) { setClauses.push('logo_url = ?'); params.push(logoUrl); }
+        if (cols.includes('software_icon_url')) { setClauses.push('software_icon_url = ?'); params.push(softwareIconUrl); }
+
+        params.push(existingId);
+        await query(`UPDATE restaurant_details SET ${setClauses.join(', ')} WHERE id = ?`, params);
+      } else {
+        await query(
+          `INSERT INTO restaurant_details (company_name, tagline, phone, email, address, tax_rate, currency)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [companyName, tagline, phone, email, address, taxRate, currency]
+        );
+      }
+      settingsRestored = true;
+    }
+
+    // 2. Restore Categories
+    const categoriesList = fullBackup.categories || [];
+    if (Array.isArray(categoriesList)) {
+      for (const cat of categoriesList) {
+        const catName = cat.name || cat.label || 'Category';
+        const catId = Number(cat.id || 1);
+        await query(
+          `INSERT INTO categories (id, name) VALUES (?, ?)
+           ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+          [catId, catName]
+        );
+        importedCategories++;
+      }
+    }
+
+    // 3. Restore Menu Items
+    const menuList = fullBackup.menuItems || fullBackup.menu_items || [];
+    if (Array.isArray(menuList)) {
+      for (const item of menuList) {
+        const cId = Number(item.categoryId || item.category_id || 1);
+        const name = item.name || 'Dish Item';
+        const qPrice = Number(item.priceQuarter || item.price_quarter || 0);
+        const hPrice = Number(item.priceHalf || item.price_half || 0);
+        const fPrice = Number(item.priceFull || item.price_full || 0);
+        const avail = item.isAvailable !== undefined ? (item.isAvailable ? 1 : 0) : (item.is_available ?? 1);
+
+        if (item.id) {
+          await query(
+            `INSERT INTO menu_items (id, category_id, name, price_quarter, price_half, price_full, is_available)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               category_id = VALUES(category_id),
+               name = VALUES(name),
+               price_quarter = VALUES(price_quarter),
+               price_half = VALUES(price_half),
+               price_full = VALUES(price_full),
+               is_available = VALUES(is_available)`,
+            [Number(item.id), cId, name, qPrice, hPrice, fPrice, avail]
+          );
+        } else {
+          await query(
+            `INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [cId, name, qPrice, hPrice, fPrice, avail]
+          );
+        }
+        importedMenu++;
+      }
+    }
+
+    // 4. Restore Orders & Itemized Order Items
+    const ordersList = fullBackup.orders || [];
+    if (Array.isArray(ordersList)) {
+      for (const o of ordersList) {
+        const orderNum = o.orderNumber || o.order_number || `KMIV-IMP-${Date.now()}`;
+        const orderType = o.orderType || o.order_type || 'Dine-In';
+        const subtotal = Number(o.subtotal || o.grandTotal || o.total || 0);
+        const tax = Number(o.taxAmount || o.tax_amount || 0);
+        const disc = Number(o.discountAmount || o.discount_amount || 0);
+        const grand = Number(o.grandTotal || o.grand_total || o.total || subtotal);
+        const mode = o.paymentMode || o.payment_mode || 'Cash';
+        const created = formatDateTimeForDB(o.createdAt || o.created_at || o.orderDate);
+
+        let res;
+        if (o.id) {
+          res = await query(
+            `INSERT INTO orders (id, order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Completed', ?)
+             ON DUPLICATE KEY UPDATE
+               order_number = VALUES(order_number),
+               order_type = VALUES(order_type),
+               subtotal = VALUES(subtotal),
+               tax_amount = VALUES(tax_amount),
+               discount_amount = VALUES(discount_amount),
+               grand_total = VALUES(grand_total),
+               payment_mode = VALUES(payment_mode),
+               created_at = VALUES(created_at)`,
+            [Number(o.id), orderNum, orderType, subtotal, tax, disc, grand, mode, created]
+          );
+        } else {
+          res = await query(
+            `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'Completed', ?)
+             ON DUPLICATE KEY UPDATE
+               subtotal = VALUES(subtotal),
+               grand_total = VALUES(grand_total),
+               payment_mode = VALUES(payment_mode),
+               created_at = VALUES(created_at)`,
+            [orderNum, orderType, subtotal, tax, disc, grand, mode, created]
+          );
+        }
+
+        if (res.success) {
+          importedOrders++;
+          const orderId = o.id ? Number(o.id) : res.insertId;
+
+          const itemsList = o.items || o.orderItems || o.order_items || [];
+          if (orderId && Array.isArray(itemsList) && itemsList.length > 0) {
+            for (const item of itemsList) {
+              const name = item.name || item.itemName || item.item_name || item.dishName || 'Item';
+              const qty = Number(item.quantity || item.qty || 1);
+              const uPrice = Number(item.unitPrice || item.price || item.unit_price || 0);
+              const tPrice = Number(item.totalPrice || item.total_price || (qty * uPrice));
+              await query(
+                `INSERT INTO order_items (order_id, dish_name, item_name, quantity, unit_price, total_price)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [orderId, name, name, qty, uPrice, tPrice]
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Direct Order Items List
+    const directOrderItems = fullBackup.orderItems || fullBackup.order_items || [];
+    if (Array.isArray(directOrderItems) && directOrderItems.length > 0) {
+      for (const item of directOrderItems) {
+        const oId = Number(item.order_id || item.orderId);
+        const name = item.item_name || item.dish_name || item.name || item.itemName || 'Item';
+        const qty = Number(item.quantity || 1);
+        const uPrice = Number(item.unit_price || item.unitPrice || 0);
+        const tPrice = Number(item.total_price || item.totalPrice || (qty * uPrice));
+        if (oId) {
+          await query(
+            `INSERT INTO order_items (order_id, dish_name, item_name, quantity, unit_price, total_price)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [oId, name, name, qty, uPrice, tPrice]
+          );
+        }
+      }
+    }
+
+    // 5. Restore Expenses
+    const expensesList = fullBackup.expenses || [];
+    if (Array.isArray(expensesList)) {
+      for (const e of expensesList) {
+        const cat = e.category || 'General';
+        const desc = e.description || e.title || e.name || 'Imported Expense';
+        const amt = Number(e.amount || 0);
+        const expDate = formatDateTimeForDB(e.expenseDate || e.expense_date).slice(0, 10);
+        const paidTo = e.paidTo || e.paid_to || '';
+        const mode = e.paymentMode || e.payment_mode || e.paymentMethod || 'Cash';
+
+        const res = await query(
+          `INSERT INTO expenses (category, description, amount, expense_date, paid_to, payment_mode)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [cat, desc, amt, expDate, paidTo, mode]
+        );
+        if (res.success) importedExpenses++;
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        importedOrders,
+        importedExpenses,
+        importedMenu,
+        importedCategories,
+        settingsRestored
+      },
+      message: `Full system migration completed: ${importedOrders} Orders, ${importedMenu} Dishes, ${importedExpenses} Expenses!`
     };
   } catch (err) {
     return { success: false, message: err.message };

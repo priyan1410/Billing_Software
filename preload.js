@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearExpenses: () => ipcRenderer.invoke('db:clearExpenses'),
   resetDefaults: () => ipcRenderer.invoke('db:resetDefaults'),
   importBackup: (backupData) => ipcRenderer.invoke('db:importBackup', backupData),
+  exportFullSystem: () => ipcRenderer.invoke('db:exportFullSystem'),
+  importFullSystem: (fullBackupData) => ipcRenderer.invoke('db:importFullSystem', fullBackupData),
 
   // Thermal Receipt Printing
   printReceipt: (receiptHtml) => ipcRenderer.invoke('receipt:print', receiptHtml),

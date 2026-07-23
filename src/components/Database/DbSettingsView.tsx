@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Database, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp, Package } from 'lucide-react';
 import { Dish, Order, Expense } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 export const DbSettingsView: React.FC = () => {
@@ -14,6 +15,10 @@ export const DbSettingsView: React.FC = () => {
   const [testing, setTesting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Dish>>({});
+
+  // Full PC Migration & Backup State
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'working' | 'success' | 'error'>('idle');
+  const [migrationMsg, setMigrationMsg] = useState('');
 
   // MySQL Connection Settings State
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -263,6 +268,79 @@ export const DbSettingsView: React.FC = () => {
     }
   };
 
+  const handleExportFullSystem = async () => {
+    try {
+      if ((window as any).electronAPI?.exportFullSystem) {
+        const res = await (window as any).electronAPI.exportFullSystem();
+        if (res && res.success && res.data) {
+          const jsonStr = JSON.stringify(res.data, null, 2);
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `KishMandhi_Full_System_Backup_${new Date().toISOString().split('T')[0]}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          alert('✓ Full System Backup exported successfully! You can copy this file to another PC and import it.');
+        } else {
+          alert(res?.message || 'Full system export failed.');
+        }
+      } else {
+        alert('Full system export API unavailable in browser mode.');
+      }
+    } catch (err: any) {
+      alert('Error exporting full system: ' + err.message);
+    }
+  };
+
+  const handleImportFullSystemFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm('This will import 100% of all software data, restaurant branding, custom icons, dishes, orders, and expenses into your database. Proceed with full PC migration import?')) {
+      return;
+    }
+
+    setMigrationStatus('working');
+    setMigrationMsg(`Reading full system backup ${file.name}...`);
+
+    try {
+      const text = await file.text();
+      const backupObj = JSON.parse(text);
+
+      if (!backupObj || typeof backupObj !== 'object') {
+        setMigrationStatus('error');
+        setMigrationMsg('Invalid backup file. Please select a valid Kish Mandhi full system JSON backup file.');
+        return;
+      }
+
+      setMigrationMsg('Restoring restaurant branding, menu dishes, orders & expenses into database...');
+
+      if ((window as any).electronAPI?.importFullSystem) {
+        const res = await (window as any).electronAPI.importFullSystem(backupObj);
+        if (res && res.success) {
+          setMigrationStatus('success');
+          setMigrationMsg(`✓ ${res.message || 'Full system migration completed successfully!'}`);
+          useAuthStore.getState().loadRestaurantDetails();
+          await loadAllData();
+          setTimeout(() => setMigrationStatus('idle'), 6000);
+        } else {
+          setMigrationStatus('error');
+          setMigrationMsg(res?.message || 'Full system migration failed.');
+        }
+      } else {
+        setMigrationStatus('error');
+        setMigrationMsg('Database API unavailable in browser mode.');
+      }
+    } catch (err: any) {
+      console.error('Import full system error:', err);
+      setMigrationStatus('error');
+      setMigrationMsg(err.message || 'Error parsing full backup file.');
+    }
+  };
+
   const filteredMenuItems = menuItems.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredOrders = orders.filter(o => o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) || o.paymentMode.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredExpenses = expenses.filter(e => e.description.toLowerCase().includes(searchQuery.toLowerCase()) || e.category.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -313,6 +391,59 @@ export const DbSettingsView: React.FC = () => {
             </label>
           </div>
         </div>
+      </div>
+
+      {/* Full System PC Migration & Backup Card */}
+      <div className="bg-gradient-to-r from-amber-950/70 via-olive-900 to-amber-950/70 border border-gold-500/40 rounded-2xl p-5 shadow-xl">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-gold-400 shrink-0">
+              <Package className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold text-white tracking-wide">Full System Backup & PC Migration</h4>
+              <p className="text-xs text-olive-300 mt-0.5">
+                Export 100% of all data (branding, logo, icon, dishes, orders & expenses) from PC 1 and restore onto PC 2
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={handleExportFullSystem}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:scale-[1.02] transition-all"
+              title="Export complete database backup containing all settings, dishes, bills, and expenses"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Entire System Data</span>
+            </button>
+
+            <label className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-lg hover:scale-[1.02] transition-all cursor-pointer">
+              <Upload className="w-4 h-4" />
+              <span>Import & Migrate System Data</span>
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleImportFullSystemFileChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Migration Status Message */}
+        {migrationStatus !== 'idle' && (
+          <div className={`mt-4 p-3 rounded-xl text-xs font-bold flex items-center gap-2.5 ${
+            migrationStatus === 'working' ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300' :
+            migrationStatus === 'success' ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' :
+            'bg-rose-500/20 border border-rose-500/40 text-rose-300'
+          }`}>
+            {migrationStatus === 'working' && <RefreshCw className="w-4 h-4 animate-spin shrink-0" />}
+            {migrationStatus === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+            {migrationStatus === 'error' && <AlertTriangle className="w-4 h-4 shrink-0" />}
+            <span>{migrationMsg}</span>
+          </div>
+        )}
       </div>
 
       {/* Record Counter Tabs */}
@@ -475,12 +606,45 @@ export const DbSettingsView: React.FC = () => {
             <h4 className="text-sm font-bold text-gold-500 flex items-center gap-2">
               <Table className="w-4 h-4" /> Raw Table: `orders` (Completed Billing History)
             </h4>
-            <button
-              onClick={handleExportOrdersExcel}
-              className="text-xs text-emerald-400 hover:underline font-bold flex items-center gap-1"
-            >
-              <Download className="w-3.5 h-3.5" /> Download Excel Sheet
-            </button>
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-amber-300 hover:underline font-bold flex items-center gap-1 cursor-pointer">
+                <Upload className="w-3.5 h-3.5" /> Import Bills (.JSON/.CSV)
+                <input
+                  type="file"
+                  accept=".json,.csv"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const text = await file.text();
+                      let list: any[] = [];
+                      if (file.name.endsWith('.json')) {
+                        const parsed = JSON.parse(text);
+                        list = Array.isArray(parsed) ? parsed : (parsed.orders || parsed.bills || []);
+                      }
+                      if (list.length > 0 && (window as any).electronAPI?.importBackup) {
+                        const res = await (window as any).electronAPI.importBackup({ orders: list });
+                        if (res && res.success) {
+                          alert(`Imported ${list.length} bills successfully!`);
+                          window.location.reload();
+                        } else {
+                          alert(res?.message || 'Import failed.');
+                        }
+                      }
+                    } catch (err: any) {
+                      alert('Error reading bill file: ' + err.message);
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={handleExportOrdersExcel}
+                className="text-xs text-emerald-400 hover:underline font-bold flex items-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" /> Download Excel Sheet
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">

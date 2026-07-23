@@ -22,19 +22,25 @@ body {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: #0d130e;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(212, 175, 55, 0.25);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(212, 175, 55, 0.5);
 }
 
 /* Ensure text inputs are always selectable and editable even inside select-none containers */
-input, textarea, select, [contenteditable="true"] {
+input,
+textarea,
+select,
+[contenteditable="true"] {
   user-select: text !important;
   -webkit-user-select: text !important;
 }
@@ -45,8 +51,8 @@ input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 input[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
-

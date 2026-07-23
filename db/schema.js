@@ -117,6 +117,21 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB;
     `);
 
+    // Ensure item_name column exists for backwards compatibility
+    const orderItemsCols = await query(`
+      SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'order_items'
+    `);
+    if (orderItemsCols.success) {
+      const existingOICols = orderItemsCols.data.map(r => r.COLUMN_NAME.toLowerCase());
+      if (!existingOICols.includes('item_name')) {
+        await query("ALTER TABLE order_items ADD COLUMN item_name VARCHAR(200) DEFAULT '' AFTER order_id").catch(() => {});
+      }
+      if (!existingOICols.includes('dish_name')) {
+        await query("ALTER TABLE order_items ADD COLUMN dish_name VARCHAR(200) DEFAULT '' AFTER order_id").catch(() => {});
+      }
+    }
+
 
     await query(`
       CREATE TABLE IF NOT EXISTS expenses (
