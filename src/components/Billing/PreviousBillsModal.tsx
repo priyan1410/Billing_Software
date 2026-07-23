@@ -7,7 +7,7 @@ import {
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePosStore } from '../../store/usePosStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
-import { formatPosInvoiceHtml, formatPosTokenHtml } from '../../utils/posFormatter';
+import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
 
 interface PreviousBillsModalProps {
   onClose: () => void;
@@ -274,9 +274,8 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
       const billNumber = selectedOrder.orderNumber || `KMIV-001`;
       const tokenNumber = selectedOrder.tokenNumber || `KMKOT001`;
 
-      let html = '';
       if (isKot) {
-        html = formatPosTokenHtml(
+        const tokenHtml = formatPosTokenHtml(
           {
             tokenNumber: tokenNumber,
             orderType: selectedOrder.orderType || 'Dine-In',
@@ -287,11 +286,16 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
           },
           restaurantDetails
         );
+        if ((window as any).electronAPI?.printReceipt) {
+          await (window as any).electronAPI.printReceipt(tokenHtml);
+        } else {
+          const w = window.open('', '_blank', 'width=400,height=700');
+          if (w) { w.document.write(tokenHtml); w.print(); }
+        }
       } else {
         const invoiceHtml = formatPosInvoiceHtml(
           {
             orderNumber: billNumber,
-            tokenNumber: tokenNumber,
             orderType: selectedOrder.orderType || 'Dine-In',
             paymentMode: selectedOrder.paymentMode || 'Cash',
             items: orderItems || [],
@@ -307,6 +311,15 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
           restaurantDetails
         );
 
+        // Action 1: Print Bill
+        if ((window as any).electronAPI?.printReceipt) {
+          await (window as any).electronAPI.printReceipt(invoiceHtml);
+        } else {
+          const w = window.open('', '_blank', 'width=400,height=700');
+          if (w) { w.document.write(invoiceHtml); w.print(); }
+        }
+
+        // Action 2: Print Token (Separate Job)
         if (showTokenTicket) {
           const tokenHtml = formatPosTokenHtml(
             {
@@ -319,17 +332,14 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
             },
             restaurantDetails
           );
-          html = invoiceHtml.replace('</pre>', '\n\n' + tokenHtml.replace(/[\s\S]*?<pre class="pos-receipt">/, ''));
-        } else {
-          html = invoiceHtml;
+          await new Promise((resolve) => setTimeout(resolve, 350));
+          if ((window as any).electronAPI?.printReceipt) {
+            await (window as any).electronAPI.printReceipt(tokenHtml);
+          } else {
+            const w = window.open('', '_blank', 'width=400,height=700');
+            if (w) { w.document.write(tokenHtml); w.print(); }
+          }
         }
-      }
-
-      if ((window as any).electronAPI?.printReceipt) {
-        await (window as any).electronAPI.printReceipt(html);
-      } else {
-        const w = window.open('', '_blank', 'width=400,height=700');
-        if (w) { w.document.write(html); w.print(); }
       }
     } catch (err: any) {
       alert('Error printing bill: ' + err.message);

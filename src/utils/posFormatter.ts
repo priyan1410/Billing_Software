@@ -47,9 +47,9 @@ export function wrapText(text: string, maxWidth: number): string[] {
 }
 
 /**
- * Formats a Kitchen Order Token (KOT) into POS Text format wrapped in HTML.
+ * Returns plain text string for Kitchen Order Token (KOT).
  */
-export function formatPosTokenHtml(
+export function getPosTokenTextBody(
   data: {
     tokenNumber: string | number;
     orderType: string;
@@ -107,46 +107,16 @@ export function formatPosTokenHtml(
   lines.push(divider('-', width));
   lines.push(centerLine('*** NON-BILLING KITCHEN SLIP ***', width));
   lines.push(divider('=', width));
+  // 5 feed lines at bottom for physical cutter clearance
+  lines.push('\n\n\n\n\n');
 
-  const textBody = lines.join('\n');
-
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    @page { size: 80mm auto; margin: 0; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #fff;
-      color: #000;
-      font-family: 'Courier New', Courier, monospace;
-      -webkit-print-color-adjust: exact;
-    }
-    .pos-receipt {
-      margin: 0;
-      padding: 4px 0px 4px 14px;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 12.5px;
-      line-height: 1.25;
-      font-weight: 700;
-      letter-spacing: 0px;
-      white-space: pre;
-      color: #000;
-    }
-  </style>
-</head>
-<body>
-  <pre class="pos-receipt">${textBody}</pre>
-</body>
-</html>`;
+  return lines.join('\n');
 }
 
 /**
- * Formats a Tax Invoice Bill into POS Text format wrapped in HTML.
+ * Returns plain text string for Tax Invoice.
  */
-export function formatPosInvoiceHtml(
+export function getPosInvoiceTextBody(
   data: {
     orderNumber?: string;
     tokenNumber?: string | number;
@@ -170,13 +140,12 @@ export function formatPosInvoiceHtml(
   const rTagline = restaurantDetails?.tagline || 'Arabic Grill & Fine Dining';
   const rAddr = restaurantDetails?.address || '';
   const rPhone = restaurantDetails?.phone || '';
-  const gstVal = restaurantDetails?.gstNo || '';
-  const fssaiVal = restaurantDetails?.fssaiNo || '';
+  const rawGst = String(restaurantDetails?.gstNumber || restaurantDetails?.gstNo || '').trim();
+  const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
+  const rawFssai = String(restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo || '').trim();
+  const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
 
   const billNo = data.orderNumber || 'KMIV-001';
-  const tokenNo = data.tokenNumber
-    ? (String(data.tokenNumber).startsWith('KMKOT') ? String(data.tokenNumber) : `KMKOT${String(data.tokenNumber).padStart(3, '0')}`)
-    : '';
 
   const now = data.createdAt ? new Date(data.createdAt) : new Date();
   const dateStr = !isNaN(now.getTime())
@@ -194,7 +163,7 @@ export function formatPosInvoiceHtml(
   if (rAddr) wrapText(rAddr, width).forEach((l) => lines.push(centerLine(l, width)));
   if (rPhone) lines.push(centerLine(`Ph: ${rPhone}`, width));
 
-  if (gstVal) lines.push(centerLine(`GST: ${gstVal}`, width));
+  if (gstVal) lines.push(centerLine(`GSTIN: ${gstVal}`, width));
   if (fssaiVal) lines.push(centerLine(`FSSAI: ${fssaiVal}`, width));
 
   lines.push(divider('-', width));
@@ -202,19 +171,21 @@ export function formatPosInvoiceHtml(
   lines.push(divider('-', width));
 
   lines.push(`Bill No : ${billNo}`);
-  if (tokenNo) lines.push(`Token   : ${tokenNo}`);
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
   lines.push(padLine(`Type: ${data.orderType || 'Dine-In'}`, `Pay: ${data.paymentMode || 'Cash'}`, width));
 
-  if (data.customerName || data.customerPhone) {
+  const custName = String(data.customerName || '').trim();
+  const isWalkIn = !custName || /^walk[-_\s]*in$/i.test(custName);
+  const custPhone = String(data.customerPhone || '').trim();
+
+  if (!isWalkIn || custPhone) {
     lines.push(divider('-', width));
-    if (data.customerName) lines.push(`Cust : ${data.customerName}`);
-    if (data.customerPhone) lines.push(`Phone: ${data.customerPhone}`);
+    if (!isWalkIn) lines.push(`Cust : ${custName}`);
+    if (custPhone) lines.push(`Phone: ${custPhone}`);
   }
 
   lines.push(divider('-', width));
   // Column header for 32 columns width: ITEM (14), QTY (3), RATE (6), AMOUNT (6)
-  // 14 + 1 + 3 + 1 + 6 + 1 + 6 = 32
   lines.push('ITEM           QTY   RATE AMOUNT');
   lines.push(divider('-', width));
 
@@ -260,8 +231,24 @@ export function formatPosInvoiceHtml(
     wrapText(restaurantDetails.footerNote, width).forEach((l) => lines.push(centerLine(l, width)));
   }
   lines.push(divider('=', width));
+  // 5 feed lines at bottom for physical cutter clearance
+  lines.push('\n\n\n\n\n');
 
-  const textBody = lines.join('\n');
+  return lines.join('\n');
+}
+
+/**
+ * Combines one or multiple plain text slip bodies into a multi-page HTML document.
+ */
+export function combinePosSlips(slipsText: string[]): string {
+  const pagesHtml = slipsText
+    .map(
+      (textBody) => `
+    <div class="receipt-page">
+      <pre class="pos-receipt">${textBody}</pre>
+    </div>`
+    )
+    .join('');
 
   return `<!doctype html>
 <html>
@@ -277,6 +264,13 @@ export function formatPosInvoiceHtml(
       font-family: 'Courier New', Courier, monospace;
       -webkit-print-color-adjust: exact;
     }
+    .receipt-page {
+      page-break-after: always !important;
+      break-after: page !important;
+      display: block;
+      margin: 0;
+      padding: 0;
+    }
     .pos-receipt {
       margin: 0;
       padding: 4px 0px 4px 14px;
@@ -291,7 +285,23 @@ export function formatPosInvoiceHtml(
   </style>
 </head>
 <body>
-  <pre class="pos-receipt">${textBody}</pre>
+  ${pagesHtml}
 </body>
 </html>`;
+}
+
+/**
+ * Formats a Kitchen Order Token (KOT) into POS Text format wrapped in HTML.
+ */
+export function formatPosTokenHtml(data: any, restaurantDetails?: any, width = 32): string {
+  const body = getPosTokenTextBody(data, restaurantDetails, width);
+  return combinePosSlips([body]);
+}
+
+/**
+ * Formats a Tax Invoice Bill into POS Text format wrapped in HTML.
+ */
+export function formatPosInvoiceHtml(data: any, restaurantDetails?: any, width = 32): string {
+  const body = getPosInvoiceTextBody(data, restaurantDetails, width);
+  return combinePosSlips([body]);
 }

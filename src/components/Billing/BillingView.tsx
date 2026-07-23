@@ -7,7 +7,7 @@ import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderPayload, PortionVariant } from '../../types';
-import { formatPosInvoiceHtml, formatPosTokenHtml } from '../../utils/posFormatter';
+import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n: number, curr = '₹') =>
@@ -522,9 +522,8 @@ export const BillingView: React.FC = () => {
       ? (String(data.tokenNumber).startsWith('KMKOT') ? String(data.tokenNumber) : `KMKOT${String(data.tokenNumber).padStart(3, '0')}`)
       : `KMKOT001`;
 
-    let html = '';
     if (isKot) {
-      html = formatPosTokenHtml(
+      const tokenHtml = formatPosTokenHtml(
         {
           tokenNumber: tokenNumber,
           orderType: data.orderType || 'Dine-In',
@@ -535,18 +534,32 @@ export const BillingView: React.FC = () => {
         },
         rd
       );
+      if ((window as any).electronAPI) {
+        await (window as any).electronAPI.printReceipt(tokenHtml);
+      } else {
+        const w = window.open('', '_blank', 'width=400,height=700');
+        if (w) { w.document.write(tokenHtml); w.print(); }
+      }
     } else {
       const invoiceHtml = formatPosInvoiceHtml(
         {
           ...data,
           orderNumber: billNumber,
-          tokenNumber: tokenNumber,
           orderDate: formattedDate,
           createdAt: new Date().toISOString()
         },
         rd
       );
 
+      // Print Action 1: Tax Invoice Bill
+      if ((window as any).electronAPI) {
+        await (window as any).electronAPI.printReceipt(invoiceHtml);
+      } else {
+        const w = window.open('', '_blank', 'width=400,height=700');
+        if (w) { w.document.write(invoiceHtml); w.print(); }
+      }
+
+      // Print Action 2: Token Slip (Separate Job & Separate Auto-Cut)
       if (rd?.printWithToken !== false) {
         const tokenHtml = formatPosTokenHtml(
           {
@@ -559,18 +572,14 @@ export const BillingView: React.FC = () => {
           },
           rd
         );
-        // Combine invoice + token slips
-        html = invoiceHtml.replace('</pre>', '\n\n' + tokenHtml.replace(/[\s\S]*?<pre class="pos-receipt">/, ''));
-      } else {
-        html = invoiceHtml;
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        if ((window as any).electronAPI) {
+          await (window as any).electronAPI.printReceipt(tokenHtml);
+        } else {
+          const w = window.open('', '_blank', 'width=400,height=700');
+          if (w) { w.document.write(tokenHtml); w.print(); }
+        }
       }
-    }
-
-    if ((window as any).electronAPI) {
-      await (window as any).electronAPI.printReceipt(html);
-    } else {
-      const w = window.open('', '_blank', 'width=400,height=700');
-      if (w) { w.document.write(html); w.print(); }
     }
   };
 
