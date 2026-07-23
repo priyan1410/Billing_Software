@@ -142,6 +142,7 @@ export interface RestaurantDetails {
   printShowTaxBreakdown?: boolean;
   printShowRoundOff?: boolean;
   printShowFooterNote?: boolean;
+  printWithToken?: boolean;
 }
 
 

@@ -1253,7 +1253,8 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
       printShowTime: data.printShowTime ?? true,
       printShowTaxBreakdown: data.printShowTaxBreakdown ?? true,
       printShowRoundOff: data.printShowRoundOff ?? true,
-      printShowFooterNote: data.printShowFooterNote ?? true
+      printShowFooterNote: data.printShowFooterNote ?? true,
+      printWithToken: data.printWithToken ?? true
     };
 
     if (data.softwareIconUrl && mainWindow) {

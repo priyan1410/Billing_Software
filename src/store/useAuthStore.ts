@@ -24,7 +24,8 @@ export const defaultRestaurant: RestaurantDetails = {
   printShowTime: true,
   printShowTaxBreakdown: true,
   printShowRoundOff: true,
-  printShowFooterNote: true
+  printShowFooterNote: true,
+  printWithToken: true
 };
 
 export const syncAppIcon = (iconUrl?: string) => {

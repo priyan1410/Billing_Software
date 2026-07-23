@@ -38,6 +38,11 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
   const [showGst, setShowGst] = useState(restaurantDetails?.printShowGst ?? true);
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(restaurantDetails?.printShowTaxBreakdown ?? true);
   const [showFooterNote, setShowFooterNote] = useState(restaurantDetails?.printShowFooterNote ?? true);
+  const [showTokenTicket, setShowTokenTicket] = useState(restaurantDetails?.printWithToken ?? true);
+
+  useEffect(() => {
+    setShowTokenTicket(restaurantDetails?.printWithToken ?? true);
+  }, [restaurantDetails?.printWithToken]);
 
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 5;
@@ -280,10 +285,43 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
           .col-qty { width: 35px; text-align: center; }
           .col-rate { width: 55px; text-align: right; }
           .col-amt { width: 65px; text-align: right; }
+          .page-break { page-break-after: always; break-after: page; height: 0; display: block; clear: both; }
         </style>
       `;
 
       const billNumber = selectedOrder.orderNumber || `KMIV-001`;
+      const tokenNumber = selectedOrder.tokenNumber || `KMKOT001`;
+
+      const tokenSlipHtml = `
+        <div class="page-break"></div>
+        <div class="receipt">
+          <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
+          <div class="center bold" style="font-size: 11px; letter-spacing: 1px; margin-top: 2px;">*** TOKEN / TICKET SLIP ***</div>
+          <div class="divider"></div>
+          <div style="font-size: 10.5px; margin: 4px 0;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>Token No &nbsp;: <strong style="font-size: 14px;">#${tokenNumber}</strong></span>
+              <span>Date: ${printDateStr}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Bill No &nbsp;&nbsp;&nbsp;: ${billNumber}</span>
+              <span>Type: ${selectedOrder.orderType || 'Dine-In'}</span>
+            </div>
+            <div>Time &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${printTimeStr}</div>
+          </div>
+          <div class="divider"></div>
+          <div class="row table-header" style="font-size: 10.5px;">
+            <span class="col-item">ITEM DESCRIPTION</span>
+            <span class="col-qty">QTY</span>
+          </div>
+          ${(orderItems || []).map((i: any) => {
+            const label = `${i.name || i.dishName}${i.variant ? ` (${i.variant})` : ''}`;
+            return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span></div>`;
+          }).join('')}
+          <div class="divider"></div>
+          <div class="center bold" style="font-size: 10px; margin-top: 6px;">*** END OF TOKEN ***</div>
+        </div>
+      `;
 
       const html = isKot
         ? `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
@@ -368,7 +406,9 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
                 ${restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
               </div>
             </div>` : ''}
-          </div></body></html>`;
+          </div>
+          ${showTokenTicket ? tokenSlipHtml : ''}
+          </body></html>`;
 
       if ((window as any).electronAPI?.printReceipt) {
         await (window as any).electronAPI.printReceipt(html);
@@ -644,6 +684,10 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
                       <label className="flex items-center gap-1.5 cursor-pointer">
                         <input type="checkbox" checked={showFooterNote} onChange={(e) => setShowFooterNote(e.target.checked)} className="accent-gold-500" />
                         Footer Note
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer text-gold-400 font-semibold col-span-2">
+                        <input type="checkbox" checked={showTokenTicket} onChange={(e) => setShowTokenTicket(e.target.checked)} className="accent-gold-500" />
+                        With Separate Token Ticket (Auto-Cut)
                       </label>
                     </div>
                   </div>

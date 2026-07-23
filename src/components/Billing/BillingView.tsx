@@ -514,6 +514,7 @@ export const BillingView: React.FC = () => {
     const printShowTaxBreakdown = rd?.printShowTaxBreakdown ?? true;
     const printShowRoundOff = rd?.printShowRoundOff ?? true;
     const printShowFooterNote = rd?.printShowFooterNote ?? true;
+    const printWithToken = rd?.printWithToken ?? true;
 
     const receiptStyles = `
       <style>
@@ -530,6 +531,7 @@ export const BillingView: React.FC = () => {
         .col-qty { width: 35px; text-align: center; }
         .col-rate { width: 55px; text-align: right; }
         .col-amt { width: 65px; text-align: right; }
+        .page-break { page-break-after: always; break-after: page; height: 0; display: block; clear: both; }
       </style>
     `;
 
@@ -539,6 +541,37 @@ export const BillingView: React.FC = () => {
       : `KMKOT001`;
     const taxableAmount = Math.max(0, data.subtotal - (data.discount || 0));
     const rounding = data.roundOff ?? 0;
+
+    const tokenSlipHtml = `
+      <div class="page-break"></div>
+      <div class="receipt">
+        <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
+        <div class="center bold" style="font-size: 11px; letter-spacing: 1px; margin-top: 2px;">*** TOKEN / TICKET SLIP ***</div>
+        <div class="divider"></div>
+        <div style="font-size: 10.5px; margin: 4px 0;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Token No &nbsp;: <strong style="font-size: 14px;">#${tokenNumber}</strong></span>
+            <span>Date: ${formattedDate}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Bill No &nbsp;&nbsp;&nbsp;: ${billNumber}</span>
+            <span>Type: ${data.orderType || 'Dine-In'}</span>
+          </div>
+          ${printShowTime ? `<div>Time &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${formattedTime}</div>` : ''}
+        </div>
+        <div class="divider"></div>
+        <div class="row table-header" style="font-size: 10.5px;">
+          <span class="col-item">ITEM DESCRIPTION</span>
+          <span class="col-qty">QTY</span>
+        </div>
+        ${(data.items || []).map((i: any) => {
+          const label = `${i.name}${i.variant ? ` (${i.variant})` : ''}`;
+          return `<div class="row" style="font-size: 10.5px;"><span class="col-item">${label}</span><span class="col-qty">${i.quantity || 1}</span></div>`;
+        }).join('')}
+        <div class="divider"></div>
+        <div class="center bold" style="font-size: 10px; margin-top: 6px;">*** END OF TOKEN ***</div>
+      </div>
+    `;
 
     const html = isKot
       ? `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
@@ -635,7 +668,9 @@ export const BillingView: React.FC = () => {
               ${rd?.footerNote || 'Goods once sold cannot be returned.'}
             </div>
           </div>` : ''}
-        </div></body></html>`;
+        </div>
+        ${printWithToken ? tokenSlipHtml : ''}
+        </body></html>`;
     if ((window as any).electronAPI) {
       await (window as any).electronAPI.printReceipt(html);
     } else {
