@@ -17,15 +17,17 @@ export const Header: React.FC = () => {
   useEffect(() => {
     const update = () => {
       const now = new Date();
-      setClock(now.toLocaleDateString('en-US', {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }));
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      const hoursStr = String(hours).padStart(2, '0');
+
+      setClock(`${day}/${month}/${year}, ${hoursStr}:${minutes}:${seconds} ${ampm}`);
     };
     update();
     const interval = setInterval(update, 1000);

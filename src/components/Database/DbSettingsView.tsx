@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Database, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Dish, Order, Expense } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 export const DbSettingsView: React.FC = () => {
   const { isDbConnected, dbErrorMessage, checkDbStatus } = useAppStore();
@@ -550,7 +551,7 @@ export const DbSettingsView: React.FC = () => {
                     <td className="py-3 px-3 text-olive-300">{exp.description}</td>
                     <td className="py-3 px-3 font-bold text-rose-400">₹{Number(exp.amount || 0).toFixed(2)}</td>
                     <td className="py-3 px-3 font-mono text-olive-300">
-                      {typeof exp.expenseDate === 'string' ? exp.expenseDate : exp.expenseDate ? new Date(exp.expenseDate).toISOString().split('T')[0] : '-'}
+                      {formatDateDDMMYYYY(exp.expenseDate || (exp as any).expense_date)}
                     </td>
                     <td className="py-3 px-3 text-right">
                       <button onClick={() => handleDeleteExpense(exp.id)} className="p-1.5 bg-olive-800 text-rose-400 border border-rose-500/30 rounded hover:bg-rose-600 hover:text-white transition-colors">

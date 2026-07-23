@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer, Receipt, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 interface BillDetailModalProps {
   order: any;
@@ -26,8 +27,8 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
 
   const rawDate = order.createdAt || order.created_at || order.orderDate || new Date().toISOString();
   const orderDateObj = new Date(rawDate);
-  const formattedDate = orderDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const formattedTime = orderDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formattedDate = formatDateDDMMYYYY(rawDate);
+  const formattedTime = !isNaN(orderDateObj.getTime()) ? orderDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
   useEffect(() => {
     fetchItems();

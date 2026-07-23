@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePosStore } from '../../store/usePosStore';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 interface PreviousBillsModalProps {
   onClose: () => void;
@@ -361,7 +362,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
               ) : (
                 filteredOrders.map((order) => {
                   const isSelected = selectedOrder?.id === order.id;
-                  const dateStr = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '';
+                  const dateStr = formatDateDDMMYYYY(order.createdAt);
                   const timeStr = order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                   return (
                     <div

@@ -550,16 +550,64 @@ ipcMain.handle('db:getTableData', async (evt, tableName) => {
 
 ipcMain.handle('db:importBackup', async (evt, backupData) => {
   try {
+    let importedMenu = 0;
+    let importedOrders = 0;
+    let importedExpenses = 0;
+
     if (backupData.menuItems && Array.isArray(backupData.menuItems)) {
-      await query('DELETE FROM menu_items');
       for (const item of backupData.menuItems) {
         await query(
-          'INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available) VALUES (?, ?, ?, ?, ?, ?)',
-          [item.categoryId || item.category_id, item.name, item.priceQuarter || 0, item.priceHalf || 0, item.priceFull || 0, 1]
+          'INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available) VALUES (?, ?, ?, ?, ?, 1)',
+          [item.categoryId || item.category_id || 1, item.name, item.priceQuarter || 0, item.priceHalf || 0, item.priceFull || 0]
         );
+        importedMenu++;
       }
     }
-    return { success: true };
+
+    if (backupData.orders && Array.isArray(backupData.orders)) {
+      for (const o of backupData.orders) {
+        const orderNum = o.orderNumber || o.order_number || `KMIV-IMP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const orderType = o.orderType || o.order_type || 'Dine-In';
+        const subtotal = Number(o.subtotal || o.grandTotal || o.total || 0);
+        const tax = Number(o.taxAmount || o.tax_amount || 0);
+        const disc = Number(o.discountAmount || o.discount_amount || 0);
+        const grand = Number(o.grandTotal || o.grand_total || o.total || subtotal);
+        const mode = o.paymentMode || o.payment_mode || 'Cash';
+        const created = o.createdAt || o.created_at || o.orderDate || new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+        const res = await query(
+          `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'Completed', ?)
+           ON DUPLICATE KEY UPDATE grand_total = VALUES(grand_total)`,
+          [orderNum, orderType, subtotal, tax, disc, grand, mode, created]
+        );
+        if (res.success) importedOrders++;
+      }
+    }
+
+    if (backupData.expenses && Array.isArray(backupData.expenses)) {
+      for (const e of backupData.expenses) {
+        const cat = e.category || 'General';
+        const desc = e.description || e.title || e.name || 'Imported Expense';
+        const amt = Number(e.amount || 0);
+        const expDate = formatDateOnly(e.expenseDate || e.expense_date || new Date());
+        const paidTo = e.paidTo || e.paid_to || '';
+        const mode = e.paymentMode || e.payment_mode || e.paymentMethod || 'Cash';
+
+        const res = await query(
+          `INSERT INTO expenses (category, description, amount, expense_date, paid_to, payment_mode)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [cat, desc, amt, expDate, paidTo, mode]
+        );
+        if (res.success) importedExpenses++;
+      }
+    }
+
+    return {
+      success: true,
+      data: { importedOrders, importedExpenses, importedMenu },
+      message: `Successfully imported financial records: ${importedOrders} Orders, ${importedExpenses} Expenses!`
+    };
   } catch (err) {
     return { success: false, message: err.message };
   }

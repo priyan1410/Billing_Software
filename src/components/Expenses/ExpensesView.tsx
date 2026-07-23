@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, Trash2 } from 'lucide-react';
 import { Expense } from '../../types';
+import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 
 const getTodayString = () => {
   const d = new Date();
@@ -242,9 +243,7 @@ export const ExpensesView: React.FC = () => {
                   <td className="p-3 font-semibold text-white">{exp.description}</td>
                   <td className="p-3 text-olive-300">{exp.paidTo || '-'}</td>
                   <td className="p-3 text-olive-300">
-                    {exp.expenseDate || (exp as any).expense_date
-                      ? String(exp.expenseDate || (exp as any).expense_date).split('T')[0].split(' ')[0]
-                      : '-'}
+                    {formatDateDDMMYYYY(exp.expenseDate || (exp as any).expense_date)}
                   </td>
                   <td className="p-3 font-bold text-rose-400">₹{Number(exp.amount).toFixed(2)}</td>
                   <td className="p-3">
