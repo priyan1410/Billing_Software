@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { query, testConnection, saveConfig, loadConfig, dbConfig } = require('./db/connection');
@@ -798,6 +798,20 @@ ipcMain.handle('auth:login', async (evt, payload) => {
   }
 });
 
+ipcMain.handle('app:updateWindowIcon', async (evt, dataUrl) => {
+  try {
+    if (!mainWindow || !dataUrl) return { success: false };
+    const img = nativeImage.createFromDataURL(dataUrl);
+    if (!img.isEmpty()) {
+      mainWindow.setIcon(img);
+      return { success: true };
+    }
+  } catch (err) {
+    console.error('Failed to set window icon:', err);
+  }
+  return { success: false };
+});
+
 ipcMain.handle('restaurant:getDetails', async () => {
   try {
     const res = await query('SELECT * FROM restaurant_details ORDER BY id ASC LIMIT 1');
@@ -822,6 +836,8 @@ ipcMain.handle('restaurant:getDetails', async () => {
         currency: r.currency || '₹',
         headerNote: r.header_note || '',
         footerNote: r.footer_note || r.receipt_footer || '',
+        logoUrl: r.logo_url || '',
+        softwareIconUrl: r.software_icon_url || '',
         ...parsedPrintConfig
       }
     };
@@ -843,6 +859,17 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
       printShowRoundOff: data.printShowRoundOff ?? true,
       printShowFooterNote: data.printShowFooterNote ?? true
     };
+
+    if (data.softwareIconUrl && mainWindow) {
+      try {
+        const img = nativeImage.createFromDataURL(data.softwareIconUrl);
+        if (!img.isEmpty()) {
+          mainWindow.setIcon(img);
+        }
+      } catch (err) {
+        console.error('Failed to update window icon:', err);
+      }
+    }
 
     const colsRes = await query('SHOW COLUMNS FROM restaurant_details');
     const cols = colsRes.success ? colsRes.data.map(c => c.Field.toLowerCase()) : [];
@@ -878,6 +905,8 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
       if (cols.includes('header_note')) { setClauses.push('header_note = ?'); params.push(data.headerNote || ''); }
       if (cols.includes('footer_note')) { setClauses.push('footer_note = ?'); params.push(data.footerNote || ''); }
       if (cols.includes('receipt_footer')) { setClauses.push('receipt_footer = ?'); params.push(data.footerNote || ''); }
+      if (cols.includes('logo_url')) { setClauses.push('logo_url = ?'); params.push(data.logoUrl || ''); }
+      if (cols.includes('software_icon_url')) { setClauses.push('software_icon_url = ?'); params.push(data.softwareIconUrl || ''); }
       if (cols.includes('print_config')) { setClauses.push('print_config = ?'); params.push(JSON.stringify(printConfigObj)); }
 
       params.push(existingId);
@@ -905,6 +934,8 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
       if (cols.includes('header_note')) { insertFields.push('header_note'); placeholders.push('?'); params.push(data.headerNote || ''); }
       if (cols.includes('footer_note')) { insertFields.push('footer_note'); placeholders.push('?'); params.push(data.footerNote || ''); }
       if (cols.includes('receipt_footer')) { insertFields.push('receipt_footer'); placeholders.push('?'); params.push(data.footerNote || ''); }
+      if (cols.includes('logo_url')) { insertFields.push('logo_url'); placeholders.push('?'); params.push(data.logoUrl || ''); }
+      if (cols.includes('software_icon_url')) { insertFields.push('software_icon_url'); placeholders.push('?'); params.push(data.softwareIconUrl || ''); }
       if (cols.includes('print_config')) { insertFields.push('print_config'); placeholders.push('?'); params.push(JSON.stringify(printConfigObj)); }
 
       const res = await query(`INSERT INTO restaurant_details (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')})`, params);

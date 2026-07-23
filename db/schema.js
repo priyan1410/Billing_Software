@@ -205,6 +205,8 @@ async function initializeDatabase() {
         currency VARCHAR(10) DEFAULT '₹',
         header_note TEXT,
         footer_note TEXT,
+        logo_url LONGTEXT,
+        software_icon_url LONGTEXT,
         print_config TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
@@ -227,6 +229,12 @@ async function initializeDatabase() {
       }
       if (!existingRestCols.includes('footer_note')) {
         await query(`ALTER TABLE restaurant_details ADD COLUMN footer_note TEXT`);
+      }
+      if (!existingRestCols.includes('logo_url')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN logo_url LONGTEXT`);
+      }
+      if (!existingRestCols.includes('software_icon_url')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN software_icon_url LONGTEXT`);
       }
       if (!existingRestCols.includes('print_config')) {
         await query(`ALTER TABLE restaurant_details ADD COLUMN print_config TEXT`);

@@ -73,7 +73,7 @@ const InputField: React.FC<{
 );
 
 export const AuthModal: React.FC = () => {
-  const { login, register, isLoading, error, clearError, hasExistingUsers } = useAuthStore();
+  const { login, register, isLoading, error, clearError, hasExistingUsers, restaurantDetails } = useAuthStore();
   const [mode, setMode] = useState<AuthMode>(() => hasExistingUsers ? 'login' : 'register');
   const [regStep, setRegStep] = useState<RegStep>('account');
   const [showPwd, setShowPwd] = useState(false);
@@ -178,11 +178,15 @@ export const AuthModal: React.FC = () => {
 
           {/* Header */}
           <div className="flex flex-col items-center pt-10 pb-6 px-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-700 rounded-2xl flex items-center justify-center shadow-xl shadow-amber-500/30 mb-4">
-              <Crown className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-700 rounded-2xl flex items-center justify-center shadow-xl shadow-amber-500/30 mb-4 overflow-hidden">
+              {restaurantDetails?.logoUrl || restaurantDetails?.softwareIconUrl ? (
+                <img src={restaurantDetails.logoUrl || restaurantDetails.softwareIconUrl} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <Crown className="w-8 h-8 text-white" />
+              )}
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-wide">KISH MANDHI</h1>
-            <p className="text-amber-400/60 text-xs tracking-widest uppercase mt-1">Arabic Grill & Dining · POS System</p>
+            <h1 className="text-2xl font-bold text-white tracking-wide uppercase">{restaurantDetails?.companyName || 'KISH MANDHI'}</h1>
+            <p className="text-amber-400/60 text-xs tracking-widest uppercase mt-1">{restaurantDetails?.tagline || 'Arabic Grill & Dining · POS System'}</p>
           </div>
 
           {/* First-Time Setup Banner */}

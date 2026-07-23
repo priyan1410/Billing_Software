@@ -50,5 +50,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   hasUsers: () => ipcRenderer.invoke('auth:hasUsers'),
   verifyUser: (userId) => ipcRenderer.invoke('auth:verifyUser', userId),
   getRestaurantDetails: () => ipcRenderer.invoke('restaurant:getDetails'),
-  saveRestaurantDetails: (data) => ipcRenderer.invoke('restaurant:saveDetails', data)
+  saveRestaurantDetails: (data) => ipcRenderer.invoke('restaurant:saveDetails', data),
+  updateWindowIcon: (dataUrl) => ipcRenderer.invoke('app:updateWindowIcon', dataUrl)
 });

@@ -2,10 +2,47 @@ import React, { useState, useEffect } from 'react';
 import {
   Building2, Receipt, Phone, Mail, MapPin, Percent,
   FileText, Save, CheckCircle2, AlertCircle, User,
-  LogOut, Shield, Store, Edit3, RefreshCw, Printer
+  LogOut, Shield, Store, Edit3, RefreshCw, Printer,
+  Upload, Image as ImageIcon, Trash2, Crown
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { RestaurantDetails } from '../../types';
+
+const compressImage = (file: File, maxDim: number = 512, format: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL(format, 0.9));
+        } else {
+          resolve(e.target?.result as string);
+        }
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+};
 
 const SectionCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; subtitle?: string }> = ({ title, icon, children, subtitle }) => (
   <div className="bg-white/3 border border-white/8 rounded-2xl p-6 space-y-5">
@@ -84,6 +121,8 @@ export const RestaurantSettingsView: React.FC = () => {
       currency: form.currency,
       headerNote: form.headerNote,
       footerNote: form.footerNote,
+      logoUrl: form.logoUrl || '',
+      softwareIconUrl: form.softwareIconUrl || '',
       printShowLogo: form.printShowLogo ?? true,
       printShowAddress: form.printShowAddress ?? true,
       printShowPhone: form.printShowPhone ?? true,
@@ -169,6 +208,156 @@ export const RestaurantSettingsView: React.FC = () => {
             <FieldRow id="s-tagline" label="Tagline / Description" value={form.tagline || ''} onChange={(v) => update('tagline', v)} placeholder="Arabic Grill & Fine Dining" />
             <FieldRow id="s-owner" label="Owner / Manager Name" value={form.ownerName || ''} onChange={(v) => update('ownerName', v)} placeholder="Your Name" half />
             <FieldRow id="s-currency" label="Currency Symbol" value={form.currency || '₹'} onChange={(v) => update('currency', v)} placeholder="₹" half />
+          </div>
+        </SectionCard>
+
+        {/* Branding, Logo & Software Icon */}
+        <SectionCard title="Branding, Custom Logo & Software Icon" icon={<ImageIcon className="w-5 h-5" />} subtitle="Upload and edit your custom restaurant logo and software app icon">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Custom Logo Card */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-amber-400" /> Custom Logo
+                  </label>
+                  {form.logoUrl ? (
+                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      Custom Logo Active
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-white/40 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                      Default
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-white/50 mb-4">
+                  Displayed on software sidebar header, POS billing preview, login page, and thermal receipt prints.
+                </p>
+
+                {/* Logo Preview */}
+                <div className="w-full h-36 bg-black/40 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center p-3 relative overflow-hidden group">
+                  {form.logoUrl ? (
+                    <img src={form.logoUrl} alt="Custom Logo Preview" className="max-h-full max-w-full object-contain drop-shadow-md" />
+                  ) : (
+                    <div className="flex flex-col items-center text-center text-white/30">
+                      <Store className="w-10 h-10 mb-2 stroke-1" />
+                      <span className="text-xs font-medium">No Custom Logo Uploaded</span>
+                      <span className="text-[10px] text-white/20 mt-0.5">Supports PNG, JPG, WEBP, SVG</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 pt-2">
+                <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 rounded-xl text-xs font-bold cursor-pointer transition-all">
+                  <Upload className="w-4 h-4" />
+                  {form.logoUrl ? 'Change Logo' : 'Upload Logo'}
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const compressed = await compressImage(file, 600, 'image/png');
+                          update('logoUrl', compressed);
+                        } catch (err) {
+                          alert('Error reading logo file');
+                        }
+                      }
+                    }}
+                  />
+                </label>
+                {form.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => update('logoUrl', '')}
+                    className="px-3 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                    title="Remove custom logo"
+                  >
+                    <Trash2 className="w-4 h-4" /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Custom Software Icon Card */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-5 flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-400" /> Software App Icon
+                  </label>
+                  {form.softwareIconUrl ? (
+                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                      Custom Icon Active
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-white/40 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                      Default Crown
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-white/50 mb-4">
+                  Used as the OS Desktop Taskbar icon, Window Icon, browser favicon, and app title badge.
+                </p>
+
+                {/* Software Icon Preview */}
+                <div className="w-full h-36 bg-black/40 border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center p-3 relative overflow-hidden group">
+                  {form.softwareIconUrl ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <img src={form.softwareIconUrl} alt="Software Icon Preview" className="w-16 h-16 object-contain rounded-xl shadow-lg border border-amber-500/30" />
+                      <span className="text-[11px] text-amber-300 font-mono">App Icon Active</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center text-white/30">
+                      <Crown className="w-10 h-10 mb-2 stroke-1 text-amber-400/40" />
+                      <span className="text-xs font-medium">Default Crown Icon Active</span>
+                      <span className="text-[10px] text-white/20 mt-0.5">Recommended 128x128 PNG or ICO</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 pt-2">
+                <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 rounded-xl text-xs font-bold cursor-pointer transition-all">
+                  <Upload className="w-4 h-4" />
+                  {form.softwareIconUrl ? 'Change Icon' : 'Upload Software Icon'}
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/x-icon, image/webp, image/svg+xml"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const compressed = await compressImage(file, 256, 'image/png');
+                          update('softwareIconUrl', compressed);
+                        } catch (err) {
+                          alert('Error reading software icon file');
+                        }
+                      }
+                    }}
+                  />
+                </label>
+                {form.softwareIconUrl && (
+                  <button
+                    type="button"
+                    onClick={() => update('softwareIconUrl', '')}
+                    className="px-[12px] py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                    title="Remove custom app icon"
+                  >
+                    <Trash2 className="w-4 h-4" /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
           </div>
         </SectionCard>
 

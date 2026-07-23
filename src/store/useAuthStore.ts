@@ -14,6 +14,8 @@ export const defaultRestaurant: RestaurantDetails = {
   currency: '₹',
   headerNote: '',
   footerNote: '',
+  logoUrl: '',
+  softwareIconUrl: '',
   printShowLogo: true,
   printShowAddress: true,
   printShowPhone: true,
@@ -23,6 +25,24 @@ export const defaultRestaurant: RestaurantDetails = {
   printShowTaxBreakdown: true,
   printShowRoundOff: true,
   printShowFooterNote: true
+};
+
+export const syncAppIcon = (iconUrl?: string) => {
+  if (!iconUrl) return;
+  if ((window as any).electronAPI?.updateWindowIcon) {
+    (window as any).electronAPI.updateWindowIcon(iconUrl);
+  }
+  try {
+    let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'shortcut icon';
+      document.getElementsByTagName('head')[0].appendChild(link);
+    }
+    link.href = iconUrl;
+  } catch (e) {
+    // Ignore DOM errors if rendering headless
+  }
 };
 
 interface AuthState {
@@ -105,6 +125,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           : defaultRestaurant;
 
         localStorage.setItem('km_restaurant', JSON.stringify(currentRest));
+        syncAppIcon(currentRest.softwareIconUrl);
         set({ user: currentUser, isAuthenticated: !!currentUser, hasExistingUsers: true, restaurantDetails: currentRest, isLoading: false });
 
       } else {
@@ -332,6 +353,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       localStorage.setItem('km_restaurant', JSON.stringify(updatedRest));
+      syncAppIcon(updatedRest.softwareIconUrl);
       set({ restaurantDetails: updatedRest, isLoading: false });
       return { success: true };
     } catch (err: any) {
@@ -347,6 +369,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (res && res.success && res.data) {
           const rest = { ...defaultRestaurant, ...res.data };
           localStorage.setItem('km_restaurant', JSON.stringify(rest));
+          syncAppIcon(rest.softwareIconUrl);
           set({ restaurantDetails: rest });
         }
       }

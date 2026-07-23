@@ -20,8 +20,16 @@ export const Sidebar: React.FC = () => {
       <div>
         {/* Brand Header */}
         <div className="flex items-center gap-3 pb-6 border-b border-gold-500/20">
-          <div className="w-11 h-11 bg-gradient-to-br from-gold-500 to-gold-dark rounded-xl flex items-center justify-center text-olive-950 font-bold shadow-lg shadow-gold-500/20">
-            <Crown className="w-6 h-6" />
+          <div className="w-11 h-11 bg-gradient-to-br from-gold-500 to-gold-dark rounded-xl flex items-center justify-center text-olive-950 font-bold shadow-lg shadow-gold-500/20 overflow-hidden shrink-0">
+            {restaurantDetails?.softwareIconUrl || restaurantDetails?.logoUrl ? (
+              <img
+                src={restaurantDetails.softwareIconUrl || restaurantDetails.logoUrl}
+                alt="App Icon"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Crown className="w-6 h-6" />
+            )}
           </div>
           <div className="min-w-0">
             <h1 className="font-heading text-base font-bold text-gold-500 tracking-wide truncate">

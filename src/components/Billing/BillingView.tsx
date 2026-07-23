@@ -75,6 +75,8 @@ const ConfirmOrderModal: React.FC<{
     }
   }
 
+  const printShowLogo = restaurantDetails?.printShowLogo ?? true;
+  const logoUrl = restaurantDetails?.logoUrl || '';
   const printShowAddress = restaurantDetails?.printShowAddress ?? true;
   const printShowPhone = restaurantDetails?.printShowPhone ?? true;
   const printShowHeaderNote = restaurantDetails?.printShowHeaderNote ?? true;
@@ -116,6 +118,9 @@ const ConfirmOrderModal: React.FC<{
 
             {/* Restaurant Title & Tagline */}
             <div className="text-center">
+              {printShowLogo && logoUrl && (
+                <img src={logoUrl} alt="Logo" className="max-h-12 max-w-[140px] mx-auto mb-1.5 object-contain" />
+              )}
               <h2 className="text-xl font-extrabold tracking-tight uppercase leading-tight font-sans text-black">
                 {storeName}
               </h2>
@@ -501,6 +506,7 @@ export const BillingView: React.FC = () => {
     const cgstRate = (tp / 2).toFixed(1);
     const sgstRate = (tp / 2).toFixed(1);
 
+    const printShowLogo = rd?.printShowLogo ?? true;
     const printShowAddress = rd?.printShowAddress ?? true;
     const printShowPhone = rd?.printShowPhone ?? true;
     const printShowHeaderNote = rd?.printShowHeaderNote ?? true;
@@ -549,6 +555,7 @@ export const BillingView: React.FC = () => {
         </div></body></html>`
       : `<!doctype html><html><head>${receiptStyles}</head><body><div class="receipt">
           <!-- Restaurant Name & Details -->
+          ${printShowLogo && rd?.logoUrl ? `<div class="center" style="margin-bottom: 4px;"><img src="${rd.logoUrl}" style="max-height: 48px; max-width: 140px; filter: grayscale(100%); object-fit: contain;" /></div>` : ''}
           <div class="center bold" style="font-size: 16px; text-transform: uppercase;">${rName}</div>
           ${rTagline ? `<div class="center" style="font-size: 10.5px; font-weight: 600;">${rTagline}</div>` : ''}
           ${printShowAddress && rAddr ? `<div class="center" style="font-size: 10.5px;">${rAddr}</div>` : ''}

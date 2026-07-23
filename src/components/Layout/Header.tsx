@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Settings2, Database, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 export const Header: React.FC = () => {
   const { activeSection, setActiveSection, isDbConnected, checkDbStatus } = useAppStore();
+  const { restaurantDetails } = useAuthStore();
   const [clock, setClock] = useState('');
 
   useEffect(() => {
@@ -40,11 +42,22 @@ export const Header: React.FC = () => {
     settings: 'Restaurant Settings & Configuration'
   };
 
+  const headerIcon = restaurantDetails?.logoUrl || restaurantDetails?.softwareIconUrl;
+
   return (
     <header className="h-16 bg-olive-900 border-b border-gold-500/20 px-8 flex items-center justify-between select-none relative">
-      <div>
-        <h2 className="text-lg font-bold text-white tracking-wide">{titles[activeSection] || 'Kish Mandhi'}</h2>
-        <span className="text-xs text-olive-300 font-mono">{clock}</span>
+      <div className="flex items-center gap-3">
+        {headerIcon && (
+          <img
+            src={headerIcon}
+            alt="Logo"
+            className="w-8 h-8 object-contain rounded-lg border border-gold-500/20 shadow-sm"
+          />
+        )}
+        <div>
+          <h2 className="text-lg font-bold text-white tracking-wide">{titles[activeSection] || 'Kish Mandhi'}</h2>
+          <span className="text-xs text-olive-300 font-mono">{clock}</span>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

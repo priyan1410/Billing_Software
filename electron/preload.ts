@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Restaurant Settings
   getRestaurantDetails: () => ipcRenderer.invoke('restaurant:getDetails'),
   saveRestaurantDetails: (data: any) => ipcRenderer.invoke('restaurant:saveDetails', data),
+  updateWindowIcon: (dataUrl: string) => ipcRenderer.invoke('app:updateWindowIcon', dataUrl),
 
   // Auth
   register: (userData: any, restaurantData: any) => ipcRenderer.invoke('auth:register', { userData, restaurantData }),

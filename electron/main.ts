@@ -390,11 +390,33 @@ ipcMain.handle('db:importBackup', async (_evt: any, backupData: any) => {
   return { success: true };
 });
 
+ipcMain.handle('app:updateWindowIcon', async (_evt: any, dataUrl: string) => {
+  try {
+    const { nativeImage } = require('electron');
+    if (!mainWindow || !dataUrl) return { success: false };
+    const img = nativeImage.createFromDataURL(dataUrl);
+    if (!img.isEmpty()) {
+      mainWindow.setIcon(img);
+      return { success: true };
+    }
+  } catch (err) {
+    console.error('Failed to set window icon:', err);
+  }
+  return { success: false };
+});
+
 ipcMain.handle('restaurant:getDetails', async () => {
   return { success: true, data: (db as any).restaurantDetails || null };
 });
 
 ipcMain.handle('restaurant:saveDetails', async (_evt: any, data: any) => {
   (db as any).restaurantDetails = { ...data };
+  if (data.softwareIconUrl && mainWindow) {
+    try {
+      const { nativeImage } = require('electron');
+      const img = nativeImage.createFromDataURL(data.softwareIconUrl);
+      if (!img.isEmpty()) mainWindow.setIcon(img);
+    } catch (e) {}
+  }
   return { success: true };
 });

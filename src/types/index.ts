@@ -131,6 +131,8 @@ export interface RestaurantDetails {
   currency: string;
   headerNote?: string;
   footerNote?: string;
+  logoUrl?: string;
+  softwareIconUrl?: string;
   printShowLogo?: boolean;
   printShowAddress?: boolean;
   printShowPhone?: boolean;
