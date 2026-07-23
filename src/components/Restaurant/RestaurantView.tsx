@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus, Download, FileSpreadsheet, FileJson, X } from 'lucide-react';
+import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus, Download, FileSpreadsheet, FileJson, X, Wallet } from 'lucide-react';
 import { Dish, PnLPeriod } from '../../types';
 import { BillDetailModal } from './BillDetailModal';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -401,6 +401,36 @@ export const RestaurantView: React.FC = () => {
   const filteredOrders = allOrders.filter((o) => filterItemByPeriod(o, 'createdAt'));
   const filteredExpenses = allExpenses.filter((e) => filterItemByPeriod(e, 'expenseDate'));
 
+  // Combine orders (Revenue +) and expenses (Outflow -) into one unified timeline ledger sorted chronologically by date/time
+  const combinedPnlTransactions = [
+    ...filteredOrders.map(o => ({
+      id: `ORDER-${o.id}`,
+      type: 'INCOME' as const,
+      refNo: o.orderNumber || o.order_number || `KM-${o.id}`,
+      category: o.orderType || 'Dine-In',
+      description: 'Customer Invoice Bill',
+      amount: Number(o.grandTotal || o.grand_total || o.total || 0),
+      paymentMode: o.paymentMode || o.payment_mode || 'Cash',
+      timestamp: new Date(o.createdAt || o.orderDate || o.created_at || Date.now()).getTime(),
+      dateStr: formatDateDDMMYYYY(o.createdAt || o.orderDate || o.created_at),
+      timeStr: (o.createdAt || o.orderDate || o.created_at) ? new Date(o.createdAt || o.orderDate || o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      originalData: o
+    })),
+    ...filteredExpenses.map(e => ({
+      id: `EXPENSE-${e.id}`,
+      type: 'EXPENSE' as const,
+      refNo: e.category || 'Expense Outflow',
+      category: e.category || 'General Expense',
+      description: e.description || e.title || e.name || 'Expense Record',
+      amount: Number(e.amount || 0),
+      paymentMode: e.paymentMode || e.payment_mode || 'Cash',
+      timestamp: new Date(e.expenseDate || e.created_at || Date.now()).getTime(),
+      dateStr: formatDateDDMMYYYY(e.expenseDate || e.created_at),
+      timeStr: (e.expenseDate || e.created_at) ? new Date(e.expenseDate || e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      originalData: e
+    }))
+  ].sort((a, b) => b.timestamp - a.timestamp);
+
   const pnlRevenue = filteredOrders.reduce((sum, o) => sum + Number(o.grandTotal || 0), 0);
   const pnlExpenses = filteredExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
   const pnlNet = pnlRevenue - pnlExpenses;
@@ -498,7 +528,7 @@ export const RestaurantView: React.FC = () => {
       };
       downloadBlob(JSON.stringify(reportObj, null, 2), `${baseFileName}.json`, 'application/json');
     } else {
-      // CSV format
+      // CSV format: Unified Chronological Financial Ledger Table
       let csv = `PROFIT & LOSS FINANCIAL STATEMENT - ${restaurantDetails?.companyName || 'Kish Mandhi'}\n`;
       csv += `Period,${periodLabel}\n`;
       csv += `Exported At,${new Date().toLocaleString()}\n`;
@@ -507,29 +537,32 @@ export const RestaurantView: React.FC = () => {
       csv += `Net Profit / Loss (INR),${net.toFixed(2)}\n`;
       csv += `Net Profit Margin (%),${margin}%\n\n`;
 
-      csv += `--- INVOICE ORDERS LEDGER (${targetOrders.length} Records) ---\n`;
-      csv += `Order #,Date,Payment Mode,Subtotal,Tax,Discount,Grand Total\n`;
-      targetOrders.forEach(o => {
-        const num = o.orderNumber || o.order_number || `KM-${o.id}`;
-        const dt = toLocalDateString(o.createdAt || o.orderDate || o.created_at);
-        const pm = o.paymentMode || o.payment_mode || 'Cash';
-        const sub = Number(o.subtotal || 0).toFixed(2);
-        const tax = Number(o.taxAmount || o.tax_amount || 0).toFixed(2);
-        const disc = Number(o.discountAmount || o.discount_amount || 0).toFixed(2);
-        const total = Number(o.grandTotal || o.grand_total || o.total || 0).toFixed(2);
-        csv += `"${num}","${dt}","${pm}",${sub},${tax},${disc},${total}\n`;
-      });
+      csv += `--- UNIFIED CHRONOLOGICAL FINANCIAL LEDGER (${targetOrders.length + targetExpenses.length} Records) ---\n`;
+      csv += `Transaction Type,Ref # / Category,Description,Amount (INR),Payment Mode,Date\n`;
 
-      csv += `\n--- OPERATING EXPENSES LEDGER (${targetExpenses.length} Records) ---\n`;
-      csv += `Expense ID,Date,Title / Description,Category,Payment Method,Amount\n`;
-      targetExpenses.forEach(e => {
-        const id = e.id || '';
-        const dt = toLocalDateString(e.expenseDate || e.created_at);
-        const title = (e.description || e.title || e.name || '').replace(/"/g, '""');
-        const cat = e.category || 'General';
-        const pm = e.paymentMode || e.payment_mode || 'Cash';
-        const amt = Number(e.amount || 0).toFixed(2);
-        csv += `"${id}","${dt}","${title}","${cat}","${pm}",${amt}\n`;
+      const combinedExport = [
+        ...targetOrders.map(o => ({
+          type: 'REVENUE (+)',
+          refNo: o.orderNumber || o.order_number || `KM-${o.id}`,
+          desc: 'Customer Invoice Bill',
+          amount: Number(o.grandTotal || o.grand_total || o.total || 0).toFixed(2),
+          mode: o.paymentMode || o.payment_mode || 'Cash',
+          dt: toLocalDateString(o.createdAt || o.orderDate || o.created_at),
+          timestamp: new Date(o.createdAt || o.orderDate || o.created_at || Date.now()).getTime()
+        })),
+        ...targetExpenses.map(e => ({
+          type: 'EXPENSE (-)',
+          refNo: e.category || 'General Expense',
+          desc: (e.description || e.title || e.name || 'Expense Record').replace(/"/g, '""'),
+          amount: `-${Number(e.amount || 0).toFixed(2)}`,
+          mode: e.paymentMode || e.payment_mode || 'Cash',
+          dt: toLocalDateString(e.expenseDate || e.created_at),
+          timestamp: new Date(e.expenseDate || e.created_at || Date.now()).getTime()
+        }))
+      ].sort((a, b) => b.timestamp - a.timestamp);
+
+      combinedExport.forEach(item => {
+        csv += `"${item.type}","${item.refNo}","${item.desc}",${item.amount},"${item.mode}","${item.dt}"\n`;
       });
 
       downloadBlob(csv, `${baseFileName}.csv`, 'text/csv;charset=utf-8;');
@@ -809,58 +842,98 @@ export const RestaurantView: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-olive-900 border border-gold-500/30 rounded-2xl p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          {/* Unified Profit & Loss Financial Ledger (Single Chronological Table) */}
+          <div className="bg-olive-900 border border-gold-500/30 rounded-2xl p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h4 className="text-base font-bold text-gold-500">Invoice Bills</h4>
-                <p className="text-xs text-olive-300">Showing {filteredOrders.length} completed bill{filteredOrders.length === 1 ? '' : 's'} for the selected period.</p>
+                <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-gold-400" /> Unified Profit & Loss Financial Ledger
+                </h4>
+                <p className="text-xs text-olive-300">
+                  Showing {combinedPnlTransactions.length} transaction{combinedPnlTransactions.length === 1 ? '' : 's'} ({filteredOrders.length} Revenue Bills, {filteredExpenses.length} Operating Expenses) sorted by time
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
+                  Revenue: +₹{pnlRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg">
+                  Expenses: -₹{pnlExpenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-xs font-black text-gold-400 bg-gold-500/10 border border-gold-500/30 px-2.5 py-1 rounded-lg">
+                  Net Profit: ₹{pnlNet.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[550px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
               <table className="w-full text-left text-xs">
-                <thead className="bg-olive-800 text-olive-300 font-semibold border-b border-gold-500/20">
+                <thead className="bg-olive-950 text-olive-300 font-semibold border-b border-gold-500/20 sticky top-0 z-10">
                   <tr>
-                    <th className="p-3">Bill #</th>
+                    <th className="p-3">Type</th>
+                    <th className="p-3">Ref # / Category</th>
+                    <th className="p-3">Description</th>
                     <th className="p-3">Amount</th>
-                    <th className="p-3">Payment</th>
-                    <th className="p-3">Date</th>
+                    <th className="p-3">Payment Mode</th>
+                    <th className="p-3">Date & Time</th>
                     <th className="p-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gold-500/10">
-                  {filteredOrders.length === 0 ? (
+                  {combinedPnlTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-olive-300">No bills found for this period.</td>
+                      <td colSpan={7} className="py-12 text-center text-olive-300">No transactions recorded for this period.</td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order) => (
-                      <tr
-                        key={order.id}
-                        onClick={() => setSelectedPnlBill(order)}
-                        className="hover:bg-gold-500/10 cursor-pointer transition-colors group"
-                        title="Click to view & print bill"
-                      >
-                        <td className="p-3 font-semibold text-white group-hover:text-gold-400 flex items-center gap-1.5">
-                          <Receipt className="w-3.5 h-3.5 text-gold-500" />
-                          {order.orderNumber || order.order_number || `KM-${order.id}`}
-                        </td>
-                        <td className="p-3 font-bold text-gold-400">₹{Number(order.grandTotal || order.grand_total || order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-3 text-emerald-300">{order.paymentMode || order.payment_mode || 'Cash'}</td>
-                        <td className="p-3 text-olive-300">
-                          {formatDateDDMMYYYY(order.createdAt || order.orderDate || order.created_at)}
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setSelectedPnlBill(order); }}
-                            className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-[11px] font-bold rounded-lg group-hover:bg-gold-500 group-hover:text-olive-950 transition-colors inline-flex items-center gap-1"
-                          >
-                            <Printer className="w-3 h-3" /> Print
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    combinedPnlTransactions.map((tx) => {
+                      const isIncome = tx.type === 'INCOME';
+                      return (
+                        <tr
+                          key={tx.id}
+                          onClick={() => {
+                            if (isIncome) setSelectedPnlBill(tx.originalData);
+                          }}
+                          className={`transition-colors ${isIncome ? 'hover:bg-gold-500/10 cursor-pointer group' : 'hover:bg-rose-500/10'}`}
+                        >
+                          <td className="p-3">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-extrabold ${
+                              isIncome
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                            }`}>
+                              {isIncome ? '+ Revenue Bill' : '- Expense Outflow'}
+                            </span>
+                          </td>
+                          <td className="p-3 font-bold text-white group-hover:text-gold-400">
+                            {tx.refNo}
+                          </td>
+                          <td className="p-3 text-olive-200">
+                            {tx.description}
+                          </td>
+                          <td className={`p-3 font-extrabold text-sm ${isIncome ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {isIncome ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="p-3 text-olive-300 font-medium">
+                            {tx.paymentMode}
+                          </td>
+                          <td className="p-3 text-olive-300 font-mono">
+                            {tx.dateStr} {tx.timeStr && <span className="text-[11px] text-olive-400 ml-1">({tx.timeStr})</span>}
+                          </td>
+                          <td className="p-3 text-right">
+                            {isIncome && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedPnlBill(tx.originalData); }}
+                                className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 text-[11px] font-bold rounded-lg group-hover:bg-gold-500 group-hover:text-olive-950 transition-colors inline-flex items-center gap-1"
+                              >
+                                <Printer className="w-3 h-3" /> Print
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
