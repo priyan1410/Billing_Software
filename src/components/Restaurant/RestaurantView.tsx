@@ -7,7 +7,7 @@ import { formatDateDDMMYYYY, displayDateRange, isoToDDMMYYYY, ddmmyyyyToIso } fr
 
 export const RestaurantView: React.FC = () => {
   const { restaurantDetails } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'dishes' | 'categories' | 'pnl'>('dishes');
+  const [activeTab, setActiveTab] = useState<'pnl' | 'dishes' | 'categories'>('pnl');
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([
     { id: 1, name: 'Mandhi Special' },
@@ -416,19 +416,22 @@ export const RestaurantView: React.FC = () => {
       timeStr: (o.createdAt || o.orderDate || o.created_at) ? new Date(o.createdAt || o.orderDate || o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
       originalData: o
     })),
-    ...filteredExpenses.map(e => ({
-      id: `EXPENSE-${e.id}`,
-      type: 'EXPENSE' as const,
-      refNo: e.category || 'Expense Outflow',
-      category: e.category || 'General Expense',
-      description: e.description || e.title || e.name || 'Expense Record',
-      amount: Number(e.amount || 0),
-      paymentMode: e.paymentMode || e.payment_mode || 'Cash',
-      timestamp: new Date(e.expenseDate || e.created_at || Date.now()).getTime(),
-      dateStr: formatDateDDMMYYYY(e.expenseDate || e.created_at),
-      timeStr: (e.expenseDate || e.created_at) ? new Date(e.expenseDate || e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-      originalData: e
-    }))
+    ...filteredExpenses.map(e => {
+      const dateTimeVal = e.createdAt || e.created_at || e.expenseDate || e.expense_date;
+      return {
+        id: `EXPENSE-${e.id}`,
+        type: 'EXPENSE' as const,
+        refNo: e.category || 'Expense Outflow',
+        category: e.category || 'General Expense',
+        description: e.description || e.title || e.name || 'Expense Record',
+        amount: Number(e.amount || 0),
+        paymentMode: e.paymentMode || e.payment_mode || 'Cash',
+        timestamp: new Date(dateTimeVal || Date.now()).getTime(),
+        dateStr: formatDateDDMMYYYY(dateTimeVal),
+        timeStr: dateTimeVal ? new Date(dateTimeVal).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+        originalData: e
+      };
+    })
   ].sort((a, b) => b.timestamp - a.timestamp);
 
   const pnlRevenue = filteredOrders.reduce((sum, o) => sum + Number(o.grandTotal || 0), 0);
@@ -575,6 +578,13 @@ export const RestaurantView: React.FC = () => {
       {/* Sub Navigation Bar */}
       <div className="flex bg-olive-900 p-1 border border-gold-500/20 rounded-xl w-fit gap-1">
         <button
+          onClick={() => setActiveTab('pnl')}
+          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'pnl' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
+            }`}
+        >
+          <TrendingUp className="w-4 h-4" /> Profit & Loss Statement
+        </button>
+        <button
           onClick={() => setActiveTab('dishes')}
           className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'dishes' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
             }`}
@@ -587,13 +597,6 @@ export const RestaurantView: React.FC = () => {
             }`}
         >
           <Tags className="w-4 h-4" /> Food Categories
-        </button>
-        <button
-          onClick={() => setActiveTab('pnl')}
-          className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'pnl' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300'
-            }`}
-        >
-          <TrendingUp className="w-4 h-4" /> Profit & Loss Statement
         </button>
       </div>
 

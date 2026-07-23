@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, Trash2 } from 'lucide-react';
 import { Expense } from '../../types';
-import { formatDateDDMMYYYY } from '../../utils/dateUtils';
+import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../../utils/dateUtils';
 
 const getTodayString = () => {
   const d = new Date();
@@ -55,11 +55,17 @@ export const ExpensesView: React.FC = () => {
     setSaving(true);
 
     try {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      const fullDateTimeStr = `${expenseDate}T${timeStr}`;
+
       const payload = {
         category: finalCategory,
         description,
         amount: Number(amount),
         expense_date: expenseDate,
+        createdAt: fullDateTimeStr,
+        created_at: fullDateTimeStr,
         paid_to: paidTo,
         payment_mode: paymentMode
       };
@@ -227,7 +233,7 @@ export const ExpensesView: React.FC = () => {
                 <th className="p-3">Category</th>
                 <th className="p-3">Description</th>
                 <th className="p-3">Vendor / Paid To</th>
-                <th className="p-3">Date</th>
+                <th className="p-3">Date & Time</th>
                 <th className="p-3">Amount</th>
                 <th className="p-3">Action</th>
               </tr>
@@ -243,7 +249,7 @@ export const ExpensesView: React.FC = () => {
                   <td className="p-3 font-semibold text-white">{exp.description}</td>
                   <td className="p-3 text-olive-300">{exp.paidTo || '-'}</td>
                   <td className="p-3 text-olive-300">
-                    {formatDateDDMMYYYY(exp.expenseDate || (exp as any).expense_date)}
+                    {formatDateTimeDDMMYYYY(exp.createdAt || (exp as any).created_at || exp.expenseDate || (exp as any).expense_date)}
                   </td>
                   <td className="p-3 font-bold text-rose-400">₹{Number(exp.amount).toFixed(2)}</td>
                   <td className="p-3">

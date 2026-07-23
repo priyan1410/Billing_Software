@@ -259,15 +259,21 @@ ipcMain.handle('expenses:getAll', async () => {
 });
 
 ipcMain.handle('expenses:add', async (_evt: any, expData: any) => {
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+  const dateVal = expData.expense_date || expData.expenseDate || now.toISOString().slice(0, 10);
+  const createdVal = expData.createdAt || expData.created_at || (expData.expense_date ? `${expData.expense_date}T${timeStr}` : now.toISOString());
+
   const newExp = {
     id: db.expenses.length + 1,
     category: expData.category,
     description: expData.description,
     amount: Number(expData.amount),
-    expenseDate: expData.expense_date || expData.expenseDate,
+    expenseDate: dateVal,
     paidTo: expData.paid_to || expData.paidTo || '',
     paymentMode: expData.payment_mode || expData.paymentMode || 'Cash',
-    createdAt: new Date().toISOString()
+    createdAt: createdVal,
+    created_at: createdVal
   };
   db.expenses.unshift(newExp);
   return { success: true, data: newExp };

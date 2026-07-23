@@ -24,6 +24,15 @@ export const formatDateDDMMYYYY = (val: any): string => {
 // Formats Date with Time: DD/MM/YYYY, hh:mm A
 export const formatDateTimeDDMMYYYY = (val: any): string => {
   if (!val) return '';
+  const str = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const parts = str.split('-');
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
   const d = new Date(val);
   if (isNaN(d.getTime())) return String(val);
 
