@@ -4,7 +4,7 @@ const path = require('path');
 const { initialDbStore } = require('./db');
 const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber } = require('./tokenUtils');
 
-let mainWindow;
+let mainWindow: any = null;
 const db = initialDbStore;
 const tokenStatePath = path.join(app.getPath('userData'), 'token-state.json');
 
@@ -172,6 +172,26 @@ ipcMain.handle('orders:create', async (_evt: any, orderData: any) => {
   return { success: true, data: newOrder };
 });
 
+ipcMain.handle('orders:update', async (_evt: any, orderData: any) => {
+  const orderNum = orderData.order_number || orderData.orderNumber;
+  const idx = db.orders.findIndex((o: any) => o.orderNumber === orderNum || o.id === orderData.id);
+  if (idx !== -1) {
+    db.orders[idx] = {
+      ...db.orders[idx],
+      orderType: orderData.order_type || orderData.orderType || db.orders[idx].orderType,
+      subtotal: orderData.subtotal ?? db.orders[idx].subtotal,
+      taxAmount: orderData.tax_amount || orderData.taxAmount || db.orders[idx].taxAmount,
+      discountAmount: orderData.discount_amount || orderData.discountAmount || db.orders[idx].discountAmount,
+      grandTotal: orderData.grand_total || orderData.grandTotal || db.orders[idx].grandTotal,
+      paymentMode: orderData.payment_mode || orderData.paymentMode || db.orders[idx].paymentMode,
+      items: orderData.items || db.orders[idx].items,
+      roundOff: orderData.round_off ?? db.orders[idx].roundOff,
+    };
+    return { success: true, data: db.orders[idx] };
+  }
+  return { success: false, message: 'Order not found' };
+});
+
 ipcMain.handle('orders:getAll', async () => {
   return { success: true, data: db.orders };
 });
@@ -198,9 +218,31 @@ ipcMain.handle('orders:getByDateRange', async (_evt: any, { startDate, endDate }
 });
 
 ipcMain.handle('dashboard:getStats', async () => {
-  const totalRevenue = db.orders.reduce((sum: number, o: any) => sum + Number(o.grandTotal || 0), 0);
-  const totalOrdersCount = db.orders.length;
-  const totalExpenseSum = db.expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+  const toLocalDateOnly = (val: any) => {
+    if (!val) return '';
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
+      return val.trim();
+    }
+    const d = new Date(val);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const todayStr = toLocalDateOnly(new Date());
+
+  const todayOrders = db.orders.filter((o: any) => {
+    const dt = toLocalDateOnly(o.createdAt || o.orderDate || o.created_at);
+    return dt === todayStr;
+  });
+
+  const todayExpenses = db.expenses.filter((e: any) => {
+    const dt = toLocalDateOnly(e.expenseDate || e.createdAt || e.created_at);
+    return dt === todayStr;
+  });
+
+  const totalRevenue = todayOrders.reduce((sum: number, o: any) => sum + Number(o.grandTotal || 0), 0);
+  const totalOrdersCount = todayOrders.length;
+  const totalExpenseSum = todayExpenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
   const netProfit = totalRevenue - totalExpenseSum;
 
   return {
@@ -210,7 +252,7 @@ ipcMain.handle('dashboard:getStats', async () => {
       totalOrdersCount,
       totalExpenseSum,
       netProfit,
-      recentOrders: db.orders.slice(0, 5)
+      recentOrders: todayOrders.slice(0, 5)
     }
   };
 });

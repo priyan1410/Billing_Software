@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, ShoppingCart, Trash2, Printer, Utensils, ShoppingBag,
-  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone
+  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone,
+  Edit3, History
 } from 'lucide-react';
 import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
@@ -295,7 +296,13 @@ const ConfirmOrderModal: React.FC<{
 
 // ─── Main BillingView ─────────────────────────────────────────────────────────
 export const BillingView: React.FC = () => {
-  const { cart, orderType, paymentMode, discount, setOrderType, setPaymentMode, setDiscount, addToCart, updateQty, clearCart, loadTokenToCart } = usePosStore();
+  const {
+    cart, orderType, paymentMode, discount,
+    editingBillNumber, editingOrderId,
+    setOrderType, setPaymentMode, setDiscount,
+    addToCart, updateQty, clearCart, loadTokenToCart,
+    startEditingBill, cancelEditBill
+  } = usePosStore();
   const { activeTokensList, removeActiveToken, loadActiveTokens } = useAppStore();
   const { restaurantDetails } = useAuthStore();
 
@@ -315,6 +322,11 @@ export const BillingView: React.FC = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [nextBillNumber, setNextBillNumber] = useState<string>('KMIV-001');
 
+  // Recent Bills Dropdown State
+  const [recentBills, setRecentBills] = useState<any[]>([]);
+  const [showRecentDropdown, setShowRecentDropdown] = useState(false);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 5;
 
@@ -330,7 +342,7 @@ export const BillingView: React.FC = () => {
   };
 
   useEffect(() => { loadCategories(); loadDishes(); loadActiveTokens(); }, [activeCategory]);
-  useEffect(() => { fetchNextBillNumber(); loadActiveTokens(); }, []);
+  useEffect(() => { fetchNextBillNumber(); loadActiveTokens(); loadRecentBills(); }, []);
 
   const loadCategories = async () => {
     try {
@@ -358,6 +370,42 @@ export const BillingView: React.FC = () => {
     }
   };
 
+  const loadRecentBills = async () => {
+    setLoadingRecent(true);
+    try {
+      if ((window as any).electronAPI?.getOrders) {
+        const res = await (window as any).electronAPI.getOrders();
+        if (res && res.success && Array.isArray(res.data)) {
+          setRecentBills(res.data.slice(0, 10));
+        }
+      }
+    } catch (err) {
+      console.error('loadRecentBills error:', err);
+    } finally {
+      setLoadingRecent(false);
+    }
+  };
+
+  const handleSelectBillToEdit = async (order: any) => {
+    setShowRecentDropdown(false);
+    let orderToLoad = { ...order };
+    if (!orderToLoad.items || !orderToLoad.items.length) {
+      if ((window as any).electronAPI?.getOrderItems) {
+        const res = await (window as any).electronAPI.getOrderItems(order.id || order.orderNumber);
+        if (res && res.success && Array.isArray(res.data)) {
+          orderToLoad.items = res.data.map((i: any) => ({
+            itemId: i.dish_id || i.dishId || 0,
+            name: i.dish_name || i.dishName || i.name,
+            variant: i.variant || 'Full',
+            unitPrice: Number(i.unit_price || i.unitPrice || 0),
+            quantity: Number(i.quantity || 1),
+            totalPrice: Number(i.total_price || i.totalPrice || 0)
+          }));
+        }
+      }
+    }
+    startEditingBill(orderToLoad, dishes);
+  };
 
   const filteredDishes = dishes.filter((d) => {
     const matchesCat = activeCategory === 'all' || String(d.categoryId) === String(activeCategory);
@@ -386,17 +434,21 @@ export const BillingView: React.FC = () => {
 
   const handleCheckoutClick = async () => {
     if (cart.length === 0) { alert('Cart is empty! Add items first.'); return; }
-    await fetchNextBillNumber();
+    if (!editingBillNumber) {
+      await fetchNextBillNumber();
+    }
     setShowConfirmModal(true);
   };
 
   const handleSaveOrder = async (shouldPrint = true) => {
     setIsCheckingOut(true);
-    const currentBillNumber = await fetchNextBillNumber();
+    const isEditing = !!editingBillNumber;
+    const currentBillNumber = isEditing ? editingBillNumber : await fetchNextBillNumber();
     const orderDate = new Date();
     const orderDateString = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
 
     const payload = {
+      id: editingOrderId || undefined,
       order_number: currentBillNumber,
       order_type: orderType,
       subtotal,
@@ -413,6 +465,7 @@ export const BillingView: React.FC = () => {
       customer_name: 'Walk-in',
     };
     const base = {
+      id: editingOrderId || undefined,
       orderNumber: currentBillNumber,
       items: [...cart],
       subtotal,
@@ -430,11 +483,14 @@ export const BillingView: React.FC = () => {
     let createdData: any = null;
 
     if ((window as any).electronAPI) {
-      const res = await (window as any).electronAPI.createOrder(payload);
+      const apiCall = isEditing && (window as any).electronAPI.updateOrder 
+        ? (window as any).electronAPI.updateOrder 
+        : (window as any).electronAPI.createOrder;
+      const res = await apiCall(payload);
       if (res.success) {
         createdData = { ...base, ...res.data };
       } else {
-        alert(res.message || 'Order failed. Try again.');
+        alert(res.message || 'Order operation failed. Try again.');
         setIsCheckingOut(false);
         return;
       }
@@ -446,7 +502,6 @@ export const BillingView: React.FC = () => {
         shippingCharges: payload.shipping_charges,
         roundOff: payload.round_off,
       };
-
     }
 
     if (shouldPrint && createdData) {
@@ -462,6 +517,7 @@ export const BillingView: React.FC = () => {
     clearCart();
     setIsCheckingOut(false);
     fetchNextBillNumber();
+    loadRecentBills();
   };
 
   const triggerPrintDirect = async (data: any, isKot = false) => {
@@ -480,43 +536,6 @@ export const BillingView: React.FC = () => {
     const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
     const rd = restaurantDetails;
-    const rName = String(rd?.companyName || 'KISH MANDHI');
-    const rTagline = String(rd?.tagline || '');
-    const rAddr = String(rd?.address || '');
-    const rawPhone = String(rd?.phone || '');
-    const rPhone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
-    const rawGst = String(rd?.gstNumber || rd?.gstNo || '');
-    const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
-    const rawFssai = String(rd?.fssaiNumber || rd?.fssaiNo || '');
-    const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
-
-    const printShowGst = rd?.printShowGst ?? true;
-    let rGstFssaiLine = '';
-    if (printShowGst) {
-      if (gstVal && fssaiVal) {
-        rGstFssaiLine = `GSTIN: ${gstVal}  |  FSSAI: ${fssaiVal}`;
-      } else if (gstVal) {
-        rGstFssaiLine = `GSTIN: ${gstVal}`;
-      } else if (fssaiVal) {
-        rGstFssaiLine = `FSSAI: ${fssaiVal}`;
-      }
-    }
-
-    const curr = rd?.currency || '₹';
-    const tp = rd?.taxRate ?? 5;
-    const cgstRate = (tp / 2).toFixed(1);
-    const sgstRate = (tp / 2).toFixed(1);
-
-    const printShowLogo = rd?.printShowLogo ?? true;
-    const printShowAddress = rd?.printShowAddress ?? true;
-    const printShowPhone = rd?.printShowPhone ?? true;
-    const printShowHeaderNote = rd?.printShowHeaderNote ?? true;
-    const printShowTime = rd?.printShowTime ?? true;
-    const printShowTaxBreakdown = rd?.printShowTaxBreakdown ?? true;
-    const printShowRoundOff = rd?.printShowRoundOff ?? true;
-    const printShowFooterNote = rd?.printShowFooterNote ?? true;
-    const printWithToken = rd?.printWithToken ?? true;
-
     const billNumber = data.orderNumber || `KMIV-001`;
     const tokenNumber = data.tokenNumber
       ? (String(data.tokenNumber).startsWith('KMKOT') ? String(data.tokenNumber) : `KMKOT${String(data.tokenNumber).padStart(3, '0')}`)
@@ -611,7 +630,6 @@ export const BillingView: React.FC = () => {
           ))}
         </div>
 
-
         {/* Dish grid — independently scrollable */}
         <div className="flex-1 overflow-y-auto pr-1 min-h-0" style={{ scrollbarWidth: 'thin', scrollbarColor: '#b5882220 transparent' }}>
           <div className="grid grid-cols-2 xl:grid-cols-3 gap-2.5">
@@ -649,16 +667,92 @@ export const BillingView: React.FC = () => {
       {/* ══ RIGHT: CART + BILL (scrollable) ══════════════════════════ */}
       <div className="w-80 xl:w-96 flex flex-col gap-3 flex-shrink-0 overflow-hidden">
 
-        {/* Token Import */}
-        <div className="flex gap-2 flex-shrink-0">
+        {/* Token Import & Recent Bills Dropdown */}
+        <div className="flex gap-2 flex-shrink-0 relative">
           <select value={selectedTokenNum} onChange={(e) => handleSelectToken(e.target.value)}
-            className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none"
+            className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none min-w-0"
           >
             <option value="">Import from Token...</option>
             {activeTokensList.map((t) => <option key={t.tokenNumber} value={t.tokenNumber}>Token #{t.tokenNumber}</option>)}
           </select>
-          <button onClick={handleImportToken} className="px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl hover:scale-105 transition-transform">Load</button>
+          <button onClick={handleImportToken} className="px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl hover:scale-105 transition-transform flex-shrink-0">
+            Load
+          </button>
+
+          {/* Edit Recent Bills Dropdown Button */}
+          <div 
+            className="relative flex-shrink-0"
+            onMouseEnter={() => { setShowRecentDropdown(true); loadRecentBills(); }}
+            onMouseLeave={() => setShowRecentDropdown(false)}
+          >
+            <button 
+              onClick={() => { setShowRecentDropdown(!showRecentDropdown); loadRecentBills(); }}
+              className="px-3 py-2 bg-olive-900 border border-gold-500/30 text-gold-400 hover:text-gold-300 font-bold text-xs rounded-xl flex items-center gap-1 hover:border-gold-500 transition-colors whitespace-nowrap"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit Bill ▾</span>
+            </button>
+
+            {showRecentDropdown && (
+              <div className="absolute right-0 top-full mt-1.5 w-72 bg-slate-900 border border-gold-500/30 rounded-2xl shadow-2xl z-50 p-2 text-xs space-y-1">
+                <div className="flex justify-between items-center px-2 py-1.5 border-b border-slate-800 text-gold-400 font-bold text-[11px] uppercase tracking-wider">
+                  <span>Recent 10 Bills</span>
+                  <History className="w-3.5 h-3.5 text-gold-400" />
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                  {loadingRecent ? (
+                    <div className="text-center py-4 text-slate-400">Loading bills...</div>
+                  ) : recentBills.length === 0 ? (
+                    <div className="text-center py-4 text-slate-400">No recent bills found</div>
+                  ) : (
+                    recentBills.map((b) => (
+                      <button
+                        key={b.id || b.orderNumber}
+                        onClick={() => handleSelectBillToEdit(b)}
+                        className="w-full text-left p-2 rounded-xl bg-slate-800/80 hover:bg-gold-500/20 border border-slate-700/60 hover:border-gold-500/40 transition-all flex items-center justify-between group"
+                      >
+                        <div>
+                          <div className="font-bold text-white group-hover:text-gold-300 flex items-center gap-1.5">
+                            <span>{b.orderNumber}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-950 text-olive-300 font-normal">
+                              {b.orderType || 'Dine-In'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            {b.createdAt ? new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-gold-400 text-xs">
+                            {curr}{Number(b.grandTotal || b.grand_total || 0).toFixed(2)}
+                          </div>
+                          <span className="text-[10px] text-emerald-400 font-semibold group-hover:underline">Edit ✎</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Editing Banner */}
+        {editingBillNumber && (
+          <div className="bg-amber-500/15 border border-amber-500/40 rounded-xl p-2.5 flex justify-between items-center text-xs">
+            <div className="flex items-center gap-2 text-amber-300 font-bold">
+              <Edit3 className="w-4 h-4 text-amber-400 animate-bounce" />
+              <span>Editing Bill: <span className="text-white underline">{editingBillNumber}</span></span>
+            </div>
+            <button
+              onClick={cancelEditBill}
+              className="text-amber-400 hover:text-white p-1 rounded-lg hover:bg-amber-500/20 transition-colors"
+              title="Cancel editing"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Order Type */}
         <div className="flex bg-olive-950 p-1 rounded-xl gap-1 flex-shrink-0">
@@ -721,9 +815,9 @@ export const BillingView: React.FC = () => {
           </div>
 
           <button onClick={handleCheckoutClick}
-            className="w-full py-3 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 font-extrabold rounded-xl text-sm shadow-lg shadow-gold-500/20 flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+            className={`w-full py-3 ${editingBillNumber ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-amber-500/30' : 'bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 shadow-gold-500/20'} font-extrabold rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform`}
           >
-            <Printer className="w-4 h-4" /> Complete Order & Print Bill
+            <Printer className="w-4 h-4" /> {editingBillNumber ? `Update & Print Bill (${editingBillNumber})` : 'Complete Order & Print Bill'}
           </button>
 
           {cart.length > 0 && (
@@ -741,7 +835,7 @@ export const BillingView: React.FC = () => {
         <ConfirmOrderModal
           cart={cart} orderType={orderType} paymentMode={paymentMode}
           subtotal={subtotal} tax={taxAmt} discount={discount} grandTotal={grandTotal}
-          taxRate={taxRate} curr={curr} billNumber={nextBillNumber} restaurantDetails={restaurantDetails}
+          taxRate={taxRate} curr={curr} billNumber={editingBillNumber || nextBillNumber} restaurantDetails={restaurantDetails}
           onSaveOnly={() => handleSaveOrder(false)}
           onPrintAndSave={() => handleSaveOrder(true)}
           onCancel={() => setShowConfirmModal(false)}

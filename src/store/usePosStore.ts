@@ -6,6 +6,8 @@ interface PosState {
   orderType: OrderType;
   paymentMode: PaymentMode;
   discount: number;
+  editingBillNumber: string | null;
+  editingOrderId: any | null;
   setOrderType: (type: OrderType) => void;
   setPaymentMode: (mode: PaymentMode) => void;
   setDiscount: (discount: number) => void;
@@ -13,6 +15,8 @@ interface PosState {
   updateQty: (cartKey: string, delta: number) => void;
   clearCart: () => void;
   loadTokenToCart: (token: TokenItem, dishes: Dish[]) => void;
+  startEditingBill: (order: any, dishes: Dish[]) => void;
+  cancelEditBill: () => void;
 }
 
 export const usePosStore = create<PosState>((set: any) => ({
@@ -20,6 +24,8 @@ export const usePosStore = create<PosState>((set: any) => ({
   orderType: 'Dine-In',
   paymentMode: 'Cash',
   discount: 0,
+  editingBillNumber: null,
+  editingOrderId: null,
   setOrderType: (orderType: OrderType) => set({ orderType }),
   setPaymentMode: (paymentMode: PaymentMode) => set({ paymentMode }),
   setDiscount: (discount: number) => set({ discount }),
@@ -73,7 +79,47 @@ export const usePosStore = create<PosState>((set: any) => ({
         .filter(Boolean) as CartItem[],
     })),
 
-  clearCart: () => set({ cart: [], discount: 0 }),
+  clearCart: () => set({ cart: [], discount: 0, editingBillNumber: null, editingOrderId: null }),
+
+  cancelEditBill: () => set({ editingBillNumber: null, editingOrderId: null }),
+
+  startEditingBill: (order: any, dishes: Dish[]) =>
+    set(() => {
+      const items = order.items || [];
+      const newCart: CartItem[] = items.map((item: any) => {
+        const dish = dishes.find((d: Dish) => d.id === item.itemId || d.id === item.item_id || d.name === (item.name || item.dishName || item.dish_name));
+        let price = Number(item.unitPrice || item.price || item.unit_price || 0);
+        if (price === 0 && dish) {
+          if (item.variant === 'Quarter') price = dish.priceQuarter;
+          else if (item.variant === 'Half') price = dish.priceHalf;
+          else price = dish.priceFull;
+        }
+
+        const qty = Number(item.quantity || 1);
+        const variant = item.variant || 'Full';
+
+        return {
+          cartKey: `${item.itemId || item.item_id || (dish ? dish.id : item.name)}_${variant}`,
+          itemId: item.itemId || item.item_id || (dish ? dish.id : 0),
+          name: item.name || item.dishName || item.dish_name || (dish ? dish.name : 'Item'),
+          variant,
+          unitPrice: price,
+          quantity: qty,
+          totalPrice: Number(item.totalPrice || item.total_price || (price * qty)),
+          unit: item.unit || (dish?.unit || 'Plate'),
+          hsnSac: item.hsnSac || dish?.hsnSac || undefined,
+        };
+      });
+
+      return {
+        cart: newCart,
+        orderType: order.orderType || order.order_type || 'Dine-In',
+        paymentMode: order.paymentMode || order.payment_mode || 'Cash',
+        discount: Number(order.discountAmount || order.discount_amount || 0),
+        editingBillNumber: order.orderNumber || order.order_number || null,
+        editingOrderId: order.id || null,
+      };
+    }),
 
   loadTokenToCart: (token: TokenItem, dishes: Dish[]) =>
     set(() => {

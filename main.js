@@ -289,6 +289,64 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   return { success: true, data: { id: orderId, orderNumber, tokenId } };
 });
 
+ipcMain.handle('orders:update', async (evt, orderData) => {
+  const orderNumber = orderData.order_number || orderData.orderNumber;
+  if (!orderNumber) return { success: false, message: 'Order number missing' };
+
+  let orderId = orderData.id;
+  if (!orderId) {
+    const findRes = await query('SELECT id FROM orders WHERE order_number = ?', [orderNumber]);
+    if (!findRes.success || !findRes.data.length) {
+      return { success: false, message: 'Order not found' };
+    }
+    orderId = findRes.data[0].id;
+  }
+
+  const updateRes = await query(
+    `UPDATE orders SET 
+      order_type = ?, 
+      subtotal = ?, 
+      tax_amount = ?, 
+      discount_amount = ?, 
+      grand_total = ?, 
+      payment_mode = ? 
+     WHERE id = ? OR order_number = ?`,
+    [
+      orderData.order_type || orderData.orderType || 'Dine-In',
+      Number(orderData.subtotal || 0),
+      Number(orderData.tax_amount || orderData.taxAmount || 0),
+      Number(orderData.discount_amount || orderData.discountAmount || 0),
+      Number(orderData.grand_total || orderData.grandTotal || 0),
+      orderData.payment_mode || orderData.paymentMode || 'Cash',
+      orderId,
+      orderNumber
+    ]
+  );
+
+  if (!updateRes.success) return { success: false, message: updateRes.error };
+
+  // Replace order items
+  await query('DELETE FROM order_items WHERE order_id = ?', [orderId]);
+  if (Array.isArray(orderData.items)) {
+    for (const item of orderData.items) {
+      await query(
+        `INSERT INTO order_items (order_id, dish_name, variant, quantity, unit_price, total_price)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          item.name || item.dishName || 'Item',
+          item.variant || 'Full',
+          Number(item.quantity || 1),
+          Number(item.unitPrice || item.price || 0),
+          Number(item.totalPrice || (Number(item.unitPrice || item.price || 0) * Number(item.quantity || 1)))
+        ]
+      );
+    }
+  }
+
+  return { success: true, data: { id: orderId, orderNumber } };
+});
+
 ipcMain.handle('orders:getAll', async () => {
   const result = await query('SELECT * FROM orders ORDER BY created_at DESC');
   if (!result.success) return { success: false, message: result.error };
@@ -337,13 +395,13 @@ ipcMain.handle('orders:getItems', async (evt, orderIdOrNumber) => {
 
 
 // ─────────────────────────────────────────────────────────────
-// DASHBOARD STATS (live from MySQL)
+// DASHBOARD STATS (live from MySQL - Today's data only)
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('dashboard:getStats', async () => {
-  const revResult = await query(`SELECT COALESCE(SUM(grand_total), 0) AS total FROM orders`);
-  const cntResult = await query(`SELECT COUNT(*) AS cnt FROM orders`);
-  const expResult = await query(`SELECT COALESCE(SUM(amount), 0) AS total FROM expenses`);
-  const recentResult = await query(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 5`);
+  const revResult = await query(`SELECT COALESCE(SUM(grand_total), 0) AS total FROM orders WHERE DATE(created_at) = CURDATE()`);
+  const cntResult = await query(`SELECT COUNT(*) AS cnt FROM orders WHERE DATE(created_at) = CURDATE()`);
+  const expResult = await query(`SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE DATE(expense_date) = CURDATE() OR DATE(created_at) = CURDATE()`);
+  const recentResult = await query(`SELECT * FROM orders WHERE DATE(created_at) = CURDATE() ORDER BY created_at DESC LIMIT 5`);
 
   const totalRevenue = revResult.success ? Number(revResult.data[0].total) : 0;
   const totalOrdersCount = cntResult.success ? Number(cntResult.data[0].cnt) : 0;
