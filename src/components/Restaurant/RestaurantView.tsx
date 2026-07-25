@@ -89,6 +89,27 @@ export const RestaurantView: React.FC = () => {
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [allExpenses, setAllExpenses] = useState<any[]>([]);
 
+  // PnL Multi-Option Filter State
+  const [filterProfit, setFilterProfit] = useState<boolean>(true);
+  const [filterExpense, setFilterExpense] = useState<boolean>(true);
+  const [filterUpi, setFilterUpi] = useState<boolean>(true);
+  const [filterCash, setFilterCash] = useState<boolean>(true);
+  const [filterCard, setFilterCard] = useState<boolean>(true);
+
+  const matchesPaymentModeFilter = (pm: string) => {
+    const norm = (pm || '').toLowerCase().trim();
+    if (norm.includes('upi') || norm.includes('gpay') || norm.includes('phonepe') || norm.includes('paytm')) {
+      return filterUpi;
+    }
+    if (norm.includes('card') || norm.includes('credit') || norm.includes('debit') || norm.includes('pos')) {
+      return filterCard;
+    }
+    if (norm.includes('cash')) {
+      return filterCash;
+    }
+    return filterCash || filterUpi || filterCard;
+  };
+
   const handleSelectPeriod = (selectedP: PnLPeriod) => {
     setPeriod(selectedP);
     const now = new Date();
@@ -447,8 +468,17 @@ export const RestaurantView: React.FC = () => {
     return true;
   };
 
-  const filteredOrders = allOrders.filter((o) => filterItemByPeriod(o, 'createdAt'));
-  const filteredExpenses = allExpenses.filter((e) => filterItemByPeriod(e, 'expenseDate'));
+  const filteredOrders = filterProfit ? allOrders.filter((o) => {
+    if (!filterItemByPeriod(o, 'createdAt')) return false;
+    const mode = o.paymentMode || o.payment_mode || 'Cash';
+    return matchesPaymentModeFilter(mode);
+  }) : [];
+
+  const filteredExpenses = filterExpense ? allExpenses.filter((e) => {
+    if (!filterItemByPeriod(e, 'expenseDate')) return false;
+    const mode = e.paymentMode || e.payment_mode || 'Cash';
+    return matchesPaymentModeFilter(mode);
+  }) : [];
 
   // Combine orders (Revenue +) and expenses (Outflow -) into one unified timeline ledger sorted chronologically by date/time
   const combinedPnlTransactions = [
@@ -547,6 +577,18 @@ export const RestaurantView: React.FC = () => {
         if (end && d > end) return false;
         return true;
       });
+    }
+
+    if (filterProfit) {
+      targetOrders = targetOrders.filter(o => matchesPaymentModeFilter(o.paymentMode || o.payment_mode || 'Cash'));
+    } else {
+      targetOrders = [];
+    }
+
+    if (filterExpense) {
+      targetExpenses = targetExpenses.filter(e => matchesPaymentModeFilter(e.paymentMode || e.payment_mode || 'Cash'));
+    } else {
+      targetExpenses = [];
     }
 
     const rev = targetOrders.reduce((sum, o) => sum + Number(o.grandTotal || o.grand_total || o.total || 0), 0);
@@ -1085,6 +1127,117 @@ export const RestaurantView: React.FC = () => {
                   <Download className="w-3.5 h-3.5" /> Export P&L Data
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* P&L Filter Checkbox Controls Panel */}
+          <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-gold-400">
+                <Filter className="w-4 h-4 text-gold-400" />
+                <span>Filter P&L Records:</span>
+              </div>
+
+              {/* Checkbox Pills */}
+              <div className="flex flex-wrap items-center gap-2 text-xs select-none">
+                {/* [ ] Profit */}
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
+                  filterProfit
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-sm'
+                    : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={filterProfit}
+                    onChange={(e) => setFilterProfit(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-emerald-500 rounded cursor-pointer"
+                  />
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Profit</span>
+                </label>
+
+                {/* [ ] Expense */}
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
+                  filterExpense
+                    ? 'bg-rose-500/20 border-rose-500/40 text-rose-400 shadow-sm'
+                    : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={filterExpense}
+                    onChange={(e) => setFilterExpense(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-rose-500 rounded cursor-pointer"
+                  />
+                  <Receipt className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Expense</span>
+                </label>
+
+                <div className="h-4 w-px bg-gold-500/20 mx-1 hidden sm:block" />
+
+                {/* [ ] UPI */}
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
+                  filterUpi
+                    ? 'bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm'
+                    : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={filterUpi}
+                    onChange={(e) => setFilterUpi(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-purple-500 rounded cursor-pointer"
+                  />
+                  <Wallet className="w-3.5 h-3.5 text-purple-400" />
+                  <span>UPI</span>
+                </label>
+
+                {/* [ ] Cash */}
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
+                  filterCash
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-sm'
+                    : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={filterCash}
+                    onChange={(e) => setFilterCash(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+                  />
+                  <span>Cash</span>
+                </label>
+
+                {/* [ ] Card */}
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
+                  filterCard
+                    ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-sm'
+                    : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={filterCard}
+                    onChange={(e) => setFilterCard(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-sky-500 rounded cursor-pointer"
+                  />
+                  <span>Card</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Quick Action Button */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterProfit(true);
+                  setFilterExpense(true);
+                  setFilterUpi(true);
+                  setFilterCash(true);
+                  setFilterCard(true);
+                }}
+                className="px-3 py-1 bg-olive-950 border border-gold-500/20 hover:border-gold-500/40 text-olive-300 hover:text-gold-400 text-xs font-semibold rounded-xl transition-colors"
+                title="Reset all filters to select everything"
+              >
+                Select All
+              </button>
             </div>
           </div>
 
