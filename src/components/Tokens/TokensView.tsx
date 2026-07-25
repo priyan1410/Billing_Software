@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, X, CheckCircle2, Receipt } from 'lucide-react';
+import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, X, CheckCircle2, Receipt, Edit3, History } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -30,6 +30,8 @@ export const TokensView: React.FC = () => {
   const [customTable, setCustomTable] = useState<string>('');
   const [isCustomTableMode, setIsCustomTableMode] = useState<boolean>(false);
   const [showTableDropdown, setShowTableDropdown] = useState<boolean>(false);
+  const [editingTokenNumber, setEditingTokenNumber] = useState<string | number | null>(null);
+  const [showRecentTokensDropdown, setShowRecentTokensDropdown] = useState<boolean>(false);
   const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; tableNo?: string; paymentMode: string; items: any[]; timestamp: string; date: string } | null>(null);
 
   useEffect(() => {
@@ -76,14 +78,14 @@ export const TokensView: React.FC = () => {
   };
 
 
-  const filteredDishes = dishes.filter((d) => {
+  const filteredDishes = dishes.filter((d: Dish) => {
     const matchesCat = activeCategory === 'all' || String(d.categoryId) === String(activeCategory);
     return matchesCat && d.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const addToTokenCart = (dish: Dish, variant: PortionVariant) => {
-    setTokenCart((prev) => {
-      const existingIndex = prev.findIndex((i) => i.itemId === dish.id && i.variant === variant);
+    setTokenCart((prev: any[]) => {
+      const existingIndex = prev.findIndex((i: any) => i.itemId === dish.id && i.variant === variant);
       if (existingIndex > -1) {
         const newCart = [...prev];
         newCart[existingIndex] = { ...newCart[existingIndex], quantity: newCart[existingIndex].quantity + 1 };
@@ -94,9 +96,9 @@ export const TokensView: React.FC = () => {
   };
 
   const updateQty = (itemId: number, variant: PortionVariant, delta: number) => {
-    setTokenCart((prev) =>
+    setTokenCart((prev: any[]) =>
       prev
-        .map((item) => {
+        .map((item: any) => {
           if (item.itemId === itemId && item.variant === variant) {
             const newQty = item.quantity + delta;
             return newQty > 0 ? { ...item, quantity: newQty } : null;
@@ -107,7 +109,7 @@ export const TokensView: React.FC = () => {
     );
   };
 
-  const totalQty = tokenCart.reduce((sum, i) => sum + i.quantity, 0);
+  const totalQty = tokenCart.reduce((sum: number, i: any) => sum + i.quantity, 0);
 
   const handleOpenPreview = async () => {
     if (tokenCart.length === 0) {
@@ -116,7 +118,9 @@ export const TokensView: React.FC = () => {
     }
 
     let tokenNum: string;
-    if ((window as any).electronAPI?.getNextTokenSeq) {
+    if (editingTokenNumber) {
+      tokenNum = String(editingTokenNumber);
+    } else if ((window as any).electronAPI?.getNextTokenSeq) {
       // Get next seq from main process — never reuses deleted numbers
       const res = await (window as any).electronAPI.getNextTokenSeq();
       tokenNum = res.tokenNumber;
@@ -150,36 +154,37 @@ export const TokensView: React.FC = () => {
     setShowPreviewModal(true);
   };
 
-  const handleSelectActiveToken = (token: any) => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    const dateStr = `${day}/${month}/${year}`;
-    setPreviewToken({ ...token, paymentMode: token.paymentMode || 'Cash', timestamp: token.timestamp || timeStr, date: token.date || dateStr });
-    setShowPreviewModal(true);
+  const handleSelectTokenToEdit = (token: any) => {
+    setEditingTokenNumber(token.tokenNumber);
+    setOrderType(token.orderType || 'Dine-In');
+    if (token.tableNo && token.tableNo !== 'N/A' && token.tableNo !== 'TA') {
+      setSelectedTable(token.tableNo);
+      setIsCustomTableMode(false);
+    }
+    setTokenCart(token.items ? [...token.items] : []);
+    setShowRecentTokensDropdown(false);
+  };
+
+  const cancelEditToken = () => {
+    setEditingTokenNumber(null);
+    setTokenCart([]);
   };
 
   const handleSaveTokenOnly = () => {
     if (!previewToken) return;
-    const exists = activeTokensList.some((t) => t.tokenNumber === previewToken.tokenNumber);
-    if (!exists) {
-      addActiveToken(previewToken);
-    }
+    addActiveToken(previewToken);
     setShowPreviewModal(false);
     setTokenCart([]);
+    setEditingTokenNumber(null);
   };
 
   const handlePrintAndSaveToken = async () => {
     if (!previewToken) return;
-    const exists = activeTokensList.some((t) => t.tokenNumber === previewToken.tokenNumber);
-    if (!exists) {
-      addActiveToken(previewToken);
-    }
+    addActiveToken(previewToken);
     await triggerTokenPrint();
     setShowPreviewModal(false);
     setTokenCart([]);
+    setEditingTokenNumber(null);
   };
 
   const triggerTokenPrint = async () => {
@@ -209,7 +214,7 @@ export const TokensView: React.FC = () => {
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {categories.map((cat) => (
+            {categories.map((cat: { id: string; label: string }) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
@@ -227,7 +232,7 @@ export const TokensView: React.FC = () => {
 
         {/* Dishes Rows */}
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pr-1">
-          {filteredDishes.map((dish) => (
+          {filteredDishes.map((dish: Dish) => (
             <div
               key={dish.id}
               className="bg-olive-900 border border-gold-500/20 rounded-xl px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 hover:border-gold-500/50 transition-all"
@@ -268,12 +273,83 @@ export const TokensView: React.FC = () => {
       <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col h-full min-h-0 overflow-hidden">
         <div className="flex justify-between items-center pb-3 border-b border-gold-500/20">
           <h3 className="text-base font-bold text-gold-500 flex items-center gap-2">
-            <Ticket className="w-5 h-5" /> New Token Order
+            <Ticket className="w-5 h-5" /> {editingTokenNumber ? `Token #${editingTokenNumber}` : 'New Token Order'}
           </h3>
-          <button onClick={() => setTokenCart([])} className="text-xs text-rose-500 hover:underline flex items-center gap-1 font-medium">
-            <Trash2 className="w-3.5 h-3.5" /> Clear
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Edit Token Dropdown */}
+            <div 
+              className="relative flex-shrink-0"
+              onMouseEnter={() => setShowRecentTokensDropdown(true)}
+              onMouseLeave={() => setShowRecentTokensDropdown(false)}
+            >
+              <button 
+                onClick={() => setShowRecentTokensDropdown(!showRecentTokensDropdown)}
+                className="px-2.5 py-1 bg-olive-950 border border-gold-500/30 text-gold-400 hover:text-gold-300 font-bold text-xs rounded-xl flex items-center gap-1 hover:border-gold-500 transition-colors whitespace-nowrap"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit Token ▾</span>
+              </button>
+
+              {showRecentTokensDropdown && (
+                <div className="absolute right-0 top-full mt-1.5 w-72 bg-slate-900 border border-gold-500/30 rounded-2xl shadow-2xl z-50 p-2 text-xs space-y-1">
+                  <div className="flex justify-between items-center px-2 py-1.5 border-b border-slate-800 text-gold-400 font-bold text-[11px] uppercase tracking-wider">
+                    <span>Active Pending Tokens</span>
+                    <History className="w-3.5 h-3.5 text-gold-400" />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                    {activeTokensList.length === 0 ? (
+                      <div className="text-center py-4 text-slate-400">No active tokens found</div>
+                    ) : (
+                      activeTokensList.map((t) => (
+                        <button
+                          key={t.tokenNumber}
+                          onClick={() => handleSelectTokenToEdit(t)}
+                          className="w-full text-left p-2 rounded-xl bg-slate-800/80 hover:bg-gold-500/20 border border-slate-700/60 hover:border-gold-500/40 transition-all flex items-center justify-between group"
+                        >
+                          <div>
+                            <div className="font-bold text-white group-hover:text-gold-300 flex items-center gap-1.5">
+                              <span>Token #{t.tokenNumber}</span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-950 text-olive-300 font-normal">
+                                {t.orderType || 'Dine-In'}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {t.tableNo && t.tableNo !== 'N/A' && t.tableNo !== 'TA' ? `Table: ${t.tableNo}` : t.orderType === 'Takeaway' ? 'Takeaway (TA)' : ''}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] text-amber-400 font-semibold group-hover:underline">Edit ✎</span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={cancelEditToken} className="text-xs text-rose-500 hover:underline flex items-center gap-1 font-medium">
+              <Trash2 className="w-3.5 h-3.5" /> Clear
+            </button>
+          </div>
         </div>
+
+        {/* Editing Token Banner */}
+        {editingTokenNumber && (
+          <div className="mt-3 bg-amber-500/15 border border-amber-500/40 rounded-xl p-2.5 flex justify-between items-center text-xs">
+            <div className="flex items-center gap-2 text-amber-300 font-bold">
+              <Edit3 className="w-4 h-4 text-amber-400 animate-bounce" />
+              <span>Editing Token: <span className="text-white underline font-mono">#{editingTokenNumber}</span></span>
+            </div>
+            <button
+              onClick={cancelEditToken}
+              className="text-amber-400 hover:text-white p-1 rounded-lg hover:bg-amber-500/20 transition-colors"
+              title="Cancel editing token"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Order Type Toggle */}
         <div className="flex bg-olive-950 p-1 rounded-xl gap-1 my-3">
@@ -374,7 +450,7 @@ export const TokensView: React.FC = () => {
               No items added.<br />Click menu items to build token.
             </div>
           ) : (
-            tokenCart.map((item, idx) => (
+            tokenCart.map((item: any, idx: number) => (
               <div key={idx} className="flex justify-between items-center bg-olive-800/60 p-2.5 rounded-lg text-xs">
                 <div>
                   <h6 className="font-bold text-white">{item.name}</h6>
