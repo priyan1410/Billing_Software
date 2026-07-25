@@ -54,7 +54,7 @@ async function initializeDatabase() {
     // Seed default categories if table is empty
     const catCheck = await query('SELECT COUNT(*) AS cnt FROM categories');
     if (catCheck.success && catCheck.data[0] && Number(catCheck.data[0].cnt) === 0) {
-      await query("INSERT INTO categories (id, name, icon) VALUES (1, 'Mandhi Special', 'utensils'), (2, 'Barbeque & Grills', 'flame'), (3, 'Starters & Sides', 'drumstick'), (4, 'Beverages & Juices', 'cup-soda'), (5, 'Desserts', 'ice-cream')");
+      await query("INSERT INTO categories (id, name, icon) VALUES (1, 'Mandhi Special', 'utensils'), (2, 'Barbeque & Grills', 'flame'), (3, 'Starters & Sides', 'drumstick'), (4, 'Beverages & Juices', 'cup-soda'), (5, 'Desserts', 'ice-cream'), (6, 'Combo Offers', 'gift')");
       console.log('✓ Default categories seeded into MySQL.');
     }
 
@@ -68,9 +68,12 @@ async function initializeDatabase() {
         price_full DECIMAL(10,2) DEFAULT 0,
         is_available TINYINT(1) DEFAULT 1,
         image VARCHAR(100) DEFAULT 'default',
+        combo_items TEXT DEFAULT NULL,
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
       ) ENGINE=InnoDB;
     `);
+
+    await query(`ALTER TABLE menu_items ADD COLUMN combo_items TEXT DEFAULT NULL`).catch(() => { });
 
     // Seed default menu items if table is empty
     const itemCheck = await query('SELECT COUNT(*) AS cnt FROM menu_items');
@@ -81,7 +84,9 @@ async function initializeDatabase() {
         (2, 'Alfaham Chicken (அல்ஃபாஹாம் சிக்கன்)', 150, 280, 540, 1),
         (2, 'Pepper BBQ Chicken', 160, 300, 580, 1),
         (4, 'Fresh Mint Lime', 0, 0, 50, 1),
-        (5, 'Kunafa Special', 0, 0, 180, 1)`);
+        (5, 'Kunafa Special', 0, 0, 180, 1),
+        (6, 'Family Mandhi Combo (Full Mandhi + Alfaham + Mojito)', 0, 0, 999, 1),
+        (6, 'Couple Combo (Half Mandhi + 2 Mint Lime)', 0, 0, 499, 1)`);
       console.log('✓ Default menu items seeded into MySQL.');
     }
 

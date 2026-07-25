@@ -60,6 +60,7 @@ export const usePosStore = create<PosState>((set: any) => ({
             totalPrice: price,
             unit: dish.unit || 'Plate',
             hsnSac: dish.hsnSac || undefined,
+            comboItems: dish.comboItems || undefined,
           },
         ],
       };
@@ -108,6 +109,7 @@ export const usePosStore = create<PosState>((set: any) => ({
           totalPrice: Number(item.totalPrice || item.total_price || (price * qty)),
           unit: item.unit || (dish?.unit || 'Plate'),
           hsnSac: item.hsnSac || dish?.hsnSac || undefined,
+          comboItems: item.comboItems || dish?.comboItems || undefined,
         };
       });
 

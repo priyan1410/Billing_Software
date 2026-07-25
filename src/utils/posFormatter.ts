@@ -86,21 +86,29 @@ export function getPosTokenTextBody(
   lines.push(divider('-', width));
 
   let totalQty = 0;
-  (data.items || []).forEach((item) => {
-    const qtyNum = Number(item.quantity || 1);
-    totalQty += qtyNum;
-    const qtyStr = `[ ${qtyNum} ]`;
-    const itemTitle = `• ${item.name}${item.variant ? ` (${item.variant})` : ''}`;
+    (data.items || []).forEach((item: any) => {
+      const qtyNum = Number(item.quantity || 1);
+      totalQty += qtyNum;
+      const qtyStr = `[ ${qtyNum} ]`;
+      const itemTitle = `• ${item.name}${item.variant ? ` (${item.variant})` : ''}`;
 
-    const maxTitleLen = width - qtyStr.length - 1;
-    const itemLines = wrapText(itemTitle, maxTitleLen);
-    if (itemLines.length > 0) {
-      lines.push(padLine(itemLines[0], qtyStr, width));
-      for (let i = 1; i < itemLines.length; i++) {
-        lines.push('  ' + itemLines[i]);
+      const maxTitleLen = width - qtyStr.length - 1;
+      const itemLines = wrapText(itemTitle, maxTitleLen);
+      if (itemLines.length > 0) {
+        lines.push(padLine(itemLines[0], qtyStr, width));
+        for (let i = 1; i < itemLines.length; i++) {
+          lines.push('  ' + itemLines[i]);
+        }
       }
-    }
-  });
+
+      if (item.comboItems && Array.isArray(item.comboItems) && item.comboItems.length > 0) {
+        item.comboItems.forEach((sub: string) => {
+          if (sub && sub.trim()) {
+            lines.push(`  + ${sub.trim()}`);
+          }
+        });
+      }
+    });
 
   lines.push(divider('-', width));
   lines.push(padLine('Total Items', `${totalQty} Pcs`, width));
@@ -189,19 +197,27 @@ export function getPosInvoiceTextBody(
   lines.push('ITEM           QTY   RATE AMOUNT');
   lines.push(divider('-', width));
 
-  (data.items || []).forEach((item) => {
-    const nameStr = `${item.name}${item.variant ? ` (${item.variant})` : ''}`;
-    const qtyStr = String(item.quantity || 1).padStart(3, ' ');
-    const unitP = Number(item.unitPrice || item.price || 0).toFixed(2).padStart(6, ' ');
-    const totP = Number(item.totalPrice || (Number(item.unitPrice || item.price || 0) * Number(item.quantity || 1))).toFixed(2).padStart(6, ' ');
+    (data.items || []).forEach((item: any) => {
+      const nameStr = `${item.name}${item.variant ? ` (${item.variant})` : ''}`;
+      const qtyStr = String(item.quantity || 1).padStart(3, ' ');
+      const unitP = Number(item.unitPrice || item.price || 0).toFixed(2).padStart(6, ' ');
+      const totP = Number(item.totalPrice || (Number(item.unitPrice || item.price || 0) * Number(item.quantity || 1))).toFixed(2).padStart(6, ' ');
 
-    const wrappedName = wrapText(nameStr, 14);
-    const firstLineName = (wrappedName[0] || '').padEnd(14, ' ');
-    lines.push(`${firstLineName} ${qtyStr} ${unitP} ${totP}`);
-    for (let i = 1; i < wrappedName.length; i++) {
-      lines.push('  ' + wrappedName[i]);
-    }
-  });
+      const wrappedName = wrapText(nameStr, 14);
+      const firstLineName = (wrappedName[0] || '').padEnd(14, ' ');
+      lines.push(`${firstLineName} ${qtyStr} ${unitP} ${totP}`);
+      for (let i = 1; i < wrappedName.length; i++) {
+        lines.push('  ' + wrappedName[i]);
+      }
+
+      if (item.comboItems && Array.isArray(item.comboItems) && item.comboItems.length > 0) {
+        item.comboItems.forEach((sub: string) => {
+          if (sub && sub.trim()) {
+            lines.push(`  + ${sub.trim()}`);
+          }
+        });
+      }
+    });
 
   lines.push(divider('-', width));
   lines.push(padLine('Subtotal', Number(data.subtotal || 0).toFixed(2), width));

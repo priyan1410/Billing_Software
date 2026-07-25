@@ -218,12 +218,22 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
                   items.map((item, idx) => {
                     const uNum = Number(item.unitPrice || item.price || 0);
                     const tNum = Number(item.totalPrice || (uNum * (item.quantity || 1)));
+                    const isCombo = item.comboItems && Array.isArray(item.comboItems) && item.comboItems.length > 0;
                     return (
-                      <div key={idx} className="grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 leading-tight">
-                        <span className="font-semibold break-words">{item.name || item.dishName}{item.variant ? ` (${item.variant})` : ''}</span>
-                        <span className="text-center">{item.quantity || 1}</span>
-                        <span className="text-right">{uNum.toFixed(2)}</span>
-                        <span className="text-right font-semibold">{tNum.toFixed(2)}</span>
+                      <div key={idx} className="flex flex-col gap-0.5">
+                        <div className="grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 leading-tight">
+                          <span className={`break-words ${isCombo ? 'font-extrabold text-black uppercase' : 'font-semibold'}`}>{item.name || item.dishName}{item.variant ? ` (${item.variant})` : ''}</span>
+                          <span className="text-center">{item.quantity || 1}</span>
+                          <span className="text-right">{uNum.toFixed(2)}</span>
+                          <span className="text-right font-semibold">{tNum.toFixed(2)}</span>
+                        </div>
+                        {isCombo && (
+                          <div className="pl-3 text-[9.5px] text-slate-700 font-medium leading-tight">
+                            {item.comboItems.map((sub: string, sIdx: number) => (
+                              <div key={sIdx}>• {sub}</div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })

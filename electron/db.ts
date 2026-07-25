@@ -57,7 +57,8 @@ export const initialDbStore: DbStore = {
     { id: 2, name: 'Alfaham & Grill', icon: 'fire' },
     { id: 3, name: 'Starters & Sides', icon: 'drumstick-bite' },
     { id: 4, name: 'Beverages', icon: 'glass-martini-alt' },
-    { id: 5, name: 'Desserts', icon: 'ice-cream' }
+    { id: 5, name: 'Desserts', icon: 'ice-cream' },
+    { id: 6, name: 'Combo Offers', icon: 'gift' }
   ],
   menuItems: [
     { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
@@ -69,7 +70,9 @@ export const initialDbStore: DbStore = {
     { id: 7, categoryId: 3, name: 'Special Garlic Sauce / Mayonnaise (பூண்டு சாஸ்)', priceQuarter: 40, priceHalf: 40, priceFull: 40, isAvailable: true },
     { id: 8, categoryId: 4, name: 'Fresh Mint Lime Mojito (புதினா மோஹிட்டோ)', priceQuarter: 70, priceHalf: 70, priceFull: 70, isAvailable: true },
     { id: 9, categoryId: 4, name: 'Avocado Milkshake (அவகாடோ மில்க்‌ஷேக்)', priceQuarter: 110, priceHalf: 110, priceFull: 110, isAvailable: true },
-    { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true }
+    { id: 10, categoryId: 5, name: 'Turkish Kunafa (துருக்கி குனாஃபா)', priceQuarter: 180, priceHalf: 180, priceFull: 180, isAvailable: true },
+    { id: 11, categoryId: 6, name: 'Family Mandhi Combo (Full Mandhi + Alfaham + Mojito)', priceQuarter: 0, priceHalf: 0, priceFull: 999, isAvailable: true },
+    { id: 12, categoryId: 6, name: 'Couple Combo (Half Mandhi + 2 Mint Lime)', priceQuarter: 0, priceHalf: 0, priceFull: 499, isAvailable: true }
   ],
   orders: [],
   expenses: [],

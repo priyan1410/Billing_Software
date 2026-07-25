@@ -147,37 +147,52 @@ ipcMain.handle('menu:deleteCategory', async (evt, id) => {
 // MENU ITEMS
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('menu:getItems', async (evt, categoryId) => {
-  let sql = 'SELECT * FROM menu_items WHERE is_available = 1';
+  let sql = 'SELECT m.*, c.name as category_name FROM menu_items m LEFT JOIN categories c ON m.category_id = c.id WHERE m.is_available = 1';
   const params = [];
   if (categoryId && categoryId !== 'all') {
-    sql += ' AND category_id = ?';
+    sql += ' AND m.category_id = ?';
     params.push(categoryId);
   }
-  sql += ' ORDER BY id ASC';
+  sql += ' ORDER BY m.id ASC';
   const result = await query(sql, params);
   if (!result.success) return { success: false, message: result.error };
   return {
     success: true, data: result.data.map(r => ({
       id: r.id,
       categoryId: r.category_id,
+      categoryName: r.category_name || '',
       name: r.name,
       priceQuarter: Number(r.price_quarter),
       priceHalf: Number(r.price_half),
       priceFull: Number(r.price_full),
-      isAvailable: !!r.is_available
+      isAvailable: !!r.is_available,
+      comboItems: (() => {
+        if (!r.combo_items) return [];
+        try {
+          const parsed = JSON.parse(r.combo_items);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return String(r.combo_items).split('\n').map(s => s.trim()).filter(Boolean);
+        }
+      })()
     }))
   };
 });
 
 ipcMain.handle('menu:saveItem', async (evt, itemData) => {
+  const comboStr = Array.isArray(itemData.comboItems)
+    ? JSON.stringify(itemData.comboItems)
+    : (itemData.combo_items || itemData.comboItems || null);
+
   const result = await query(
-    'INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available) VALUES (?, ?, ?, ?, ?, 1)',
+    'INSERT INTO menu_items (category_id, name, price_quarter, price_half, price_full, is_available, combo_items) VALUES (?, ?, ?, ?, ?, 1, ?)',
     [
       Number(itemData.category_id || itemData.categoryId),
       itemData.name,
       Number(itemData.price_quarter || itemData.priceQuarter || 0),
       Number(itemData.price_half || itemData.priceHalf || 0),
-      Number(itemData.price_full || itemData.priceFull || 0)
+      Number(itemData.price_full || itemData.priceFull || 0),
+      comboStr
     ]
   );
   if (!result.success) return { success: false, message: result.error };
@@ -185,14 +200,19 @@ ipcMain.handle('menu:saveItem', async (evt, itemData) => {
 });
 
 ipcMain.handle('menu:updateItem', async (evt, itemData) => {
+  const comboStr = Array.isArray(itemData.comboItems)
+    ? JSON.stringify(itemData.comboItems)
+    : (itemData.combo_items || itemData.comboItems || null);
+
   const result = await query(
-    'UPDATE menu_items SET name = ?, category_id = ?, price_quarter = ?, price_half = ?, price_full = ? WHERE id = ?',
+    'UPDATE menu_items SET name = ?, category_id = ?, price_quarter = ?, price_half = ?, price_full = ?, combo_items = ? WHERE id = ?',
     [
       itemData.name,
       Number(itemData.category_id || itemData.categoryId),
       Number(itemData.price_quarter || itemData.priceQuarter || 0),
       Number(itemData.price_half || itemData.priceHalf || 0),
       Number(itemData.price_full || itemData.priceFull || 0),
+      comboStr,
       Number(itemData.id)
     ]
   );

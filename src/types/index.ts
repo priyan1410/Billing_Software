@@ -12,6 +12,7 @@ export interface Category {
 export interface Dish {
   id: number;
   categoryId: number;
+  categoryName?: string;
   name: string;
   priceQuarter: number;
   priceHalf: number;
@@ -19,6 +20,7 @@ export interface Dish {
   isAvailable: boolean;
   hsnSac?: string;
   unit?: UnitType;
+  comboItems?: string[];
 }
 
 export interface CartItem {
@@ -32,6 +34,7 @@ export interface CartItem {
   unit?: UnitType;
   hsnSac?: string;
   discount?: number;
+  comboItems?: string[];
 }
 
 export interface Order {

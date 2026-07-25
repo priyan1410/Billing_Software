@@ -34,6 +34,7 @@ export const RestaurantView: React.FC = () => {
   const [addQtr, setAddQtr] = useState('');
   const [addHalf, setAddHalf] = useState('');
   const [addFull, setAddFull] = useState('');
+  const [addComboItems, setAddComboItems] = useState<string[]>(['']);
 
   // Edit Dish Form State
   const [editId, setEditId] = useState<number | null>(null);
@@ -43,6 +44,7 @@ export const RestaurantView: React.FC = () => {
   const [editQtr, setEditQtr] = useState('');
   const [editHalf, setEditHalf] = useState('');
   const [editFull, setEditFull] = useState('');
+  const [editComboItems, setEditComboItems] = useState<string[]>(['']);
 
   // PnL Period Timeline State
   const [period, setPeriod] = useState<PnLPeriod>('today');
@@ -254,12 +256,16 @@ export const RestaurantView: React.FC = () => {
       }
     }
 
+    const isComboCat = categories.find(c => String(c.id) === String(targetCatId))?.name.toLowerCase().includes('combo') || addCustomCat.toLowerCase().includes('combo');
+    const validComboItems = isComboCat ? addComboItems.map(s => s.trim()).filter(Boolean) : [];
+
     const payload = {
       name: addName,
       category_id: targetCatId,
-      price_quarter: Number(addQtr || 0),
-      price_half: Number(addHalf || 0),
-      price_full: Number(addFull)
+      price_quarter: isComboCat ? 0 : Number(addQtr || 0),
+      price_half: isComboCat ? 0 : Number(addHalf || 0),
+      price_full: Number(addFull),
+      comboItems: validComboItems
     };
 
     if ((window as any).electronAPI) {
@@ -276,10 +282,11 @@ export const RestaurantView: React.FC = () => {
           id: dishes.length + 1,
           categoryId: Number(addCat),
           name: addName,
-          priceQuarter: Number(addQtr || 0),
-          priceHalf: Number(addHalf || 0),
+          priceQuarter: isComboCat ? 0 : Number(addQtr || 0),
+          priceHalf: isComboCat ? 0 : Number(addHalf || 0),
           priceFull: Number(addFull),
-          isAvailable: true
+          isAvailable: true,
+          comboItems: validComboItems
         }
       ]);
     }
@@ -288,6 +295,7 @@ export const RestaurantView: React.FC = () => {
     setAddQtr('');
     setAddHalf('');
     setAddFull('');
+    setAddComboItems(['']);
     setShowAddModal(false);
   };
 
@@ -299,6 +307,7 @@ export const RestaurantView: React.FC = () => {
     setEditQtr(String(dish.priceQuarter || 0));
     setEditHalf(String(dish.priceHalf || 0));
     setEditFull(String(dish.priceFull || 0));
+    setEditComboItems(dish.comboItems && dish.comboItems.length > 0 ? dish.comboItems : ['']);
     setShowEditModal(true);
   };
 
@@ -306,13 +315,17 @@ export const RestaurantView: React.FC = () => {
     e.preventDefault();
     if (!editId || !editName || !editFull) return;
 
+    const isEditComboCat = categories.find(c => String(c.id) === String(editCat))?.name.toLowerCase().includes('combo');
+    const validComboItems = isEditComboCat ? editComboItems.map(s => s.trim()).filter(Boolean) : [];
+
     const payload = {
       id: editId,
       name: editName,
       category_id: Number(editCat),
-      price_quarter: Number(editQtr || 0),
-      price_half: Number(editHalf || 0),
-      price_full: Number(editFull)
+      price_quarter: isEditComboCat ? 0 : Number(editQtr || 0),
+      price_half: isEditComboCat ? 0 : Number(editHalf || 0),
+      price_full: Number(editFull),
+      comboItems: validComboItems
     };
 
     if ((window as any).electronAPI) {
@@ -330,9 +343,10 @@ export const RestaurantView: React.FC = () => {
               ...d,
               name: editName,
               categoryId: Number(editCat),
-              priceQuarter: Number(editQtr || 0),
-              priceHalf: Number(editHalf || 0),
-              priceFull: Number(editFull)
+              priceQuarter: isEditComboCat ? 0 : Number(editQtr || 0),
+              priceHalf: isEditComboCat ? 0 : Number(editHalf || 0),
+              priceFull: Number(editFull),
+              comboItems: validComboItems
             }
             : d
         )
@@ -949,23 +963,11 @@ export const RestaurantView: React.FC = () => {
       {/* Add Dish Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[400px] space-y-4">
+          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[420px] space-y-4 max-h-[90vh] overflow-y-auto">
             <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
-              <Plus className="w-5 h-5" /> Add New Menu Dish
+              <Plus className="w-5 h-5" /> Add New Menu Dish / Combo
             </h4>
             <form onSubmit={handleAddSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="text-olive-300 block mb-1">Dish Name</label>
-                <input
-                  type="text"
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  placeholder="e.g., Alfaham Mandhi"
-                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  required
-                />
-              </div>
-
               <div>
                 <label className="text-olive-300 block mb-1">Category</label>
                 <select
@@ -994,47 +996,101 @@ export const RestaurantView: React.FC = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-olive-300 block mb-1">Quarter Price (₹)</label>
-                  <input
-                    type="number"
-                    value={addQtr}
-                    onChange={(e) => setAddQtr(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-olive-300 block mb-1">Half Price (₹)</label>
-                  <input
-                    type="number"
-                    value={addHalf}
-                    onChange={(e) => setAddHalf(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  />
-                </div>
-              </div>
+              {(() => {
+                const isComboCat = categories.find(c => String(c.id) === String(addCat))?.name.toLowerCase().includes('combo') || addCustomCat.toLowerCase().includes('combo');
+                return (
+                  <>
+                    <div>
+                      <label className="text-olive-300 block mb-1 font-semibold">{isComboCat ? 'Combo Offer Name' : 'Dish Name'}</label>
+                      <input
+                        type="text"
+                        value={addName}
+                        onChange={(e) => setAddName(e.target.value)}
+                        placeholder={isComboCat ? 'e.g., Family Mandhi Feast Combo' : 'e.g., Alfaham Mandhi'}
+                        className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
+                        required
+                      />
+                    </div>
 
-              <div>
-                <label className="text-olive-300 block mb-1">Full Price (₹)</label>
-                <input
-                  type="number"
-                  value={addFull}
-                  onChange={(e) => setAddFull(e.target.value)}
-                  placeholder="0"
-                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  required
-                />
-              </div>
+                    {isComboCat ? (
+                      <div className="space-y-2 bg-olive-950/60 p-3 rounded-xl border border-gold-500/20">
+                        <div className="flex justify-between items-center">
+                          <label className="text-amber-400 font-bold block text-xs">Included Items Breakdown</label>
+                          <button
+                            type="button"
+                            onClick={() => setAddComboItems(p => [...p, ''])}
+                            className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-[11px] font-bold hover:bg-amber-500/30 flex items-center gap-1"
+                          >
+                            + Add Included Item
+                          </button>
+                        </div>
+                        {addComboItems.map((item, idx) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={item}
+                              onChange={(e) => setAddComboItems(p => p.map((v, i) => i === idx ? e.target.value : v))}
+                              placeholder={`e.g. ${idx === 0 ? '1 Full Chicken Mandhi' : idx === 1 ? '1 Alfaham' : '2 Mint Lime'}`}
+                              className="flex-1 px-2.5 py-1.5 bg-olive-900 border border-gold-500/20 rounded-lg text-white outline-none text-xs"
+                            />
+                            {addComboItems.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setAddComboItems(p => p.filter((_, i) => i !== idx))}
+                                className="text-rose-400 hover:text-rose-300 p-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-olive-300 block mb-1">Quarter Price (₹)</label>
+                          <input
+                            type="number"
+                            value={addQtr}
+                            onChange={(e) => setAddQtr(e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-olive-300 block mb-1">Half Price (₹)</label>
+                          <input
+                            type="number"
+                            value={addHalf}
+                            onChange={(e) => setAddHalf(e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-olive-300 block mb-1 font-semibold">{isComboCat ? 'Combo Package Price (₹)' : 'Full Price (₹)'}</label>
+                      <input
+                        type="number"
+                        value={addFull}
+                        onChange={(e) => setAddFull(e.target.value)}
+                        placeholder="0"
+                        className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none font-bold text-gold-400"
+                        required
+                      />
+                    </div>
+                  </>
+                );
+              })()}
 
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2 bg-olive-800 text-white rounded-lg font-bold">
                   Cancel
                 </button>
                 <button type="submit" className="flex-1 py-2 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 rounded-lg font-extrabold">
-                  Save Dish
+                  Save Dish / Combo
                 </button>
               </div>
             </form>
@@ -1045,60 +1101,102 @@ export const RestaurantView: React.FC = () => {
       {/* Edit Dish Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[400px] space-y-4">
+          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-[420px] space-y-4 max-h-[90vh] overflow-y-auto">
             <h4 className="text-base font-bold text-gold-500 flex items-center gap-2">
-              <Edit2 className="w-5 h-5" /> Edit Dish Prices
+              <Edit2 className="w-5 h-5" /> Edit Dish / Combo Details
             </h4>
             <form onSubmit={handleEditSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="text-olive-300 block mb-1">Dish Name</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  required
-                />
-              </div>
+              {(() => {
+                const isEditComboCat = categories.find(c => String(c.id) === String(editCat))?.name.toLowerCase().includes('combo');
+                return (
+                  <>
+                    <div>
+                      <label className="text-olive-300 block mb-1 font-semibold">{isEditComboCat ? 'Combo Offer Name' : 'Dish Name'}</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
+                        required
+                      />
+                    </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-olive-300 block mb-1">Quarter Price (₹)</label>
-                  <input
-                    type="number"
-                    value={editQtr}
-                    onChange={(e) => setEditQtr(e.target.value)}
-                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-olive-300 block mb-1">Half Price (₹)</label>
-                  <input
-                    type="number"
-                    value={editHalf}
-                    onChange={(e) => setEditHalf(e.target.value)}
-                    className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  />
-                </div>
-              </div>
+                    {isEditComboCat ? (
+                      <div className="space-y-2 bg-olive-950/60 p-3 rounded-xl border border-gold-500/20">
+                        <div className="flex justify-between items-center">
+                          <label className="text-amber-400 font-bold block text-xs">Included Items Breakdown</label>
+                          <button
+                            type="button"
+                            onClick={() => setEditComboItems(p => [...p, ''])}
+                            className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded text-[11px] font-bold hover:bg-amber-500/30 flex items-center gap-1"
+                          >
+                            + Add Included Item
+                          </button>
+                        </div>
+                        {editComboItems.map((item, idx) => (
+                          <div key={idx} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={item}
+                              onChange={(e) => setEditComboItems(p => p.map((v, i) => i === idx ? e.target.value : v))}
+                              placeholder={`Included Item ${idx + 1}`}
+                              className="flex-1 px-2.5 py-1.5 bg-olive-900 border border-gold-500/20 rounded-lg text-white outline-none text-xs"
+                            />
+                            {editComboItems.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setEditComboItems(p => p.filter((_, i) => i !== idx))}
+                                className="text-rose-400 hover:text-rose-300 p-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-olive-300 block mb-1">Quarter Price (₹)</label>
+                          <input
+                            type="number"
+                            value={editQtr}
+                            onChange={(e) => setEditQtr(e.target.value)}
+                            className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-olive-300 block mb-1">Half Price (₹)</label>
+                          <input
+                            type="number"
+                            value={editHalf}
+                            onChange={(e) => setEditHalf(e.target.value)}
+                            className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
 
-              <div>
-                <label className="text-olive-300 block mb-1">Full Price (₹)</label>
-                <input
-                  type="number"
-                  value={editFull}
-                  onChange={(e) => setEditFull(e.target.value)}
-                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none"
-                  required
-                />
-              </div>
+                    <div>
+                      <label className="text-olive-300 block mb-1 font-semibold">{isEditComboCat ? 'Combo Package Price (₹)' : 'Full Price (₹)'}</label>
+                      <input
+                        type="number"
+                        value={editFull}
+                        onChange={(e) => setEditFull(e.target.value)}
+                        className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-lg text-white outline-none font-bold text-gold-400"
+                        required
+                      />
+                    </div>
+                  </>
+                );
+              })()}
 
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-2 bg-olive-800 text-white rounded-lg font-bold">
                   Cancel
                 </button>
                 <button type="submit" className="flex-1 py-2 bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 rounded-lg font-extrabold">
-                  Update Prices
+                  Update Dish / Combo
                 </button>
               </div>
             </form>

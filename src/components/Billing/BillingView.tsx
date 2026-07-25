@@ -170,15 +170,25 @@ const ConfirmOrderModal: React.FC<{
             {/* Items List */}
             <div className="space-y-1.5 my-2 text-[11px]">
               {(cart || []).map((item, idx) => {
+                const isCombo = item.comboItems && item.comboItems.length > 0;
                 const label = `${item.name}${item.variant ? ` (${item.variant})` : ''}`;
                 const unitP = Number(item.unitPrice || item.price || 0);
                 const totalP = Number(item.totalPrice || (unitP * (item.quantity || 1)));
                 return (
-                  <div key={idx} className="grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 text-[11px] leading-tight items-baseline">
-                    <span className="font-semibold text-black break-words">{label}</span>
-                    <span className="text-center">{item.quantity || 1}</span>
-                    <span className="text-right">{unitP.toFixed(2)}</span>
-                    <span className="text-right font-semibold">{totalP.toFixed(2)}</span>
+                  <div key={idx} className="flex flex-col gap-0.5">
+                    <div className="grid grid-cols-[1.4fr_0.4fr_0.8fr_0.8fr] gap-1 text-[11px] leading-tight items-baseline">
+                      <span className={`break-words ${isCombo ? 'font-extrabold text-black uppercase' : 'font-semibold text-black'}`}>{label}</span>
+                      <span className="text-center">{item.quantity || 1}</span>
+                      <span className="text-right">{unitP.toFixed(2)}</span>
+                      <span className="text-right font-semibold">{totalP.toFixed(2)}</span>
+                    </div>
+                    {isCombo && (
+                      <div className="pl-3 text-[10px] text-slate-700 font-medium leading-tight">
+                        {item.comboItems.map((sub: string, sIdx: number) => (
+                          <div key={sIdx}>• {sub}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -353,6 +363,16 @@ export const BillingView: React.FC = () => {
             id: String(c.id),
             label: c.name
           }));
+
+          // Ensure a Combo Offers category exists in the categories list
+          const hasCombo = dynamicCats.some((c: any) => c.label.toLowerCase().includes('combo'));
+          if (!hasCombo && (window as any).electronAPI?.saveCategory) {
+            const createRes = await (window as any).electronAPI.saveCategory({ name: 'Combo Offers', icon: 'gift' });
+            if (createRes && createRes.success && createRes.data) {
+              dynamicCats.push({ id: String(createRes.data.id), label: createRes.data.name });
+            }
+          }
+
           setCategories([{ id: 'all', label: 'All Items' }, ...dynamicCats]);
         }
       }
@@ -407,8 +427,19 @@ export const BillingView: React.FC = () => {
     startEditingBill(orderToLoad, dishes);
   };
 
+  const comboCatIds = categories
+    .filter((c) => c.label.toLowerCase().includes('combo'))
+    .map((c) => String(c.id));
+
   const filteredDishes = dishes.filter((d) => {
-    const matchesCat = activeCategory === 'all' || String(d.categoryId) === String(activeCategory);
+    const isCombo = comboCatIds.includes(String(d.categoryId)) ||
+                    (d.categoryName && d.categoryName.toLowerCase().includes('combo')) ||
+                    d.name.toLowerCase().includes('combo');
+    if (activeCategory === 'all') {
+      if (isCombo) return false;
+      return d.name.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    const matchesCat = String(d.categoryId) === String(activeCategory);
     return matchesCat && d.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -639,6 +670,56 @@ export const BillingView: React.FC = () => {
                 { variant: 'Half' as const, price: dish.priceHalf },
                 { variant: 'Full' as const, price: dish.priceFull },
               ].filter((p) => p.price > 0);
+
+              const isComboDish = comboCatIds.includes(String(dish.categoryId)) ||
+                                  (dish.categoryName && dish.categoryName.toLowerCase().includes('combo')) ||
+                                  dish.name.toLowerCase().includes('combo');
+
+              if (isComboDish) {
+                const comboPrice = prices[0]?.price || dish.priceFull || dish.priceQuarter || 0;
+                const comboVariant = prices[0]?.variant || 'Full';
+                const subItemsList = (dish.comboItems && dish.comboItems.length > 0)
+                  ? dish.comboItems
+                  : (() => {
+                      const match = dish.name.match(/\(([^)]+)\)/);
+                      if (match && match[1]) {
+                        return match[1].split('+').map((s: string) => s.trim()).filter(Boolean);
+                      }
+                      return [];
+                    })();
+
+                return (
+                  <div key={dish.id} className="bg-gradient-to-br from-amber-950/40 via-olive-900 to-amber-950/30 border border-amber-500/40 rounded-xl p-3 hover:border-amber-400 transition-all hover:shadow-lg hover:shadow-amber-500/10 group flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          🎁 Combo Deal
+                        </span>
+                        <span className="text-[10px] text-amber-400 font-bold">{curr}{comboPrice}</span>
+                      </div>
+                      <h4 className="text-white text-xs font-bold leading-tight mb-1 group-hover:text-amber-300 transition-colors">{dish.name}</h4>
+                      {subItemsList.length > 0 && (
+                        <div className="mb-2.5 space-y-0.5 border-l-2 border-amber-500/40 pl-2 text-[10px] text-amber-200/90 font-medium">
+                          {subItemsList.map((sub: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-1 leading-tight">
+                              <span className="text-amber-400 font-bold">•</span>
+                              <span>{sub}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => addToCart(dish, comboVariant)}
+                      className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 mt-1"
+                    >
+                      <span>🎁 Add Combo</span>
+                      <span className="bg-slate-950/20 px-1.5 py-0.5 rounded text-[10px]">{curr}{comboPrice}</span>
+                    </button>
+                  </div>
+                );
+              }
+
               return (
                 <div key={dish.id} className="bg-olive-900 border border-gold-500/10 rounded-xl p-3 hover:border-gold-500/30 transition-all hover:shadow-lg hover:shadow-gold-500/5 group">
                   <h4 className="text-white text-[11px] font-semibold leading-tight mb-2 group-hover:text-gold-300 transition-colors">{dish.name}</h4>
@@ -772,17 +853,31 @@ export const BillingView: React.FC = () => {
               Cart is empty.<br />Tap menu items to add.
             </div>
           ) : cart.map((item) => (
-            <div key={item.cartKey} className="flex items-center gap-2 bg-olive-800/60 px-3 py-2 rounded-xl text-xs">
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-white text-[11px] truncate">{item.name}</p>
-                <p className="text-olive-400 text-[10px]">{item.variant} · {curr}{item.unitPrice}</p>
+            <div key={item.cartKey} className="flex flex-col bg-olive-800/60 px-3 py-2 rounded-xl text-xs gap-1">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className={`font-extrabold text-[11px] truncate ${item.comboItems && item.comboItems.length > 0 ? 'text-amber-300' : 'text-white'}`}>
+                    {item.name}
+                  </p>
+                  <p className="text-olive-400 text-[10px]">{item.variant} · {curr}{item.unitPrice}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => updateQty(item.cartKey, -1)} className="w-6 h-6 rounded bg-olive-950 border border-gold-500/20 text-white flex items-center justify-center hover:border-gold-500/50 transition-colors text-sm">−</button>
+                  <span className="font-bold text-white w-5 text-center text-sm">{item.quantity}</span>
+                  <button onClick={() => updateQty(item.cartKey, 1)} className="w-6 h-6 rounded bg-olive-950 border border-gold-500/20 text-white flex items-center justify-center hover:border-gold-500/50 transition-colors text-sm">+</button>
+                </div>
+                <span className="font-bold text-gold-400 text-[11px] min-w-[52px] text-right">{curr}{item.totalPrice.toFixed(2)}</span>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <button onClick={() => updateQty(item.cartKey, -1)} className="w-6 h-6 rounded bg-olive-950 border border-gold-500/20 text-white flex items-center justify-center hover:border-gold-500/50 transition-colors text-sm">−</button>
-                <span className="font-bold text-white w-5 text-center text-sm">{item.quantity}</span>
-                <button onClick={() => updateQty(item.cartKey, 1)} className="w-6 h-6 rounded bg-olive-950 border border-gold-500/20 text-white flex items-center justify-center hover:border-gold-500/50 transition-colors text-sm">+</button>
-              </div>
-              <span className="font-bold text-gold-400 text-[11px] min-w-[52px] text-right">{curr}{item.totalPrice.toFixed(2)}</span>
+              {item.comboItems && item.comboItems.length > 0 && (
+                <div className="ml-2 pl-2 border-l-2 border-amber-500/40 text-[10px] text-amber-200/90 space-y-0.5 font-medium">
+                  {item.comboItems.map((sub: string, idx: number) => (
+                    <div key={idx} className="flex items-center gap-1">
+                      <span className="text-amber-400 font-bold">•</span>
+                      <span>{sub}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
