@@ -10,7 +10,7 @@ export const defaultRestaurant: RestaurantDetails = {
   phone: '',
   email: '',
   address: '',
-  taxRate: 5.0,
+  taxRate: 0.0,
   currency: '₹',
   totalTables: 10,
   headerNote: '',

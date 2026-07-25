@@ -89,7 +89,7 @@ export const RestaurantSettingsView: React.FC = () => {
 
   const [form, setForm] = useState<RestaurantDetails & { taxRateStr: string; totalTablesStr: string }>({
     ...restaurantDetails,
-    taxRateStr: String(restaurantDetails.taxRate ?? 5),
+    taxRateStr: String(restaurantDetails.taxRate ?? 0),
     totalTablesStr: String(restaurantDetails.totalTables ?? 10)
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -103,7 +103,7 @@ export const RestaurantSettingsView: React.FC = () => {
   useEffect(() => {
     setForm({
       ...restaurantDetails,
-      taxRateStr: String(restaurantDetails.taxRate ?? 5),
+      taxRateStr: String(restaurantDetails.taxRate ?? 0),
       totalTablesStr: String(restaurantDetails.totalTables ?? 10)
     });
     setIsDirty(false);
@@ -117,6 +117,7 @@ export const RestaurantSettingsView: React.FC = () => {
 
   const handleSave = async () => {
     setSaveStatus('saving');
+    const parsedTax = Number(form.taxRateStr);
     const payload: Partial<RestaurantDetails> = {
       companyName: form.companyName,
       tagline: form.tagline,
@@ -126,7 +127,7 @@ export const RestaurantSettingsView: React.FC = () => {
       phone: form.phone,
       email: form.email,
       address: form.address,
-      taxRate: Number(form.taxRateStr) || 5,
+      taxRate: isNaN(parsedTax) ? 0 : parsedTax,
       totalTables: Math.max(1, Number(form.totalTablesStr) || 10),
       currency: form.currency,
       headerNote: form.headerNote,

@@ -1310,7 +1310,7 @@ ipcMain.handle('restaurant:getDetails', async () => {
         phone: r.phone || '',
         email: r.email || '',
         address: r.address || '',
-        taxRate: Number(r.tax_rate ?? 5),
+        taxRate: Number(r.tax_rate ?? 0),
         currency: r.currency || '₹',
         totalTables: Number(r.total_tables || r.totalTables || parsedPrintConfig.totalTables || 10),
         headerNote: r.header_note || '',
@@ -1374,7 +1374,7 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
         data.phone || '',
         data.email || '',
         data.address || '',
-        Number(data.taxRate ?? 5.0),
+        Number(data.taxRate ?? 0.0),
         data.currency || '₹'
       ];
 
@@ -1404,7 +1404,7 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
         data.phone || '',
         data.email || '',
         data.address || '',
-        Number(data.taxRate ?? 5.0),
+        Number(data.taxRate ?? 0.0),
         data.currency || '₹'
       ];
 

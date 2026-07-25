@@ -329,7 +329,7 @@ export const BillingView: React.FC = () => {
   const [loadingRecent, setLoadingRecent] = useState(false);
 
   const curr = restaurantDetails?.currency || '₹';
-  const taxRate = restaurantDetails?.taxRate ?? 5;
+  const taxRate = restaurantDetails?.taxRate ?? 0;
 
   const fetchNextBillNumber = async () => {
     if ((window as any).electronAPI?.getNextOrderNumber) {

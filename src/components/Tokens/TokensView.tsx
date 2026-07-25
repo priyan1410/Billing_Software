@@ -270,10 +270,10 @@ export const TokensView: React.FC = () => {
       </div>
 
       {/* Token Cart Right (No Prices / Pure Token Generator) */}
-      <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col h-full min-h-0 overflow-hidden">
+      <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col h-full min-h-0 relative">
         <div className="flex justify-between items-center pb-3 border-b border-gold-500/20">
           <h3 className="text-base font-bold text-gold-500 flex items-center gap-2">
-            <Ticket className="w-5 h-5" /> {editingTokenNumber ? `Token #${editingTokenNumber}` : 'New Token Order'}
+            <Ticket className="w-5 h-5" /> {editingTokenNumber ? `Token #${editingTokenNumber}` : 'New Token'}
           </h3>
           <div className="flex items-center gap-2">
             {/* Edit Token Dropdown */}
@@ -291,7 +291,7 @@ export const TokensView: React.FC = () => {
               </button>
 
               {showRecentTokensDropdown && (
-                <div className="absolute right-0 top-full mt-1.5 w-72 bg-slate-900 border border-gold-500/30 rounded-2xl shadow-2xl z-50 p-2 text-xs space-y-1">
+                <div className="absolute right-0 top-full mt-1.5 w-[280px] bg-slate-900 border border-gold-500/30 rounded-2xl shadow-2xl z-50 p-2.5 text-xs space-y-1">
                   <div className="flex justify-between items-center px-2 py-1.5 border-b border-slate-800 text-gold-400 font-bold text-[11px] uppercase tracking-wider">
                     <span>Active Pending Tokens</span>
                     <History className="w-3.5 h-3.5 text-gold-400" />
@@ -306,18 +306,18 @@ export const TokensView: React.FC = () => {
                           onClick={() => handleSelectTokenToEdit(t)}
                           className="w-full text-left p-2 rounded-xl bg-slate-800/80 hover:bg-gold-500/20 border border-slate-700/60 hover:border-gold-500/40 transition-all flex items-center justify-between group"
                         >
-                          <div>
+                          <div className="flex-1 min-w-0 pr-2">
                             <div className="font-bold text-white group-hover:text-gold-300 flex items-center gap-1.5">
-                              <span>Token #{t.tokenNumber}</span>
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-950 text-olive-300 font-normal">
+                              <span className="truncate">Token #{t.tokenNumber}</span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-950 text-olive-300 font-normal shrink-0">
                                 {t.orderType || 'Dine-In'}
                               </span>
                             </div>
-                            <div className="text-[10px] text-slate-400 mt-0.5">
+                            <div className="text-[10px] text-slate-400 mt-0.5 truncate">
                               {t.tableNo && t.tableNo !== 'N/A' && t.tableNo !== 'TA' ? `Table: ${t.tableNo}` : t.orderType === 'Takeaway' ? 'Takeaway (TA)' : ''}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <span className="text-[10px] text-amber-400 font-semibold group-hover:underline">Edit ✎</span>
                           </div>
                         </button>
