@@ -737,9 +737,8 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
                   </div>
 
                   {showFooterNote && (
-                    <div className="text-center mt-2 text-[10px] italic">
-                      Thank You! Visit Again.<br />
-                      <span className="not-italic text-[9px] text-slate-700">{restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}</span>
+                    <div className="text-center mt-2 text-[9px] text-slate-700">
+                      {restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
                     </div>
                   )}
                 </div>

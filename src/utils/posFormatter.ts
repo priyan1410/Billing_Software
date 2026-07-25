@@ -242,7 +242,6 @@ export function getPosInvoiceTextBody(
   lines.push(padLine('GRAND TOTAL', `RS.${Number(data.grandTotal || 0).toFixed(2)}`, width));
   lines.push(divider('=', width));
 
-  lines.push(centerLine('Thank You! Visit Again.', width));
   if (restaurantDetails?.footerNote) {
     wrapText(restaurantDetails.footerNote, width).forEach((l) => lines.push(centerLine(l, width)));
   }

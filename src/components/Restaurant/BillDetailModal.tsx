@@ -257,14 +257,6 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
               </div>
 
               <div className="text-center mt-3 pt-1">
-                <div className="font-serif italic font-bold text-sm text-black leading-snug">
-                  Thank You!<br />Visit Again.
-                </div>
-                <div className="flex items-center justify-center gap-2 my-2">
-                  <div className="h-[1px] bg-black w-10"></div>
-                  <span className="text-[9px]">★</span>
-                  <div className="h-[1px] bg-black w-10"></div>
-                </div>
                 <div className="text-[10px] text-slate-800 leading-tight">
                   {restaurantDetails?.footerNote || 'Goods once sold cannot be returned.'}
                 </div>

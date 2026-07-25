@@ -528,14 +528,6 @@ const Billing = {
         <div style="border-top: 1px dashed #000; margin: 6px 0;"></div>
 
         <div style="text-align: center; margin-top: 8px;">
-          <div style="font-family: Georgia, serif; font-style: italic; font-weight: bold; font-size: 14px;">
-            Thank You!<br/>Visit Again.
-          </div>
-          <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin: 6px 0;">
-            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
-            <span style="font-size: 9px;">★</span>
-            <span style="border-bottom: 1px solid #000; width: 35px; display: inline-block;"></span>
-          </div>
           <div style="font-size: 9.5px;">
             Goods once sold cannot be returned.<br/>
             Please visit again.
