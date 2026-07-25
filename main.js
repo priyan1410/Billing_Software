@@ -1426,3 +1426,34 @@ ipcMain.handle('receipt:print', async (evt, receiptHtml, options = {}) => {
     return { success: false, message: err.message };
   }
 });
+
+// ─────────────────────────────────────────────────────────────
+// DATABASE CONFIGURATION & MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+ipcMain.handle('db:getConfig', async () => {
+  try {
+    const cfg = loadConfig();
+    return { success: true, data: cfg };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:testConnection', async (evt, customConfig) => {
+  try {
+    const res = await testConnection(customConfig || null);
+    return res;
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:saveConfig', async (evt, config) => {
+  try {
+    const res = await saveConfig(config);
+    return res;
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+

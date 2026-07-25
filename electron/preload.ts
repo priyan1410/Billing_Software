@@ -33,7 +33,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   printReceipt: (receiptHtml: string) => ipcRenderer.invoke('receipt:print', receiptHtml),
 
   // Database Management
+  getDbConfig: () => ipcRenderer.invoke('db:getConfig'),
+  testDbConnection: (config?: any) => ipcRenderer.invoke('db:testConnection', config),
+  saveDbConfig: (config: any) => ipcRenderer.invoke('db:saveConfig', config),
   clearOrders: () => ipcRenderer.invoke('db:clearOrders'),
+
   clearExpenses: () => ipcRenderer.invoke('db:clearExpenses'),
   resetDefaults: () => ipcRenderer.invoke('db:resetDefaults'),
   importBackup: (backupData: any) => ipcRenderer.invoke('db:importBackup', backupData),

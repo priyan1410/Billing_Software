@@ -468,3 +468,32 @@ ipcMain.handle('restaurant:saveDetails', async (_evt: any, data: any) => {
   }
   return { success: true };
 });
+
+// Database Config Handlers
+ipcMain.handle('db:getConfig', async () => {
+  try {
+    const { loadConfig } = require('../db/connection');
+    return { success: true, data: loadConfig() };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:testConnection', async (_evt: any, customConfig: any) => {
+  try {
+    const { testConnection } = require('../db/connection');
+    return await testConnection(customConfig || null);
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:saveConfig', async (_evt: any, config: any) => {
+  try {
+    const { saveConfig } = require('../db/connection');
+    return await saveConfig(config);
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+});
+

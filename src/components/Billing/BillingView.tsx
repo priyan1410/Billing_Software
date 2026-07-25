@@ -304,7 +304,7 @@ export const BillingView: React.FC = () => {
     startEditingBill, cancelEditBill
   } = usePosStore();
   const { activeTokensList, removeActiveToken, loadActiveTokens } = useAppStore();
-  const { restaurantDetails } = useAuthStore();
+  const { restaurantDetails, updateRestaurantDetails } = useAuthStore();
 
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; label: string }>>([
@@ -802,6 +802,27 @@ export const BillingView: React.FC = () => {
             </div>
             <div className="flex justify-between text-base font-extrabold text-gold-500 border-t border-dashed border-gold-500/20 pt-2">
               <span>Grand Total</span><span>{fmt(grandTotal, curr)}</span>
+            </div>
+          </div>
+
+          {/* Quick Toggle: Print Token (KOT) with Bill */}
+          <div
+            onClick={() => {
+              const currentVal = restaurantDetails?.printWithToken ?? true;
+              updateRestaurantDetails({ printWithToken: !currentVal });
+            }}
+            className="flex items-center justify-between px-3 py-2 bg-olive-900 border border-gold-500/20 rounded-xl cursor-pointer hover:border-gold-500/50 transition-all select-none"
+          >
+            <div className="flex items-center gap-2">
+              <Printer className="w-3.5 h-3.5 text-gold-400" />
+              <span className="text-xs font-semibold text-olive-200">Print Token (KOT) with Bill</span>
+            </div>
+            <div className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${
+              (restaurantDetails?.printWithToken ?? true) ? 'bg-gold-500 justify-end' : 'bg-olive-950 justify-start border border-gold-500/20'
+            }`}>
+              <div className={`w-3 h-3 rounded-full shadow-md transition-transform ${
+                (restaurantDetails?.printWithToken ?? true) ? 'bg-olive-950' : 'bg-olive-400'
+              }`} />
             </div>
           </div>
 
