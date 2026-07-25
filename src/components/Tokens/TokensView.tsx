@@ -524,14 +524,17 @@ export const TokensView: React.FC = () => {
                     <span>Date : {previewToken.date}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Order Type: <strong>{previewToken.orderType.toUpperCase()}</strong></span>
+                    <span>
+                      Order Type: <strong>
+                        {previewToken.orderType.toLowerCase().includes('dine')
+                          ? (previewToken.tableNo && previewToken.tableNo !== 'N/A' && previewToken.tableNo !== 'TA'
+                              ? `DI-${previewToken.tableNo}`
+                              : 'DI-Dine-In')
+                          : 'Takeaway'}
+                      </strong>
+                    </span>
                     <span>Time : {previewToken.timestamp}</span>
                   </div>
-                  {previewToken.tableNo && (
-                    <div className="flex justify-between font-bold text-black text-[11px]">
-                      <span>Table No &nbsp;: <strong>{previewToken.tableNo}</strong></span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Table Header */}

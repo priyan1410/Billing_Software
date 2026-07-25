@@ -243,12 +243,15 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   const rawToken = orderData.token_number || orderData.tokenNumber || orderData.token_id || orderData.tokenId || '';
   const normalizedToken = rawToken ? normalizeTokenNumber(rawToken) : null;
 
+  const tableNum = orderData.table_number || orderData.tableNumber || (orderData.order_type === 'Takeaway' ? 'TA' : 'N/A');
+
   let insertOrder = await query(
-    `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+    `INSERT INTO orders (order_number, order_type, table_number, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
     [
       orderNumber,
       orderData.order_type || orderData.orderType || 'Dine-In',
+      tableNum,
       Number(orderData.subtotal || 0),
       Number(orderData.tax_amount || orderData.taxAmount || 0),
       Number(orderData.discount_amount || orderData.discountAmount || 0),
@@ -265,11 +268,12 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
     orderNumber = `KMIV-${String(seqRetry).padStart(3, '0')}`;
 
     insertOrder = await query(
-      `INSERT INTO orders (order_number, order_type, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+      `INSERT INTO orders (order_number, order_type, table_number, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
       [
         orderNumber,
         orderData.order_type || orderData.orderType || 'Dine-In',
+        tableNum,
         Number(orderData.subtotal || 0),
         Number(orderData.tax_amount || orderData.taxAmount || 0),
         Number(orderData.discount_amount || orderData.discountAmount || 0),
@@ -306,7 +310,7 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
     ? (String(tokenRef).startsWith('KMKOT-') ? String(tokenRef) : `KMKOT-${String(tokenRef).padStart(3, '0')}`)
     : `KMKOT-${String(orderId).padStart(3, '0')}`;
 
-  return { success: true, data: { id: orderId, orderNumber, tokenId } };
+  return { success: true, data: { id: orderId, orderNumber, tokenId, tokenNumber: normalizedToken, tableNumber: tableNum } };
 });
 
 ipcMain.handle('orders:update', async (evt, orderData) => {
@@ -322,22 +326,30 @@ ipcMain.handle('orders:update', async (evt, orderData) => {
     orderId = findRes.data[0].id;
   }
 
+  const rawToken = orderData.token_number || orderData.tokenNumber || '';
+  const normalizedToken = rawToken ? normalizeTokenNumber(rawToken) : null;
+  const tableNum = orderData.table_number || orderData.tableNumber || (orderData.order_type === 'Takeaway' ? 'TA' : 'N/A');
+
   const updateRes = await query(
     `UPDATE orders SET 
       order_type = ?, 
+      table_number = ?,
       subtotal = ?, 
       tax_amount = ?, 
       discount_amount = ?, 
       grand_total = ?, 
-      payment_mode = ? 
+      payment_mode = ?,
+      token_number = ?
      WHERE id = ? OR order_number = ?`,
     [
       orderData.order_type || orderData.orderType || 'Dine-In',
+      tableNum,
       Number(orderData.subtotal || 0),
       Number(orderData.tax_amount || orderData.taxAmount || 0),
       Number(orderData.discount_amount || orderData.discountAmount || 0),
       Number(orderData.grand_total || orderData.grandTotal || 0),
       orderData.payment_mode || orderData.paymentMode || 'Cash',
+      normalizedToken,
       orderId,
       orderNumber
     ]
@@ -364,7 +376,7 @@ ipcMain.handle('orders:update', async (evt, orderData) => {
     }
   }
 
-  return { success: true, data: { id: orderId, orderNumber } };
+  return { success: true, data: { id: orderId, orderNumber, tokenNumber: normalizedToken, tableNumber: tableNum } };
 });
 
 ipcMain.handle('orders:getAll', async () => {
@@ -375,6 +387,7 @@ ipcMain.handle('orders:getAll', async () => {
       id: r.id,
       orderNumber: r.order_number,
       tokenNumber: r.token_number,
+      tableNumber: r.table_number,
       orderType: r.order_type,
       subtotal: Number(r.subtotal),
       taxAmount: Number(r.tax_amount),

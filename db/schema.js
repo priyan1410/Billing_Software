@@ -108,6 +108,7 @@ async function initializeDatabase() {
     `);
 
     await query(`ALTER TABLE orders ADD COLUMN token_number VARCHAR(50) DEFAULT NULL`).catch(() => { });
+    await query(`ALTER TABLE orders ADD COLUMN table_number VARCHAR(50) DEFAULT NULL`).catch(() => { });
 
     await query(`
       CREATE TABLE IF NOT EXISTS order_items (

@@ -77,11 +77,17 @@ export function getPosTokenTextBody(
   lines.push(centerLine('*** KITCHEN ORDER TOKEN ***', width));
   lines.push(divider('-', width));
 
-  lines.push(`Token No : ${tokenNo}`);
-  lines.push(`Order    : ${orderType}`);
-  if (data.tableNo) {
-    lines.push(`Table No : ${data.tableNo}`);
+  const rawType = String(data.orderType || 'Dine-In');
+  const tbl = data.tableNo || (data as any).tableNumber || '';
+  let formattedType = 'Takeaway';
+  if (rawType.toLowerCase().includes('dine')) {
+    formattedType = (tbl && tbl !== 'N/A' && tbl !== 'TA') ? `DI-${tbl}` : 'DI-Dine-In';
+  } else {
+    formattedType = 'Takeaway';
   }
+
+  lines.push(`Token No   : ${tokenNo}`);
+  lines.push(`Order Type : ${formattedType}`);
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
   lines.push(divider('-', width));
 
@@ -183,11 +189,15 @@ export function getPosInvoiceTextBody(
 
   lines.push(`Bill No : ${billNo}`);
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
-  lines.push(padLine(`Type: ${data.orderType || 'Dine-In'}`, `Pay: ${data.paymentMode || 'Cash'}`, width));
+  const rawType = String(data.orderType || 'Dine-In');
   const tblVal = (data as any).tableNumber || (data as any).table_number || (data as any).tableNo;
-  if (tblVal && tblVal !== 'N/A') {
-    lines.push(`Table No: ${tblVal}`);
+  let formattedType = 'Takeaway';
+  if (rawType.toLowerCase().includes('dine')) {
+    formattedType = (tblVal && tblVal !== 'N/A' && tblVal !== 'TA') ? `DI-${tblVal}` : 'DI-Dine-In';
+  } else {
+    formattedType = 'Takeaway';
   }
+  lines.push(padLine(`Type: ${formattedType}`, `Pay: ${data.paymentMode || 'Cash'}`, width));
 
   const custName = String(data.customerName || '').trim();
   const isWalkIn = !custName || /^walk[-_\s]*in$/i.test(custName);

@@ -472,17 +472,19 @@ export const BillingView: React.FC = () => {
     const orderDate = new Date();
     const orderDateString = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
 
+    const activeTokenNo = selectedTokenNum || (editingBillNumber ? (usePosStore.getState() as any).editingBillTokenNumber : undefined);
+
     const payload = {
       id: editingOrderId || undefined,
       order_number: currentBillNumber,
       order_type: orderType,
-      table_number: tableNumber || 'N/A',
+      table_number: tableNumber || (orderType === 'Takeaway' ? 'TA' : 'N/A'),
       subtotal,
       tax_amount: taxAmt,
       discount_amount: discount,
       grand_total: grandTotal,
       payment_mode: paymentMode,
-      token_number: selectedTokenNum || undefined,
+      token_number: activeTokenNo || undefined,
       items: cart,
       order_date: orderDateString,
       due_date: '',
@@ -493,6 +495,8 @@ export const BillingView: React.FC = () => {
     const base = {
       id: editingOrderId || undefined,
       orderNumber: currentBillNumber,
+      tokenNumber: activeTokenNo || undefined,
+      tableNumber: tableNumber || (orderType === 'Takeaway' ? 'TA' : 'N/A'),
       items: [...cart],
       subtotal,
       tax: taxAmt,
@@ -503,7 +507,6 @@ export const BillingView: React.FC = () => {
       paymentMode,
       customerName: 'Walk-in',
       cashierName: (useAuthStore.getState().user?.name || 'Staff') as string,
-      tableNumber: tableNumber || 'N/A',
     };
 
     let createdData: any = null;
@@ -563,14 +566,29 @@ export const BillingView: React.FC = () => {
 
     const rd = restaurantDetails;
     const billNumber = data.orderNumber || `KMIV-001`;
-    const tokenNumber = data.tokenNumber
-      ? (String(data.tokenNumber).startsWith('KMKOT') ? String(data.tokenNumber) : `KMKOT${String(data.tokenNumber).padStart(3, '0')}`)
-      : `KMKOT001`;
+
+    let tokenNumber = data.tokenNumber || data.token_number;
+    if (!tokenNumber) {
+      if ((window as any).electronAPI?.getNextTokenSeq) {
+        const seqRes = await (window as any).electronAPI.getNextTokenSeq();
+        if (seqRes && seqRes.tokenNumber) {
+          tokenNumber = seqRes.tokenNumber;
+        }
+      }
+    }
+    if (!tokenNumber) {
+      tokenNumber = 'KMKOT001';
+    } else if (!String(tokenNumber).startsWith('KMKOT')) {
+      tokenNumber = `KMKOT${String(tokenNumber).padStart(3, '0')}`;
+    }
+
+    const activeTableNo = data.tableNumber || data.table_number || data.tableNo || (data.orderType === 'Takeaway' ? 'TA' : '');
 
     if (isKot) {
       const tokenHtml = formatPosTokenHtml(
         {
           tokenNumber: tokenNumber,
+          tableNo: activeTableNo,
           orderType: data.orderType || 'Dine-In',
           paymentMode: data.paymentMode || 'Cash',
           items: data.items || [],
@@ -589,6 +607,7 @@ export const BillingView: React.FC = () => {
       const invoiceHtml = formatPosInvoiceHtml(
         {
           ...data,
+          tableNumber: activeTableNo,
           orderNumber: billNumber,
           orderDate: formattedDate,
           createdAt: new Date().toISOString()
@@ -609,6 +628,7 @@ export const BillingView: React.FC = () => {
         const tokenHtml = formatPosTokenHtml(
           {
             tokenNumber: tokenNumber,
+            tableNo: activeTableNo,
             orderType: data.orderType || 'Dine-In',
             paymentMode: data.paymentMode || 'Cash',
             items: data.items || [],
