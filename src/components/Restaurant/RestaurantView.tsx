@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus, Download, FileSpreadsheet, FileJson, X, Wallet, Search, Layers, Sparkles, Filter } from 'lucide-react';
 import { Dish, PnLPeriod } from '../../types';
 import { BillDetailModal } from './BillDetailModal';
@@ -18,6 +18,39 @@ export const RestaurantView: React.FC = () => {
   ]);
   const [dishSearchQuery, setDishSearchQuery] = useState('');
   const [dishSelectedCategory, setDishSelectedCategory] = useState<string>('all');
+
+  // Memoized Category Dishes Grouping for 60 FPS performance without render lag
+  const groupedCategoryData = useMemo(() => {
+    const knownCatIds = new Set(categories.map(c => Number(c.id)));
+    const activeCategoriesToRender = categories.filter((cat) => {
+      if (dishSelectedCategory !== 'all' && String(dishSelectedCategory) !== String(cat.id)) {
+        return false;
+      }
+      return true;
+    });
+
+    const searchQueryLower = dishSearchQuery.toLowerCase().trim();
+
+    const grouped = activeCategoriesToRender.map((cat) => {
+      const catDishes = dishes.filter(d => {
+        const isCatMatch = Number(d.categoryId) === Number(cat.id);
+        const isSearchMatch = !searchQueryLower || d.name.toLowerCase().includes(searchQueryLower);
+        return isCatMatch && isSearchMatch;
+      });
+      return { category: cat, dishes: catDishes };
+    });
+
+    const uncategorized = dishes.filter(d => {
+      const isUncat = !knownCatIds.has(Number(d.categoryId));
+      const isSearchMatch = !searchQueryLower || d.name.toLowerCase().includes(searchQueryLower);
+      return isUncat && isSearchMatch;
+    });
+
+    const totalVisible = grouped.reduce((sum, g) => sum + g.dishes.length, 0) + uncategorized.length;
+
+    return { grouped, uncategorized, totalVisible };
+  }, [categories, dishes, dishSelectedCategory, dishSearchQuery]);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPnlBill, setSelectedPnlBill] = useState<any | null>(null);
@@ -673,13 +706,12 @@ export const RestaurantView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 1: DISHES & MENU MANAGEMENT (ACRYLIC GLASS GROUPED BY CATEGORY) */}
+      {/* TAB 1: DISHES & MENU MANAGEMENT (OPTIMIZED FAST CATEGORY GROUPED VIEW) */}
       {activeTab === 'dishes' && (
-        <div className="space-y-6">
-          {/* Top Acrylic Controls Toolbar */}
-          <div className="relative bg-gradient-to-r from-olive-900/80 via-olive-900/60 to-olive-950/80 backdrop-blur-xl border border-gold-500/25 rounded-2xl p-5 shadow-2xl space-y-4 overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-32 bg-gold-500/10 blur-3xl pointer-events-none rounded-full" />
-            <div className="relative flex flex-wrap justify-between items-center gap-4 border-b border-gold-500/20 pb-4">
+        <div className="space-y-5">
+          {/* Top Controls Toolbar */}
+          <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 shadow-lg space-y-4">
+            <div className="flex flex-wrap justify-between items-center gap-4 border-b border-gold-500/20 pb-4">
               <div>
                 <h3 className="text-lg font-extrabold text-gold-400 flex items-center gap-2">
                   <Utensils className="w-5 h-5 text-gold-500" /> Kish Mandhi Menu Dishes
@@ -687,7 +719,7 @@ export const RestaurantView: React.FC = () => {
                     {dishes.length} Dish{dishes.length === 1 ? '' : 'es'} Total
                   </span>
                 </h3>
-                <p className="text-xs text-olive-300 mt-1">
+                <p className="text-xs text-olive-300 mt-0.5">
                   Dishes grouped by food category with portion sizes & pricing controls
                 </p>
               </div>
@@ -701,7 +733,7 @@ export const RestaurantView: React.FC = () => {
                     value={dishSearchQuery}
                     onChange={(e) => setDishSearchQuery(e.target.value)}
                     placeholder="Search dish name..."
-                    className="pl-9 pr-8 py-2 bg-olive-950/80 border border-gold-500/30 rounded-xl text-white text-xs placeholder-olive-400 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 transition-all w-60"
+                    className="pl-9 pr-8 py-2 bg-olive-950 border border-gold-500/30 rounded-xl text-white text-xs placeholder-olive-400 focus:outline-none focus:border-gold-500 w-60"
                   />
                   {dishSearchQuery && (
                     <button
@@ -715,7 +747,7 @@ export const RestaurantView: React.FC = () => {
 
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl shadow-lg hover:scale-105 transition-transform"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl shadow hover:scale-105 transition-transform"
                 >
                   <Plus className="w-4 h-4" /> Add New Dish
                 </button>
@@ -725,14 +757,14 @@ export const RestaurantView: React.FC = () => {
             {/* Category Filter Chips */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               <span className="text-xs font-semibold text-olive-300 flex items-center gap-1 shrink-0 mr-1">
-                <Filter className="w-3.5 h-3.5 text-gold-400" /> Filter Category:
+                <Filter className="w-3.5 h-3.5 text-gold-400" /> Category:
               </span>
               <button
                 onClick={() => setDishSelectedCategory('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1.5 border ${
                   dishSelectedCategory === 'all'
-                    ? 'bg-gold-500 text-olive-950 border-gold-400 shadow-lg shadow-gold-500/20'
-                    : 'bg-olive-950/60 text-olive-300 border-gold-500/20 hover:border-gold-500/40 hover:text-white'
+                    ? 'bg-gold-500 text-olive-950 border-gold-400 shadow'
+                    : 'bg-olive-950/80 text-olive-300 border-gold-500/20 hover:border-gold-500/40 hover:text-white'
                 }`}
               >
                 All Categories
@@ -748,10 +780,10 @@ export const RestaurantView: React.FC = () => {
                   <button
                     key={cat.id}
                     onClick={() => setDishSelectedCategory(String(cat.id))}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1.5 border ${
                       isSelected
-                        ? 'bg-gold-500 text-olive-950 border-gold-400 shadow-lg shadow-gold-500/20'
-                        : 'bg-olive-950/60 text-olive-300 border-gold-500/20 hover:border-gold-500/40 hover:text-white'
+                        ? 'bg-gold-500 text-olive-950 border-gold-400 shadow'
+                        : 'bg-olive-950/80 text-olive-300 border-gold-500/20 hover:border-gold-500/40 hover:text-white'
                     }`}
                   >
                     {cat.name}
@@ -764,237 +796,189 @@ export const RestaurantView: React.FC = () => {
             </div>
           </div>
 
-          {/* Grouped Dishes by Category (Acrylic Glass Panels) */}
-          {(() => {
-            const activeCategoriesToRender = categories.filter((cat) => {
-              if (dishSelectedCategory !== 'all' && String(dishSelectedCategory) !== String(cat.id)) {
-                return false;
-              }
-              return true;
-            });
+          {/* Grouped Dishes Cards */}
+          <div className="space-y-5">
+            {groupedCategoryData.grouped.map(({ category: cat, dishes: catDishes }) => {
+              if (dishSearchQuery && catDishes.length === 0) return null;
 
-            const knownCatIds = new Set(categories.map(c => Number(c.id)));
-            const uncategorizedDishes = dishes.filter(d => !knownCatIds.has(Number(d.categoryId)));
-
-            let totalVisibleDishes = 0;
-
-            return (
-              <div className="space-y-6">
-                {activeCategoriesToRender.map((cat) => {
-                  const catDishes = dishes.filter(d => {
-                    const isCatMatch = Number(d.categoryId) === Number(cat.id);
-                    const isSearchMatch = d.name.toLowerCase().includes(dishSearchQuery.toLowerCase());
-                    return isCatMatch && isSearchMatch;
-                  });
-
-                  totalVisibleDishes += catDishes.length;
-
-                  if (dishSearchQuery && catDishes.length === 0) {
-                    return null;
-                  }
-
-                  return (
-                    <div
-                      key={cat.id}
-                      className="relative bg-gradient-to-br from-olive-900/80 via-olive-950/70 to-olive-900/90 backdrop-blur-xl border border-gold-500/25 hover:border-gold-500/40 rounded-2xl p-5 shadow-2xl transition-all duration-300 group overflow-hidden"
-                    >
-                      {/* Ambient Glass Glow Overlay */}
-                      <div className="absolute -top-20 -right-20 w-48 h-48 bg-gold-500/10 blur-3xl rounded-full pointer-events-none group-hover:bg-gold-500/15 transition-all" />
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/[0.02] via-transparent to-white/[0.01] pointer-events-none" />
-
-                      {/* Category Header */}
-                      <div className="relative flex flex-wrap justify-between items-center gap-3 pb-3 border-b border-gold-500/20 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-gold-400 font-bold shadow-inner">
-                            <Tags className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className="text-base font-bold text-white group-hover:text-gold-400 transition-colors flex items-center gap-2">
-                              {cat.name}
-                            </h4>
-                            <span className="text-xs text-olive-300 font-medium">
-                              {catDishes.length} dish{catDishes.length === 1 ? '' : 'es'} listed
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => {
-                            setAddCat(String(cat.id));
-                            setShowAddModal(true);
-                          }}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-400 hover:bg-gold-500 hover:text-olive-950 rounded-xl font-bold text-xs transition-all shadow-sm"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> Add to {cat.name}
-                        </button>
-                      </div>
-
-                      {/* Dishes Content for Category */}
-                      {catDishes.length === 0 ? (
-                        <div className="py-8 text-center bg-olive-950/40 rounded-xl border border-gold-500/10">
-                          <Utensils className="w-8 h-8 text-olive-500 mx-auto mb-2 opacity-50" />
-                          <p className="text-xs text-olive-400 font-medium">No dishes present in {cat.name}</p>
-                          <button
-                            onClick={() => {
-                              setAddCat(String(cat.id));
-                              setShowAddModal(true);
-                            }}
-                            className="mt-2 text-xs text-gold-400 hover:underline font-bold inline-flex items-center gap-1"
-                          >
-                            <Plus className="w-3 h-3" /> Add first dish to this category
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left text-xs">
-                            <thead className="bg-olive-950/80 text-olive-300 font-semibold border-b border-gold-500/20">
-                              <tr>
-                                <th className="p-3 rounded-l-xl">Dish Name</th>
-                                <th className="p-3">Quarter (₹)</th>
-                                <th className="p-3">Half (₹)</th>
-                                <th className="p-3">Full / Base (₹)</th>
-                                <th className="p-3 text-right rounded-r-xl">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gold-500/10">
-                              {catDishes.map((dish) => (
-                                <tr
-                                  key={dish.id}
-                                  className="hover:bg-gold-500/10 transition-colors group/row"
-                                >
-                                  <td className="p-3 font-bold text-white group-hover/row:text-gold-300">
-                                    <div className="flex flex-col">
-                                      <span className="text-sm">{dish.name}</span>
-                                      {dish.comboItems && dish.comboItems.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {dish.comboItems.map((item, idx) => (
-                                            <span key={idx} className="text-[10px] bg-olive-800 text-olive-300 px-2 py-0.5 rounded border border-gold-500/20">
-                                              + {item}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="p-3 font-medium text-olive-300">
-                                    {dish.priceQuarter > 0 ? (
-                                      <span className="px-2 py-1 bg-olive-950/60 border border-gold-500/15 rounded-lg text-olive-200">
-                                        ₹{dish.priceQuarter}
-                                      </span>
-                                    ) : (
-                                      <span className="text-olive-500">-</span>
-                                    )}
-                                  </td>
-                                  <td className="p-3 font-medium text-olive-300">
-                                    {dish.priceHalf > 0 ? (
-                                      <span className="px-2 py-1 bg-olive-950/60 border border-gold-500/15 rounded-lg text-olive-200">
-                                        ₹{dish.priceHalf}
-                                      </span>
-                                    ) : (
-                                      <span className="text-olive-500">-</span>
-                                    )}
-                                  </td>
-                                  <td className="p-3 font-bold text-gold-400">
-                                    <span className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 rounded-lg text-gold-400 font-black">
-                                      ₹{dish.priceFull}
-                                    </span>
-                                  </td>
-                                  <td className="p-3 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <button
-                                        onClick={() => handleOpenEdit(dish)}
-                                        className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-gold-500 hover:text-olive-950 transition-colors shadow-sm"
-                                      >
-                                        <Edit2 className="w-3 h-3" /> Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteDish(dish.id)}
-                                        className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-rose-500 hover:text-white transition-colors shadow-sm"
-                                      >
-                                        <Trash2 className="w-3 h-3" /> Remove
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Render Uncategorized Dishes if any exist */}
-                {uncategorizedDishes.length > 0 && (dishSelectedCategory === 'all' || dishSelectedCategory === 'custom') && (
-                  <div className="relative bg-gradient-to-br from-olive-900/80 via-olive-950/70 to-olive-900/90 backdrop-blur-xl border border-gold-500/25 rounded-2xl p-5 shadow-2xl space-y-4">
-                    <div className="flex items-center gap-3 pb-3 border-b border-gold-500/20">
-                      <div className="w-10 h-10 rounded-xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-gold-400 font-bold">
-                        <FolderPlus className="w-5 h-5" />
+              return (
+                <div
+                  key={cat.id}
+                  className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 shadow-lg space-y-4"
+                >
+                  {/* Category Header */}
+                  <div className="flex flex-wrap justify-between items-center gap-3 pb-3 border-b border-gold-500/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400 font-bold">
+                        <Tags className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="text-base font-bold text-white">Other / Custom Category Dishes</h4>
-                        <span className="text-xs text-olive-300">{uncategorizedDishes.length} dishes</span>
+                        <h4 className="text-base font-bold text-white flex items-center gap-2">
+                          {cat.name}
+                        </h4>
+                        <span className="text-xs text-olive-300 font-medium">
+                          {catDishes.length} dish{catDishes.length === 1 ? '' : 'es'} listed
+                        </span>
                       </div>
                     </div>
 
+                    <button
+                      onClick={() => {
+                        setAddCat(String(cat.id));
+                        setShowAddModal(true);
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-400 hover:bg-gold-500 hover:text-olive-950 rounded-xl font-bold text-xs transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add to {cat.name}
+                    </button>
+                  </div>
+
+                  {/* Category Dishes Table */}
+                  {catDishes.length === 0 ? (
+                    <div className="py-6 text-center bg-olive-950/50 rounded-xl border border-gold-500/10">
+                      <p className="text-xs text-olive-400">No dishes present in {cat.name}</p>
+                      <button
+                        onClick={() => {
+                          setAddCat(String(cat.id));
+                          setShowAddModal(true);
+                        }}
+                        className="mt-2 text-xs text-gold-400 hover:underline font-bold inline-flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Add first dish
+                      </button>
+                    </div>
+                  ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-olive-950/80 text-olive-300 font-semibold border-b border-gold-500/20">
+                        <thead className="bg-olive-950 text-olive-300 font-semibold border-b border-gold-500/20">
                           <tr>
-                            <th className="p-3">Dish Name</th>
+                            <th className="p-3 rounded-l-xl">Dish Name</th>
                             <th className="p-3">Quarter (₹)</th>
                             <th className="p-3">Half (₹)</th>
-                            <th className="p-3">Full (₹)</th>
-                            <th className="p-3 text-right">Action</th>
+                            <th className="p-3">Full / Base (₹)</th>
+                            <th className="p-3 text-right rounded-r-xl">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gold-500/10">
-                          {uncategorizedDishes.map((dish) => (
-                            <tr key={dish.id} className="hover:bg-gold-500/10 transition-colors">
-                              <td className="p-3 font-bold text-white">{dish.name}</td>
-                              <td className="p-3 font-medium text-olive-300">{dish.priceQuarter > 0 ? `₹${dish.priceQuarter}` : '-'}</td>
-                              <td className="p-3 font-medium text-olive-300">{dish.priceHalf > 0 ? `₹${dish.priceHalf}` : '-'}</td>
-                              <td className="p-3 font-bold text-gold-400">₹{dish.priceFull}</td>
-                              <td className="p-3 text-right flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleOpenEdit(dish)}
-                                  className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-gold-500 hover:text-olive-950 transition-colors"
-                                >
-                                  <Edit2 className="w-3 h-3" /> Edit
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteDish(dish.id)}
-                                  className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-rose-500 hover:text-white transition-colors"
-                                >
-                                  <Trash2 className="w-3 h-3" /> Remove
-                                </button>
+                          {catDishes.map((dish) => (
+                            <tr key={dish.id} className="hover:bg-olive-800/40 transition-colors">
+                              <td className="p-3 font-bold text-white">
+                                <div className="flex flex-col">
+                                  <span className="text-sm">{dish.name}</span>
+                                  {dish.comboItems && dish.comboItems.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {dish.comboItems.map((item, idx) => (
+                                        <span key={idx} className="text-[10px] bg-olive-950 text-olive-300 px-2 py-0.5 rounded border border-gold-500/20">
+                                          + {item}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 font-medium text-olive-300">
+                                {dish.priceQuarter > 0 ? `₹${dish.priceQuarter}` : '-'}
+                              </td>
+                              <td className="p-3 font-medium text-olive-300">
+                                {dish.priceHalf > 0 ? `₹${dish.priceHalf}` : '-'}
+                              </td>
+                              <td className="p-3 font-bold text-gold-400">
+                                ₹{dish.priceFull}
+                              </td>
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => handleOpenEdit(dish)}
+                                    className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-gold-500 hover:text-olive-950 transition-colors"
+                                  >
+                                    <Edit2 className="w-3 h-3" /> Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDish(dish.id)}
+                                    className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-rose-500 hover:text-white transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3" /> Remove
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              );
+            })}
 
-                {/* Overall Empty Search Result */}
-                {dishSearchQuery && totalVisibleDishes === 0 && (
-                  <div className="py-12 text-center bg-olive-900/60 backdrop-blur-xl border border-gold-500/20 rounded-2xl p-6">
-                    <Search className="w-10 h-10 text-gold-400/50 mx-auto mb-3" />
-                    <h4 className="text-base font-bold text-white">No dishes matched "{dishSearchQuery}"</h4>
-                    <p className="text-xs text-olive-300 mt-1">Try searching with a different keyword or filter.</p>
-                    <button
-                      onClick={() => { setDishSearchQuery(''); setDishSelectedCategory('all'); }}
-                      className="mt-4 px-4 py-2 bg-gold-500/10 border border-gold-500/30 text-gold-400 font-bold text-xs rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-colors"
-                    >
-                      Reset Filters
-                    </button>
+            {/* Render Uncategorized Dishes if any exist */}
+            {groupedCategoryData.uncategorized.length > 0 && (dishSelectedCategory === 'all' || dishSelectedCategory === 'custom') && (
+              <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 shadow-lg space-y-4">
+                <div className="flex items-center gap-3 pb-3 border-b border-gold-500/20">
+                  <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400 font-bold">
+                    <FolderPlus className="w-4 h-4" />
                   </div>
-                )}
+                  <div>
+                    <h4 className="text-base font-bold text-white">Other / Custom Category Dishes</h4>
+                    <span className="text-xs text-olive-300">{groupedCategoryData.uncategorized.length} dishes</span>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-olive-950 text-olive-300 font-semibold border-b border-gold-500/20">
+                      <tr>
+                        <th className="p-3">Dish Name</th>
+                        <th className="p-3">Quarter (₹)</th>
+                        <th className="p-3">Half (₹)</th>
+                        <th className="p-3">Full (₹)</th>
+                        <th className="p-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gold-500/10">
+                      {groupedCategoryData.uncategorized.map((dish) => (
+                        <tr key={dish.id} className="hover:bg-olive-800/40 transition-colors">
+                          <td className="p-3 font-bold text-white">{dish.name}</td>
+                          <td className="p-3 font-medium text-olive-300">{dish.priceQuarter > 0 ? `₹${dish.priceQuarter}` : '-'}</td>
+                          <td className="p-3 font-medium text-olive-300">{dish.priceHalf > 0 ? `₹${dish.priceHalf}` : '-'}</td>
+                          <td className="p-3 font-bold text-gold-400">₹{dish.priceFull}</td>
+                          <td className="p-3 text-right flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(dish)}
+                              className="px-2.5 py-1 bg-gold-500/10 border border-gold-500/30 text-gold-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-gold-500 hover:text-olive-950 transition-colors"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDish(dish.id)}
+                              className="px-2.5 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg font-semibold text-[11px] flex items-center gap-1 hover:bg-rose-500 hover:text-white transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" /> Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            );
-          })()}
+            )}
+
+            {/* Empty Search Result State */}
+            {dishSearchQuery && groupedCategoryData.totalVisible === 0 && (
+              <div className="py-10 text-center bg-olive-900 border border-gold-500/20 rounded-2xl p-6">
+                <Search className="w-8 h-8 text-gold-400/50 mx-auto mb-2" />
+                <h4 className="text-base font-bold text-white">No dishes matched "{dishSearchQuery}"</h4>
+                <p className="text-xs text-olive-300 mt-1">Try searching with a different keyword.</p>
+                <button
+                  onClick={() => { setDishSearchQuery(''); setDishSelectedCategory('all'); }}
+                  className="mt-3 px-4 py-1.5 bg-gold-500/10 border border-gold-500/30 text-gold-400 font-bold text-xs rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-colors"
+                >
+                  Reset Search
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
