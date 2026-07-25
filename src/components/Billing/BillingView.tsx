@@ -323,10 +323,13 @@ export const BillingView: React.FC = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [nextBillNumber, setNextBillNumber] = useState<string>('KMIV-001');
 
-  // Recent Bills Dropdown State
+  // Recent Bills & Table Dropdown State
   const [recentBills, setRecentBills] = useState<any[]>([]);
   const [showRecentDropdown, setShowRecentDropdown] = useState(false);
   const [loadingRecent, setLoadingRecent] = useState(false);
+  const [showTableDropdown, setShowTableDropdown] = useState<boolean>(false);
+  const [customTable, setCustomTable] = useState<string>('');
+  const [isCustomTableMode, setIsCustomTableMode] = useState<boolean>(false);
 
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 0;
@@ -738,7 +741,7 @@ export const BillingView: React.FC = () => {
       </div>
 
       {/* ══ RIGHT: CART + BILL (scrollable) ══════════════════════════ */}
-      <div className="w-80 xl:w-96 flex flex-col gap-3 flex-shrink-0 overflow-hidden">
+      <div className="w-80 xl:w-96 flex flex-col gap-3 flex-shrink-0 relative">
 
         {/* Token Import & Recent Bills Dropdown */}
         <div className="flex gap-2 flex-shrink-0 relative">
@@ -853,17 +856,74 @@ export const BillingView: React.FC = () => {
           </div>
 
           {orderType === 'Dine-In' && (
-            <div className="flex items-center justify-between px-3 py-1.5 bg-olive-950/80 border border-gold-500/20 rounded-xl text-xs">
-              <span className="text-olive-300 font-medium flex items-center gap-1">
-                <Utensils className="w-3.5 h-3.5 text-gold-400" /> Table No:
-              </span>
-              <input
-                type="text"
-                value={tableNumber}
-                onChange={(e) => setTableNumber(e.target.value)}
-                placeholder="e.g. Table 1"
-                className="w-28 px-2 py-0.5 bg-olive-900 border border-gold-500/30 rounded text-amber-300 font-extrabold text-xs text-right outline-none font-mono focus:border-gold-500"
-              />
+            <div className="relative mb-1 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowTableDropdown(!showTableDropdown)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-olive-950/80 border border-gold-500/20 hover:border-gold-500/40 rounded-xl text-xs transition-all group"
+              >
+                <span className="text-olive-300 font-semibold flex items-center gap-1.5">
+                  <Utensils className="w-3.5 h-3.5 text-gold-400" />
+                  <span>Table Number:</span>
+                </span>
+                <span className="flex items-center gap-1.5 font-extrabold text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-lg border border-amber-500/30 group-hover:bg-amber-500/25">
+                  <span>{isCustomTableMode ? (customTable || 'Custom Table') : (tableNumber || 'Table 1')}</span>
+                  <span className="text-[10px] text-gold-400">▾</span>
+                </span>
+              </button>
+
+              {/* Dropdown Menu (Floating grid table picker) */}
+              {showTableDropdown && (
+                <div className="absolute left-0 top-full mt-1.5 w-full bg-olive-950 border border-gold-500/30 rounded-2xl shadow-2xl z-50 p-2.5 text-xs space-y-2">
+                  <div className="flex justify-between items-center px-1 pb-1 border-b border-gold-500/15 text-gold-400 font-bold text-[11px] uppercase tracking-wider">
+                    <span>Select Table Number</span>
+                    <span className="text-[10px] text-olive-400 font-normal">Click to set</span>
+                  </div>
+
+                  <div className="max-h-52 overflow-y-auto grid grid-cols-3 gap-1.5 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                    {Array.from({ length: Math.max(1, restaurantDetails?.totalTables || 10) }, (_, i) => `Table ${i + 1}`).map((tbl) => (
+                      <button
+                        key={tbl}
+                        type="button"
+                        onClick={() => {
+                          setTableNumber(tbl);
+                          setIsCustomTableMode(false);
+                          setShowTableDropdown(false);
+                        }}
+                        className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center ${
+                          !isCustomTableMode && tableNumber === tbl
+                            ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md font-extrabold'
+                            : 'bg-olive-900 border border-gold-500/20 text-white hover:border-gold-500/50 hover:bg-olive-800'
+                        }`}
+                      >
+                        {tbl.replace('Table ', 'T-')}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Table Input in Dropdown */}
+                  <div className="pt-1.5 border-t border-gold-500/15">
+                    <input
+                      type="text"
+                      placeholder="Custom Table No (e.g. T-15)..."
+                      value={customTable}
+                      onChange={(e) => {
+                        setCustomTable(e.target.value);
+                        setTableNumber(e.target.value);
+                        setIsCustomTableMode(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && customTable.trim()) {
+                          setTableNumber(customTable.trim());
+                          setIsCustomTableMode(true);
+                          setShowTableDropdown(false);
+                        }
+                      }}
+                      className="w-full px-3 py-1.5 bg-olive-900 border border-gold-500/30 rounded-lg text-white text-xs placeholder-olive-400 focus:outline-none focus:border-gold-500 font-mono"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
