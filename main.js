@@ -535,7 +535,7 @@ ipcMain.handle('tokens:getActive', async () => {
         id: r.id,
         tokenNumber: normalizeTokenNumber(r.token_number),
         orderType: r.order_type || 'Dine-In',
-        tableNo: r.table_no || 'N/A',
+        tableNo: r.table_no || (r.order_type === 'Takeaway' ? 'TA' : 'N/A'),
         items: parsed,
         timestamp: r.created_at
       };
@@ -556,11 +556,13 @@ ipcMain.handle('tokens:save', async (evt, tokenData) => {
     const parsedSeq = parseTokenSequence(normalizedToken);
     if (parsedSeq > tokenState.lastTokenSeq) tokenState.lastTokenSeq = parsedSeq;
 
+    const tableNoVal = tokenData.tableNo || tokenData.table_no || (tokenData.orderType === 'Takeaway' ? 'TA' : 'N/A');
+
     const result = await query(
       `INSERT INTO tokens (token_number, order_type, table_no, items_summary, status)
-       VALUES (?, ?, 'N/A', ?, 'Active')
-       ON DUPLICATE KEY UPDATE order_type = VALUES(order_type), items_summary = VALUES(items_summary), status = 'Active'`,
-      [normalizedToken, tokenData.orderType || 'Dine-In', itemsJson]
+       VALUES (?, ?, ?, ?, 'Active')
+       ON DUPLICATE KEY UPDATE order_type = VALUES(order_type), table_no = VALUES(table_no), items_summary = VALUES(items_summary), status = 'Active'`,
+      [normalizedToken, tokenData.orderType || 'Dine-In', tableNoVal, itemsJson]
     );
 
     if (!result.success) {
@@ -572,6 +574,7 @@ ipcMain.handle('tokens:save', async (evt, tokenData) => {
     tokenState.tokens.unshift({
       tokenNumber: normalizedToken,
       orderType: tokenData.orderType || 'Dine-In',
+      tableNo: tableNoVal,
       items: tokenData.items || [],
       timestamp: tokenData.timestamp || new Date().toISOString()
     });
@@ -1260,6 +1263,7 @@ ipcMain.handle('auth:login', async (evt, payload) => {
         address: r.address,
         taxRate: Number(r.tax_rate),
         currency: r.currency,
+        totalTables: Number(r.total_tables || r.totalTables || parsedPrintConfig.totalTables || 10),
         headerNote: r.header_note,
         footerNote: r.footer_note,
         ...parsedPrintConfig
@@ -1308,6 +1312,7 @@ ipcMain.handle('restaurant:getDetails', async () => {
         address: r.address || '',
         taxRate: Number(r.tax_rate ?? 5),
         currency: r.currency || '₹',
+        totalTables: Number(r.total_tables || r.totalTables || parsedPrintConfig.totalTables || 10),
         headerNote: r.header_note || '',
         footerNote: r.footer_note || r.receipt_footer || '',
         logoUrl: r.logo_url || '',
@@ -1323,6 +1328,7 @@ ipcMain.handle('restaurant:getDetails', async () => {
 ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
   try {
     const printConfigObj = {
+      totalTables: Number(data.totalTables || 10),
       printShowLogo: data.printShowLogo ?? true,
       printShowAddress: data.printShowAddress ?? true,
       printShowPhone: data.printShowPhone ?? true,
@@ -1372,6 +1378,7 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
         data.currency || '₹'
       ];
 
+      if (cols.includes('total_tables')) { setClauses.push('total_tables = ?'); params.push(Number(data.totalTables || 10)); }
       if (cols.includes('owner_name')) { setClauses.push('owner_name = ?'); params.push(data.ownerName || ''); }
       if (cols.includes('gst_number')) { setClauses.push('gst_number = ?'); params.push(data.gstNumber || ''); }
       if (cols.includes('gst_no')) { setClauses.push('gst_no = ?'); params.push(data.gstNumber || ''); }
@@ -1401,6 +1408,7 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
         data.currency || '₹'
       ];
 
+      if (cols.includes('total_tables')) { insertFields.push('total_tables'); placeholders.push('?'); params.push(Number(data.totalTables || 10)); }
       if (cols.includes('owner_name')) { insertFields.push('owner_name'); placeholders.push('?'); params.push(data.ownerName || ''); }
       if (cols.includes('gst_number')) { insertFields.push('gst_number'); placeholders.push('?'); params.push(data.gstNumber || ''); }
       if (cols.includes('gst_no')) { insertFields.push('gst_no'); placeholders.push('?'); params.push(data.gstNumber || ''); }

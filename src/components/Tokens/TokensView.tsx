@@ -26,7 +26,11 @@ export const TokensView: React.FC = () => {
   const [tokenCart, setTokenCart] = useState<Array<{ itemId: number; name: string; variant: PortionVariant; quantity: number }>>([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [paymentMode, setPaymentMode] = useState<string>('Cash');
-  const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; paymentMode: string; items: any[]; timestamp: string; date: string } | null>(null);
+  const [selectedTable, setSelectedTable] = useState<string>('Table 1');
+  const [customTable, setCustomTable] = useState<string>('');
+  const [isCustomTableMode, setIsCustomTableMode] = useState<boolean>(false);
+  const [showTableDropdown, setShowTableDropdown] = useState<boolean>(false);
+  const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; tableNo?: string; paymentMode: string; items: any[]; timestamp: string; date: string } | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -131,9 +135,11 @@ export const TokensView: React.FC = () => {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     const dateStr = `${day}/${month}/${year}`;
+    const activeTableNo = orderType === 'Dine-In' ? (isCustomTableMode ? (customTable || 'Table 1') : (selectedTable || 'Table 1')) : '';
     const newTokenObj = {
       tokenNumber: tokenNum,
       orderType,
+      tableNo: activeTableNo,
       paymentMode,
       items: [...tokenCart],
       timestamp: timeStr,
@@ -287,18 +293,79 @@ export const TokensView: React.FC = () => {
           </button>
         </div>
 
-        {/* Payment Mode */}
-        <div className="flex bg-olive-950 p-1 rounded-xl gap-1 mb-3">
-          {['Cash', 'Card', 'UPI'].map((mode) => (
+        {/* Table Selection Dropdown (For Dine-In) */}
+        {orderType === 'Dine-In' && (
+          <div className="relative mb-3 flex-shrink-0">
             <button
-              key={mode}
-              onClick={() => setPaymentMode(mode)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${paymentMode === mode ? 'bg-olive-700 border border-gold-500/50 text-gold-400' : 'text-olive-400 hover:text-white'}`}
+              type="button"
+              onClick={() => setShowTableDropdown(!showTableDropdown)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-olive-950/80 border border-gold-500/20 hover:border-gold-500/40 rounded-xl text-xs transition-all group"
             >
-              {mode}
+              <span className="text-olive-300 font-semibold flex items-center gap-1.5">
+                <Utensils className="w-3.5 h-3.5 text-gold-400" />
+                <span>Table Number:</span>
+              </span>
+              <span className="flex items-center gap-1.5 font-extrabold text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-lg border border-amber-500/30 group-hover:bg-amber-500/25">
+                <span>{isCustomTableMode ? (customTable || 'Custom Table') : selectedTable}</span>
+                <span className="text-[10px] text-gold-400">▾</span>
+              </span>
             </button>
-          ))}
-        </div>
+
+            {/* Dropdown Menu (Floating list like Recent Bills) */}
+            {showTableDropdown && (
+              <div className="absolute left-0 top-full mt-1.5 w-full bg-olive-950 border border-gold-500/30 rounded-2xl shadow-2xl z-50 p-2.5 text-xs space-y-2">
+                <div className="flex justify-between items-center px-1 pb-1 border-b border-gold-500/15 text-gold-400 font-bold text-[11px] uppercase tracking-wider">
+                  <span>Select Table Number</span>
+                  <span className="text-[10px] text-olive-400 font-normal">Click to set</span>
+                </div>
+
+                <div className="max-h-52 overflow-y-auto grid grid-cols-3 gap-1.5 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+                  {Array.from({ length: Math.max(1, restaurantDetails?.totalTables || 10) }, (_, i) => `Table ${i + 1}`).map((tbl) => (
+                    <button
+                      key={tbl}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTable(tbl);
+                        setIsCustomTableMode(false);
+                        setShowTableDropdown(false);
+                      }}
+                      className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center ${
+                        !isCustomTableMode && selectedTable === tbl
+                          ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md font-extrabold'
+                          : 'bg-olive-900 border border-gold-500/20 text-white hover:border-gold-500/50 hover:bg-olive-800'
+                      }`}
+                    >
+                      {tbl.replace('Table ', 'T-')}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Table Input in Dropdown */}
+                <div className="pt-1.5 border-t border-gold-500/15">
+                  <input
+                    type="text"
+                    placeholder="Custom Table No (e.g. T-15)..."
+                    value={customTable}
+                    onChange={(e) => {
+                      setCustomTable(e.target.value);
+                      setIsCustomTableMode(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && customTable.trim()) {
+                        setSelectedTable(customTable.trim());
+                        setIsCustomTableMode(true);
+                        setShowTableDropdown(false);
+                      }
+                    }}
+                    className="w-full px-3 py-1.5 bg-olive-900 border border-gold-500/30 rounded-lg text-white text-xs placeholder-olive-400 focus:outline-none focus:border-gold-500 font-mono"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+
 
         <div className="flex-1 min-h-0 overflow-y-auto my-3 border-y border-gold-500/10 py-2 space-y-2">
           {tokenCart.length === 0 ? (
@@ -384,6 +451,11 @@ export const TokensView: React.FC = () => {
                     <span>Order Type: <strong>{previewToken.orderType.toUpperCase()}</strong></span>
                     <span>Time : {previewToken.timestamp}</span>
                   </div>
+                  {previewToken.tableNo && (
+                    <div className="flex justify-between font-bold text-black text-[11px]">
+                      <span>Table No &nbsp;: <strong>{previewToken.tableNo}</strong></span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Table Header */}

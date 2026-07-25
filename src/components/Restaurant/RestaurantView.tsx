@@ -1778,6 +1778,85 @@ export const RestaurantView: React.FC = () => {
                 )}
               </div>
 
+              {/* Filter Records Option inside Export Modal */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-olive-300 font-medium text-xs flex items-center gap-1.5">
+                    <Filter className="w-3.5 h-3.5 text-gold-400" />
+                    <span>Filter P&L Records to Include</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterProfit(true);
+                      setFilterExpense(true);
+                      setFilterUpi(true);
+                      setFilterCash(true);
+                      setFilterCard(true);
+                    }}
+                    className="text-[10px] text-gold-400 hover:underline font-semibold"
+                  >
+                    Select All
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 p-2.5 bg-olive-950/80 border border-gold-500/20 rounded-xl text-xs">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={filterProfit}
+                      onChange={(e) => setFilterProfit(e.target.checked)}
+                      className="accent-emerald-500 w-3.5 h-3.5 rounded"
+                    />
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>Profit</span>
+                  </label>
+
+                  <label className="flex items-center gap-1.5 cursor-pointer text-rose-400 font-semibold bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-lg hover:bg-rose-500/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={filterExpense}
+                      onChange={(e) => setFilterExpense(e.target.checked)}
+                      className="accent-rose-500 w-3.5 h-3.5 rounded"
+                    />
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>Expense</span>
+                  </label>
+
+                  <span className="text-gold-500/30 font-light">|</span>
+
+                  <label className="flex items-center gap-1.5 cursor-pointer text-purple-300 font-semibold bg-purple-500/10 border border-purple-500/30 px-2.5 py-1 rounded-lg hover:bg-purple-500/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={filterUpi}
+                      onChange={(e) => setFilterUpi(e.target.checked)}
+                      className="accent-purple-500 w-3.5 h-3.5 rounded"
+                    />
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>UPI</span>
+                  </label>
+
+                  <label className="flex items-center gap-1.5 cursor-pointer text-amber-300 font-semibold bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg hover:bg-amber-500/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={filterCash}
+                      onChange={(e) => setFilterCash(e.target.checked)}
+                      className="accent-amber-500 w-3.5 h-3.5 rounded"
+                    />
+                    <span>Cash</span>
+                  </label>
+
+                  <label className="flex items-center gap-1.5 cursor-pointer text-sky-300 font-semibold bg-sky-500/10 border border-sky-500/30 px-2.5 py-1 rounded-lg hover:bg-sky-500/20 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={filterCard}
+                      onChange={(e) => setFilterCard(e.target.checked)}
+                      className="accent-sky-500 w-3.5 h-3.5 rounded"
+                    />
+                    <span>Card</span>
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label className="text-olive-300 block mb-1.5 font-medium">Export File Format</label>
                 <div className="grid grid-cols-2 gap-3">

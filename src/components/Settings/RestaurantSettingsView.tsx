@@ -87,9 +87,10 @@ export const RestaurantSettingsView: React.FC = () => {
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [form, setForm] = useState<RestaurantDetails & { taxRateStr: string }>({
+  const [form, setForm] = useState<RestaurantDetails & { taxRateStr: string; totalTablesStr: string }>({
     ...restaurantDetails,
-    taxRateStr: String(restaurantDetails.taxRate ?? 5)
+    taxRateStr: String(restaurantDetails.taxRate ?? 5),
+    totalTablesStr: String(restaurantDetails.totalTables ?? 10)
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveMsg, setSaveMsg] = useState('');
@@ -100,11 +101,15 @@ export const RestaurantSettingsView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setForm({ ...restaurantDetails, taxRateStr: String(restaurantDetails.taxRate ?? 5) });
+    setForm({
+      ...restaurantDetails,
+      taxRateStr: String(restaurantDetails.taxRate ?? 5),
+      totalTablesStr: String(restaurantDetails.totalTables ?? 10)
+    });
     setIsDirty(false);
   }, [restaurantDetails]);
 
-  const update = (key: keyof RestaurantDetails | 'taxRateStr', value: string | boolean) => {
+  const update = (key: keyof RestaurantDetails | 'taxRateStr' | 'totalTablesStr', value: string | boolean) => {
     setForm(prev => ({ ...prev, [key]: value }));
     setIsDirty(true);
     setSaveStatus('idle');
@@ -122,6 +127,7 @@ export const RestaurantSettingsView: React.FC = () => {
       email: form.email,
       address: form.address,
       taxRate: Number(form.taxRateStr) || 5,
+      totalTables: Math.max(1, Number(form.totalTablesStr) || 10),
       currency: form.currency,
       headerNote: form.headerNote,
       footerNote: form.footerNote,
@@ -517,9 +523,9 @@ export const RestaurantSettingsView: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <FieldRow id="s-gst" label="GSTIN / GST Number" value={form.gstNumber || ''} onChange={(v) => update('gstNumber', v)} placeholder="33ABCDE1234F1Z5" half />
                   <FieldRow id="s-fssai" label="FSSAI License Number" value={form.fssaiNumber || ''} onChange={(v) => update('fssaiNumber', v)} placeholder="12421008000123" half />
-                  <div className="col-span-2">
+                  <div className="col-span-2 sm:col-span-1">
                     <label htmlFor="s-tax" className="block text-[11px] font-semibold text-amber-300/70 uppercase tracking-widest mb-1.5">Default Tax / GST Rate (%)</label>
-                    <div className="relative max-w-[180px]">
+                    <div className="relative">
                       <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/60 pointer-events-none" />
                       <input
                         id="s-tax"
@@ -534,6 +540,23 @@ export const RestaurantSettingsView: React.FC = () => {
                       />
                     </div>
                     <p className="text-[11px] text-white/30 mt-1.5">Applied on all bills. Shown as GST on receipts.</p>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label htmlFor="s-tables" className="block text-[11px] font-semibold text-amber-300/70 uppercase tracking-widest mb-1.5">Total Restaurant Tables</label>
+                    <div className="relative">
+                      <Store className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500/60 pointer-events-none" />
+                      <input
+                        id="s-tables"
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={form.totalTablesStr}
+                        onChange={(e) => update('totalTablesStr', e.target.value)}
+                        placeholder="10"
+                        className="w-full bg-white/5 border border-white/10 text-white placeholder-white/20 rounded-xl px-3 py-2.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/60 transition-all"
+                      />
+                    </div>
+                    <p className="text-[11px] text-white/30 mt-1.5">Generates table selection buttons (Table 1 to Table N) in Tokens section.</p>
                   </div>
                 </div>
               </SectionCard>

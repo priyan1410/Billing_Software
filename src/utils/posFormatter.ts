@@ -79,6 +79,9 @@ export function getPosTokenTextBody(
 
   lines.push(`Token No : ${tokenNo}`);
   lines.push(`Order    : ${orderType}`);
+  if (data.tableNo) {
+    lines.push(`Table No : ${data.tableNo}`);
+  }
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
   lines.push(divider('-', width));
 
@@ -181,6 +184,10 @@ export function getPosInvoiceTextBody(
   lines.push(`Bill No : ${billNo}`);
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
   lines.push(padLine(`Type: ${data.orderType || 'Dine-In'}`, `Pay: ${data.paymentMode || 'Cash'}`, width));
+  const tblVal = (data as any).tableNumber || (data as any).table_number || (data as any).tableNo;
+  if (tblVal && tblVal !== 'N/A') {
+    lines.push(`Table No: ${tblVal}`);
+  }
 
   const custName = String(data.customerName || '').trim();
   const isWalkIn = !custName || /^walk[-_\s]*in$/i.test(custName);

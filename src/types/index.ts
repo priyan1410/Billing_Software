@@ -53,6 +53,7 @@ export interface Order {
   roundOff?: number;
   orderDate?: string;
   dueDate?: string;
+  tableNumber?: string;
 }
 
 export interface OrderPayload {
@@ -65,6 +66,7 @@ export interface OrderPayload {
   items: CartItem[];
   customer_name?: string;
   customer_phone?: string;
+  table_number?: string;
   shipping_charges?: number;
   round_off?: number;
   order_date?: string;
@@ -74,6 +76,8 @@ export interface OrderPayload {
 export interface TokenItem {
   tokenNumber: number | string;
   orderType: OrderType;
+  tableNo?: string;
+  paymentMode?: string;
   items: {
     itemId: number;
     name: string;
@@ -83,6 +87,7 @@ export interface TokenItem {
     hsnSac?: string;
   }[];
   timestamp: string;
+  date?: string;
 }
 
 export interface Expense {
@@ -146,6 +151,7 @@ export interface RestaurantDetails {
   printShowRoundOff?: boolean;
   printShowFooterNote?: boolean;
   printWithToken?: boolean;
+  totalTables?: number;
 }
 
 

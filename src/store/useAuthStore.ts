@@ -12,6 +12,7 @@ export const defaultRestaurant: RestaurantDetails = {
   address: '',
   taxRate: 5.0,
   currency: '₹',
+  totalTables: 10,
   headerNote: '',
   footerNote: '',
   logoUrl: '',

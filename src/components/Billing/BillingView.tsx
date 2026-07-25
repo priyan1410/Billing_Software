@@ -298,9 +298,9 @@ const ConfirmOrderModal: React.FC<{
 // ─── Main BillingView ─────────────────────────────────────────────────────────
 export const BillingView: React.FC = () => {
   const {
-    cart, orderType, paymentMode, discount,
+    cart, orderType, tableNumber, paymentMode, discount,
     editingBillNumber, editingOrderId,
-    setOrderType, setPaymentMode, setDiscount,
+    setOrderType, setTableNumber, setPaymentMode, setDiscount,
     addToCart, updateQty, clearCart, loadTokenToCart,
     startEditingBill, cancelEditBill
   } = usePosStore();
@@ -473,6 +473,7 @@ export const BillingView: React.FC = () => {
       id: editingOrderId || undefined,
       order_number: currentBillNumber,
       order_type: orderType,
+      table_number: tableNumber || 'N/A',
       subtotal,
       tax_amount: taxAmt,
       discount_amount: discount,
@@ -499,7 +500,7 @@ export const BillingView: React.FC = () => {
       paymentMode,
       customerName: 'Walk-in',
       cashierName: (useAuthStore.getState().user?.name || 'Staff') as string,
-      tableNumber: 'N/A',
+      tableNumber: tableNumber || 'N/A',
     };
 
     let createdData: any = null;
@@ -745,7 +746,21 @@ export const BillingView: React.FC = () => {
             className="flex-1 py-2 px-3 bg-olive-900 border border-gold-500/20 rounded-xl text-white text-xs outline-none min-w-0"
           >
             <option value="">Import from Token...</option>
-            {activeTokensList.map((t) => <option key={t.tokenNumber} value={t.tokenNumber}>Token #{t.tokenNumber}</option>)}
+            {activeTokensList.map((t) => {
+              const isTakeaway = String(t.orderType || '').toLowerCase().includes('takeaway');
+              const hasTable = t.tableNo && t.tableNo !== 'N/A';
+              const label = isTakeaway
+                ? `Token #${t.tokenNumber} (TA)`
+                : hasTable
+                ? `Token #${t.tokenNumber} (${t.tableNo})`
+                : `Token #${t.tokenNumber} (Dine-In)`;
+
+              return (
+                <option key={t.tokenNumber} value={t.tokenNumber}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
           <button onClick={handleImportToken} className="px-3 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 font-bold text-xs rounded-xl hover:scale-105 transition-transform flex-shrink-0">
             Load
@@ -826,14 +841,31 @@ export const BillingView: React.FC = () => {
           </div>
         )}
 
-        {/* Order Type */}
-        <div className="flex bg-olive-950 p-1 rounded-xl gap-1 flex-shrink-0">
-          {[{ id: 'Dine-In', icon: <Utensils className="w-3.5 h-3.5" /> }, { id: 'Takeaway', icon: <ShoppingBag className="w-3.5 h-3.5" /> }].map((t) => (
-            <button key={t.id} onClick={() => setOrderType(t.id as any)}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${orderType === t.id ? 'bg-olive-800 text-gold-400 border border-gold-500/30' : 'text-olive-400'
-                }`}
-            >{t.icon} {t.id}</button>
-          ))}
+        {/* Order Type & Table Selection */}
+        <div className="flex flex-col gap-1.5 flex-shrink-0">
+          <div className="flex bg-olive-950 p-1 rounded-xl gap-1">
+            {[{ id: 'Dine-In', icon: <Utensils className="w-3.5 h-3.5" /> }, { id: 'Takeaway', icon: <ShoppingBag className="w-3.5 h-3.5" /> }].map((t) => (
+              <button key={t.id} onClick={() => setOrderType(t.id as any)}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${orderType === t.id ? 'bg-olive-800 text-gold-400 border border-gold-500/30' : 'text-olive-400'
+                  }`}
+              >{t.icon} {t.id}</button>
+            ))}
+          </div>
+
+          {orderType === 'Dine-In' && (
+            <div className="flex items-center justify-between px-3 py-1.5 bg-olive-950/80 border border-gold-500/20 rounded-xl text-xs">
+              <span className="text-olive-300 font-medium flex items-center gap-1">
+                <Utensils className="w-3.5 h-3.5 text-gold-400" /> Table No:
+              </span>
+              <input
+                type="text"
+                value={tableNumber}
+                onChange={(e) => setTableNumber(e.target.value)}
+                placeholder="e.g. Table 1"
+                className="w-28 px-2 py-0.5 bg-olive-900 border border-gold-500/30 rounded text-amber-300 font-extrabold text-xs text-right outline-none font-mono focus:border-gold-500"
+              />
+            </div>
+          )}
         </div>
 
         {/* Cart — independently scrollable */}

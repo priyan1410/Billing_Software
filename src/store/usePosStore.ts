@@ -4,11 +4,13 @@ import { CartItem, Dish, OrderType, PaymentMode, PortionVariant, TokenItem } fro
 interface PosState {
   cart: CartItem[];
   orderType: OrderType;
+  tableNumber: string;
   paymentMode: PaymentMode;
   discount: number;
   editingBillNumber: string | null;
   editingOrderId: any | null;
   setOrderType: (type: OrderType) => void;
+  setTableNumber: (tableNumber: string) => void;
   setPaymentMode: (mode: PaymentMode) => void;
   setDiscount: (discount: number) => void;
   addToCart: (dish: Dish, variant: PortionVariant) => void;
@@ -22,11 +24,13 @@ interface PosState {
 export const usePosStore = create<PosState>((set: any) => ({
   cart: [],
   orderType: 'Dine-In',
+  tableNumber: 'N/A',
   paymentMode: 'Cash',
   discount: 0,
   editingBillNumber: null,
   editingOrderId: null,
   setOrderType: (orderType: OrderType) => set({ orderType }),
+  setTableNumber: (tableNumber: string) => set({ tableNumber }),
   setPaymentMode: (paymentMode: PaymentMode) => set({ paymentMode }),
   setDiscount: (discount: number) => set({ discount }),
   addToCart: (dish: Dish, variant: PortionVariant) =>
@@ -80,7 +84,7 @@ export const usePosStore = create<PosState>((set: any) => ({
         .filter(Boolean) as CartItem[],
     })),
 
-  clearCart: () => set({ cart: [], discount: 0, editingBillNumber: null, editingOrderId: null }),
+  clearCart: () => set({ cart: [], discount: 0, editingBillNumber: null, editingOrderId: null, tableNumber: 'N/A' }),
 
   cancelEditBill: () => set({ editingBillNumber: null, editingOrderId: null }),
 
@@ -116,6 +120,7 @@ export const usePosStore = create<PosState>((set: any) => ({
       return {
         cart: newCart,
         orderType: order.orderType || order.order_type || 'Dine-In',
+        tableNumber: order.tableNumber || order.table_number || 'N/A',
         paymentMode: order.paymentMode || order.payment_mode || 'Cash',
         discount: Number(order.discountAmount || order.discount_amount || 0),
         editingBillNumber: order.orderNumber || order.order_number || null,
@@ -149,6 +154,8 @@ export const usePosStore = create<PosState>((set: any) => ({
 
       return {
         orderType: token.orderType,
+        tableNumber: token.tableNo || 'N/A',
+        paymentMode: (token.paymentMode as any) || 'Cash',
         cart: newCart,
       };
     }),

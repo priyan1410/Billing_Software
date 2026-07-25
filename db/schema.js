@@ -223,6 +223,7 @@ async function initializeDatabase() {
         address TEXT,
         tax_rate DECIMAL(5,2) DEFAULT 5.00,
         currency VARCHAR(10) DEFAULT '₹',
+        total_tables INT DEFAULT 10,
         header_note TEXT,
         footer_note TEXT,
         logo_url LONGTEXT,
@@ -235,6 +236,9 @@ async function initializeDatabase() {
     const restColsRes = await query(`SHOW COLUMNS FROM restaurant_details`);
     if (restColsRes.success) {
       const existingRestCols = restColsRes.data.map(c => c.Field.toLowerCase());
+      if (!existingRestCols.includes('total_tables')) {
+        await query(`ALTER TABLE restaurant_details ADD COLUMN total_tables INT DEFAULT 10`);
+      }
       if (!existingRestCols.includes('owner_name')) {
         await query(`ALTER TABLE restaurant_details ADD COLUMN owner_name VARCHAR(100) DEFAULT ''`);
       }
