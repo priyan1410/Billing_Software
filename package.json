@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "start": "npx vite build && electron .",
+    "mobile-api": "node mobile-web-application/api-server.js",
     "dist": "npx vite build && npx electron-builder --win"
   },
   "build": {

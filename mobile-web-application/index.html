@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src * 'self' 'unsafe-inline' https: http: ws: wss:;">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f08">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Kish Mandhi">
+  <meta name="description"
+    content="Kish Mandhi Owner Mobile Companion — Real-time restaurant analytics and cloud database monitor.">
+  <title>Kish Mandhi — Owner Mobile Companion</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="https://img.icons8.com/color/96/000000/restaurant.png">
+  <link rel="apple-touch-icon" href="https://img.icons8.com/color/180/000000/restaurant.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+
+  <link rel="stylesheet" href="styles.css">
+  <base target="_blank">
+</head>
+
+<body class="mobile-body">
+
+  <!-- APP SHELL -->
+  <div id="app-shell">
+
+    <!-- HEADER -->
+    <header class="app-header" id="app-header">
+      <div class="header-left">
+        <div class="brand-avatar" aria-label="Kish Mandhi Logo">
+          <i class="fa-solid fa-crown"></i>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">Kish Mandhi</h1>
+          <p class="brand-subtitle" id="header-status-subtitle">
+            <span class="status-dot"></span> Live Cloud Monitor
+          </p>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="icon-btn" id="refresh-btn" title="Refresh Live Data" aria-label="Refresh data">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button class="icon-btn" id="db-settings-btn" title="Database Settings" aria-label="Database settings">
+          <i class="fa-solid fa-database"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="app-content" id="app-content">
+
+      <!-- VIEW: LOGIN / DB CONNECT -->
+      <section id="view-db-connect" class="view-section active" aria-label="Authentication Gateway">
+        <div class="auth-hero">
+          <div class="auth-hero-icon">
+            <div class="auth-icon-ring">
+              <i class="fa-solid fa-crown"></i>
+            </div>
+          </div>
+          <h2 class="auth-hero-title">Owner Portal</h2>
+          <p class="auth-hero-desc">Secure access to your restaurant's live cloud data, financials, and operations.</p>
+        </div>
+
+        <div class="auth-card">
+          <!-- Auth Tabs: Step 1 Database, Step 2 Account Sign In -->
+          <div class="auth-tabs" role="tablist">
+            <button type="button" class="auth-tab active" id="login-tab-database" onclick="app.switchAuthTab('database')"
+              role="tab" aria-selected="true">
+              <i class="fa-solid fa-server"></i>
+              <span>Step 1: Database</span>
+            </button>
+            <button type="button" class="auth-tab" id="login-tab-account" onclick="app.switchAuthTab('account')"
+              role="tab" aria-selected="false">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span>Step 2: Account Sign In</span>
+            </button>
+          </div>
+
+          <!-- Step 1: Database Config Form -->
+          <form id="db-connect-form" class="auth-form" novalidate>
+            <div class="form-group">
+              <label for="db-host"><i class="fa-solid fa-globe"></i> MySQL Host</label>
+              <input type="text" id="db-host" placeholder="e.g. localhost or db.example.com" required autocomplete="off">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group col-7">
+                <label for="db-name"><i class="fa-solid fa-database"></i> Database Name</label>
+                <input type="text" id="db-name" placeholder="e.g. kish_mandhi" required>
+              </div>
+              <div class="form-group col-5">
+                <label for="db-port"><i class="fa-solid fa-plug"></i> Port</label>
+                <input type="number" id="db-port" placeholder="e.g. 3306" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="db-user"><i class="fa-solid fa-user-shield"></i> Username</label>
+              <input type="text" id="db-user" placeholder="e.g. root or dbuser" required>
+            </div>
+
+            <div class="form-group">
+              <label for="db-pass"><i class="fa-solid fa-key"></i> Password</label>
+              <div class="input-wrap">
+                <input type="password" id="db-pass" placeholder="Enter database password" required>
+                <button type="button" class="input-action" id="toggle-pass" aria-label="Toggle password visibility">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="db-ssl">
+                <span class="checkmark"></span>
+                <span class="checkbox-text">Require SSL/TLS encryption</span>
+              </label>
+            </div>
+
+            <div id="connect-error-msg" class="toast-error hidden" role="alert"></div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="connect-db-btn">
+              <span class="btn-text"><i class="fa-solid fa-link"></i> Save & Connect Database (Step 1)</span>
+              <span class="btn-loader hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...</span>
+            </button>
+          </form>
+
+          <!-- Step 2: Account Login Form -->
+          <form id="account-login-form" class="auth-form hidden" novalidate>
+            <div id="db-connected-notice" class="toast-info" style="margin-bottom: 14px; font-size: 12px; display: flex; align-items: center; gap: 8px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; padding: 10px 14px; border-radius: 8px;">
+              <i class="fa-solid fa-circle-check"></i>
+              <span id="db-notice-text">Database connected. Enter your account login details below.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="user-email-phone">
+                <i class="fa-solid fa-user"></i> Username, Email or Phone
+              </label>
+              <input type="text" id="user-email-phone" placeholder="Enter username, email, or phone" required
+                autocomplete="username">
+            </div>
+
+            <div class="form-group">
+              <label for="user-password">
+                <i class="fa-solid fa-lock"></i> Password
+              </label>
+              <div class="input-wrap">
+                <input type="password" id="user-password" placeholder="Enter account password" required
+                  autocomplete="current-password">
+                <button type="button" class="input-action" onclick="app.toggleUserPassVisibility()"
+                  aria-label="Toggle password visibility">
+                  <i class="fa-solid fa-eye" id="user-pass-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <div id="account-login-error" class="toast-error hidden" role="alert"></div>
+
+            <button type="submit" class="btn btn-primary btn-block" id="account-login-btn">
+              <span class="btn-text"><i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Dashboard (Step 2)</span>
+              <span class="btn-loader hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...</span>
+            </button>
+          </form>
+        </div>
+
+        <div class="auth-footer">
+          <button type="button" class="link-btn" onclick="app.clearSavedSession()" style="margin-bottom: 12px; color: #f43f5e; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer;">
+            <i class="fa-solid fa-trash-can"></i> Clear Saved Credentials & Reset App
+          </button>
+          <div class="security-row">
+            <i class="fa-solid fa-lock"></i>
+            <span>End-to-end encrypted connection</span>
+          </div>
+          <p class="auth-version">Kish Mandhi Companion v2.0</p>
+        </div>
+      </section>
+
+      <!-- VIEW: DASHBOARD -->
+      <section id="view-dashboard" class="view-section hidden" aria-label="Dashboard">
+
+        <!-- Connection Status Bar -->
+        <div class="conn-status-bar">
+          <div class="conn-status-left">
+            <span class="conn-pulse"></span>
+            <span class="conn-label" id="db-connected-host">Cloud MySQL Connected</span>
+          </div>
+          <span class="conn-badge" id="db-storage-size">--</span>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-revenue">
+            <div class="kpi-card-inner">
+              <div class="kpi-icon-wrap">
+                <i class="fa-solid fa-sack-dollar"></i>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-label">Today's Revenue</span>
+                <span class="kpi-value text-emerald" id="dash-today-revenue">₹0.00</span>
+              </div>
+            </div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="kpi-card kpi-expense">
+            <div class="kpi-card-inner">
+              <div class="kpi-icon-wrap">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-label">Daily Expenses</span>
+                <span class="kpi-value text-rose" id="dash-today-expenses">₹0.00</span>
+              </div>
+            </div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="kpi-card kpi-profit">
+            <div class="kpi-card-inner">
+              <div class="kpi-icon-wrap">
+                <i class="fa-solid fa-chart-line"></i>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-label">Net Profit</span>
+                <span class="kpi-value text-gold" id="dash-net-profit">₹0.00</span>
+              </div>
+            </div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="kpi-card kpi-orders">
+            <div class="kpi-card-inner">
+              <div class="kpi-icon-wrap">
+                <i class="fa-solid fa-utensils"></i>
+              </div>
+              <div class="kpi-data">
+                <span class="kpi-label">Orders Today</span>
+                <span class="kpi-value text-white" id="dash-orders-count">0</span>
+              </div>
+            </div>
+            <div class="kpi-bar">
+              <div class="kpi-bar-fill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Modes -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-wallet"></i> Payment Breakdown</h3>
+          </div>
+          <div class="payment-grid">
+            <div class="payment-tile payment-cash">
+              <div class="payment-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+              <div class="payment-info">
+                <span class="payment-label">Cash</span>
+                <span class="payment-value" id="pm-cash">₹0</span>
+              </div>
+            </div>
+            <div class="payment-tile payment-upi">
+              <div class="payment-icon"><i class="fa-solid fa-qrcode"></i></div>
+              <div class="payment-info">
+                <span class="payment-label">UPI / GPay</span>
+                <span class="payment-value" id="pm-upi">₹0</span>
+              </div>
+            </div>
+            <div class="payment-tile payment-card">
+              <div class="payment-icon"><i class="fa-solid fa-credit-card"></i></div>
+              <div class="payment-info">
+                <span class="payment-label">Card</span>
+                <span class="payment-value" id="pm-card">₹0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Bills Feed -->
+        <div class="panel">
+          <div class="panel-header panel-header-between">
+            <h3><i class="fa-solid fa-clock-rotate-left"></i> Live Activity Feed</h3>
+            <button class="link-btn" onclick="app.switchTab('bills')">View All <i
+                class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div class="feed-list" id="dash-recent-bills-list">
+            <div class="skeleton-list">
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-amount"></div>
+              </div>
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-amount"></div>
+              </div>
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-amount"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: RESTAURANT HUB -->
+      <section id="view-restaurant" class="view-section hidden" aria-label="Restaurant Hub">
+        <div class="section-header">
+          <h2>Restaurant Hub</h2>
+          <p class="section-subtitle">Financial analysis & menu management</p>
+        </div>
+
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" id="subtab-pnl" onclick="app.switchRestaurantSubTab('pnl')">
+            <i class="fa-solid fa-chart-pie"></i> P&L
+          </button>
+          <button class="sub-tab-btn" id="subtab-dishes" onclick="app.switchRestaurantSubTab('dishes')">
+            <i class="fa-solid fa-utensils"></i> Menu
+          </button>
+          <button class="sub-tab-btn" id="subtab-categories" onclick="app.switchRestaurantSubTab('categories')">
+            <i class="fa-solid fa-tags"></i> Categories
+          </button>
+        </div>
+
+        <!-- P&L Subview -->
+        <div id="rest-content-pnl" class="rest-subview">
+          <div class="period-bar">
+            <button class="period-chip active" data-period="today" onclick="app.setPnlPeriod('today')">Today</button>
+            <button class="period-chip" data-period="week" onclick="app.setPnlPeriod('week')">Week</button>
+            <button class="period-chip" data-period="month" onclick="app.setPnlPeriod('month')">Month</button>
+            <button class="period-chip" data-period="year" onclick="app.setPnlPeriod('year')">Year</button>
+            <button class="period-chip" data-period="all" onclick="app.setPnlPeriod('all')">All Time</button>
+          </div>
+
+          <div class="filter-panel">
+            <div class="filter-label"><i class="fa-solid fa-filter"></i> Filters</div>
+            <div class="filter-chips">
+              <label class="filter-chip chip-profit">
+                <input type="checkbox" id="pnl-flt-profit" checked onchange="app.renderPnL()">
+                <span>Revenue</span>
+              </label>
+              <label class="filter-chip chip-expense">
+                <input type="checkbox" id="pnl-flt-expense" checked onchange="app.renderPnL()">
+                <span>Expenses</span>
+              </label>
+              <label class="filter-chip chip-upi">
+                <input type="checkbox" id="pnl-flt-upi" checked onchange="app.renderPnL()">
+                <span>UPI</span>
+              </label>
+              <label class="filter-chip chip-cash">
+                <input type="checkbox" id="pnl-flt-cash" checked onchange="app.renderPnL()">
+                <span>Cash</span>
+              </label>
+              <label class="filter-chip chip-card">
+                <input type="checkbox" id="pnl-flt-card" checked onchange="app.renderPnL()">
+                <span>Card</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="kpi-grid kpi-grid-4">
+            <div class="kpi-card compact">
+              <div class="kpi-data">
+                <span class="kpi-label">Gross Revenue</span>
+                <span class="kpi-value text-emerald" id="pnl-gross-revenue">₹0.00</span>
+              </div>
+            </div>
+            <div class="kpi-card compact">
+              <div class="kpi-data">
+                <span class="kpi-label">Total Expenses</span>
+                <span class="kpi-value text-rose" id="pnl-total-expenses">₹0.00</span>
+              </div>
+            </div>
+            <div class="kpi-card compact">
+              <div class="kpi-data">
+                <span class="kpi-label">Net Profit</span>
+                <span class="kpi-value text-gold" id="pnl-net-profit">₹0.00</span>
+              </div>
+            </div>
+            <div class="kpi-card compact">
+              <div class="kpi-data">
+                <span class="kpi-label">Margin</span>
+                <span class="kpi-value text-white" id="pnl-profit-margin">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header panel-header-between">
+              <h3><i class="fa-solid fa-scale-balanced"></i> Unified Ledger</h3>
+              <span class="badge-count" id="pnl-ledger-count">0 Transactions</span>
+            </div>
+            <div class="feed-list" id="pnl-master-ledger-list">
+              <div class="empty-state">
+                <i class="fa-solid fa-receipt"></i>
+                <p>No transactions for selected period</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dishes Subview -->
+        <div id="rest-content-dishes" class="rest-subview hidden">
+          <div class="search-bar">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="dishes-search" placeholder="Search dishes, items..." oninput="app.renderDishes()">
+          </div>
+          <div class="feed-list" id="dishes-master-list">
+            <div class="skeleton-list">
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-amount"></div>
+              </div>
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-amount"></div>
+              </div>
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+                <div class="skeleton-amount"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories Subview -->
+        <div id="rest-content-categories" class="rest-subview hidden">
+          <div class="feed-list" id="categories-master-list">
+            <div class="skeleton-list">
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+              </div>
+              <div class="skeleton-row">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: BILLS -->
+      <section id="view-bills" class="view-section hidden" aria-label="Bills and Tokens">
+        <div class="section-header">
+          <h2>Bills & Tokens</h2>
+          <div class="search-bar">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="bills-search" placeholder="Search bill number, type, or payment mode...">
+          </div>
+        </div>
+
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" id="bills-subtab-all" onclick="app.switchBillsSubTab('all')">
+            <i class="fa-solid fa-receipt"></i> All Bills
+          </button>
+          <button class="sub-tab-btn" id="bills-subtab-tokens" onclick="app.switchBillsSubTab('tokens')">
+            <i class="fa-solid fa-ticket"></i> Kitchen Tokens
+          </button>
+        </div>
+
+        <div id="bills-content-all">
+          <div class="feed-list" id="bills-master-list">
+            <div class="empty-state">
+              <i class="fa-solid fa-receipt"></i>
+              <p>No bills found</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="bills-content-tokens" class="hidden">
+          <div class="tokens-grid" id="tokens-master-grid">
+            <div class="empty-state">
+              <i class="fa-solid fa-ticket"></i>
+              <p>No active kitchen tokens</p>
+            </div>
+          </div>
+          <div class="tokens-badge-wrap">
+            <span class="badge-count" id="tokens-count-badge">0 Active</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: EXPENSES -->
+      <section id="view-expenses" class="view-section hidden" aria-label="Expenses Ledger">
+        <div class="section-header">
+          <h2>Expenses Ledger</h2>
+          <p class="section-subtitle">Track and monitor all business outflows</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header panel-header-between">
+            <h3><i class="fa-solid fa-list-check"></i> All Expenses</h3>
+            <span class="total-pill" id="expenses-total-sum">₹0.00</span>
+          </div>
+          <div class="feed-list" id="expenses-master-list">
+            <div class="empty-state">
+              <i class="fa-solid fa-wallet"></i>
+              <p>No expense entries recorded</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="bottom-nav" id="bottom-nav" role="navigation" aria-label="Main navigation">
+      <button class="nav-item active" data-tab="dashboard" aria-label="Dashboard">
+        <div class="nav-icon"><i class="fa-solid fa-chart-pie"></i></div>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-tab="restaurant" aria-label="Analysis">
+        <div class="nav-icon"><i class="fa-solid fa-chart-line"></i></div>
+        <span>Analysis</span>
+      </button>
+      <button class="nav-item" data-tab="bills" aria-label="Bills">
+        <div class="nav-icon"><i class="fa-solid fa-receipt"></i></div>
+        <span>Bills</span>
+      </button>
+      <button class="nav-item" data-tab="expenses" aria-label="Expenses">
+        <div class="nav-icon"><i class="fa-solid fa-wallet"></i></div>
+        <span>Expenses</span>
+      </button>
+      <button class="nav-item" data-tab="db-connect" aria-label="Settings">
+        <div class="nav-icon"><i class="fa-solid fa-gear"></i></div>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- BILL DETAIL MODAL -->
+    <div class="modal-overlay hidden" id="bill-detail-modal" role="dialog" aria-modal="true"
+      aria-labelledby="modal-bill-title">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon"><i class="fa-solid fa-receipt"></i></span>
+            <h3 id="modal-bill-title">Bill Details</h3>
+          </div>
+          <button class="modal-close" id="close-bill-modal" aria-label="Close modal">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="modal-body" id="modal-bill-body">
+          <div class="skeleton-list">
+            <div class="skeleton-row">
+              <div class="skeleton-lines full">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
