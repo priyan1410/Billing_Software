@@ -1037,6 +1037,7 @@ export const RestaurantView: React.FC = () => {
                   { id: 'month', label: 'This Month' },
                   { id: 'year', label: 'This Year' },
                   { id: 'all', label: 'All Time' },
+                  { id: 'custom', label: 'Custom Range' },
                 ].map((p) => (
                   <button
                     key={p.id}

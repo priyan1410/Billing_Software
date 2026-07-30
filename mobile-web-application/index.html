@@ -351,12 +351,24 @@
 
         <!-- P&L Subview -->
         <div id="rest-content-pnl" class="rest-subview">
-          <div class="period-bar">
+          <div class="period-bar" style="overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none;">
             <button class="period-chip active" data-period="today" onclick="app.setPnlPeriod('today')">Today</button>
             <button class="period-chip" data-period="week" onclick="app.setPnlPeriod('week')">Week</button>
             <button class="period-chip" data-period="month" onclick="app.setPnlPeriod('month')">Month</button>
             <button class="period-chip" data-period="year" onclick="app.setPnlPeriod('year')">Year</button>
             <button class="period-chip" data-period="all" onclick="app.setPnlPeriod('all')">All Time</button>
+            <button class="period-chip" data-period="custom" onclick="app.setPnlPeriod('custom')">Custom Range</button>
+          </div>
+
+          <div id="pnl-custom-date-container" class="form-row hidden" style="margin-top: 10px; margin-bottom: 12px; gap: 8px; background: rgba(212,175,55,0.06); padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(212,175,55,0.2);">
+            <div class="form-group col-6" style="margin-bottom: 0;">
+              <label for="pnl-start-date" style="font-size: 11px; color: var(--gold-400); margin-bottom: 4px;"><i class="fa-solid fa-calendar"></i> From Date</label>
+              <input type="date" id="pnl-start-date" onchange="app.renderPnL()" style="padding: 8px 10px; font-size: 12px; border-radius: 8px;">
+            </div>
+            <div class="form-group col-6" style="margin-bottom: 0;">
+              <label for="pnl-end-date" style="font-size: 11px; color: var(--gold-400); margin-bottom: 4px;"><i class="fa-solid fa-calendar"></i> To Date</label>
+              <input type="date" id="pnl-end-date" onchange="app.renderPnL()" style="padding: 8px 10px; font-size: 12px; border-radius: 8px;">
+            </div>
           </div>
 
           <div class="filter-panel">

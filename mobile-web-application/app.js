@@ -458,6 +458,20 @@ class MobileApp {
     document.querySelectorAll('.period-chip').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.period === period);
     });
+
+    const customContainer = document.getElementById('pnl-custom-date-container');
+    if (customContainer) {
+      customContainer.classList.toggle('hidden', period !== 'custom');
+    }
+
+    if (period === 'custom') {
+      const todayStr = this.getLocalDayString(new Date());
+      const sInput = document.getElementById('pnl-start-date');
+      const eInput = document.getElementById('pnl-end-date');
+      if (sInput && !sInput.value) sInput.value = todayStr;
+      if (eInput && !eInput.value) eInput.value = todayStr;
+    }
+
     this.renderPnL();
   }
 
@@ -644,6 +658,11 @@ class MobileApp {
     }
     if (period === 'year') {
       return { start: `${year}-01-01`, end: `${year}-12-31` };
+    }
+    if (period === 'custom') {
+      const sVal = document.getElementById('pnl-start-date')?.value || '1970-01-01';
+      const eVal = document.getElementById('pnl-end-date')?.value || todayStr;
+      return { start: sVal, end: eVal };
     }
     return { start: '1970-01-01', end: todayStr };
   }
