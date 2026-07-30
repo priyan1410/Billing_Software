@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Crown, PieChart, Receipt, Ticket, Wallet, Store, Database } from 'lucide-react';
 import { useAppStore, AppSection } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -6,6 +6,26 @@ import { useAuthStore } from '../../store/useAuthStore';
 export const Sidebar: React.FC = () => {
   const { activeSection, setActiveSection } = useAppStore();
   const { restaurantDetails } = useAuthStore();
+  const [dbSize, setDbSize] = useState<string>('');
+
+  useEffect(() => {
+    const fetchStorageSize = async () => {
+      try {
+        if ((window as any).electronAPI?.getStorageSize) {
+          const res = await (window as any).electronAPI.getStorageSize();
+          if (res && res.formatted) {
+            setDbSize(res.formatted);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch DB storage size:', err);
+      }
+    };
+
+    fetchStorageSize();
+    const interval = setInterval(fetchStorageSize, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navItems: { id: AppSection; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <PieChart className="w-5 h-5" /> },
@@ -78,10 +98,13 @@ export const Sidebar: React.FC = () => {
           }`}
         >
           <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-gold-500" />
-            <span>MySQL Active</span>
+            <Database className="w-4 h-4 text-gold-500 shrink-0" />
+            <div className="flex flex-col text-left leading-tight">
+              <span>MySQL Active</span>
+              {dbSize && <span className="text-[10px] font-mono font-bold text-gold-400">{dbSize}</span>}
+            </div>
           </div>
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500"></span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500 shrink-0"></span>
         </button>
       </div>
     </aside>

@@ -53,6 +53,8 @@ export function getPosTokenTextBody(
   data: {
     tokenNumber: string | number;
     orderType: string;
+    tableNo?: string;
+    tableNumber?: string;
     paymentMode?: string;
     items: Array<{ name: string; variant?: string; quantity: number | string }>;
     timestamp?: string;
@@ -78,7 +80,7 @@ export function getPosTokenTextBody(
   lines.push(divider('-', width));
 
   const rawType = String(data.orderType || 'Dine-In');
-  const tbl = data.tableNo || (data as any).tableNumber || '';
+  const tbl = data.tableNo || data.tableNumber || '';
   let formattedType = 'Takeaway';
   if (rawType.toLowerCase().includes('dine')) {
     formattedType = (tbl && tbl !== 'N/A' && tbl !== 'TA') ? `DI-${tbl}` : 'DI-Dine-In';

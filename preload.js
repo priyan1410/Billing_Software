@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   testDbConnection: (config) => ipcRenderer.invoke('db:testConnection', config),
   saveDbConfig: (config) => ipcRenderer.invoke('db:saveConfig', config),
   getDbConfig: () => ipcRenderer.invoke('db:getConfig'),
+  getStorageSize: () => ipcRenderer.invoke('db:getStorageSize'),
   getTableData: (tableName) => ipcRenderer.invoke('db:getTableData', tableName),
   clearOrders: () => ipcRenderer.invoke('db:clearOrders'),
   clearExpenses: () => ipcRenderer.invoke('db:clearExpenses'),

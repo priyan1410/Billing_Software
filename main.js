@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
-const { query, testConnection, saveConfig, loadConfig, dbConfig } = require('./db/connection');
+const { query, testConnection, saveConfig, loadConfig, dbConfig, getStorageSize } = require('./db/connection');
 const { initializeDatabase } = require('./db/schema');
 const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber } = require('./electron/tokenUtils');
 
@@ -1077,6 +1077,14 @@ ipcMain.handle('db:saveConfig', async (evt, config) => {
     return await saveConfig(config);
   } catch (err) {
     return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('db:getStorageSize', async () => {
+  try {
+    return await getStorageSize();
+  } catch (err) {
+    return { success: false, formatted: '0 KB', error: err.message };
   }
 });
 

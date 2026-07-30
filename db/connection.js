@@ -172,12 +172,128 @@ async function saveConfig(newConfig) {
   }
 }
 
+// ─── Storage Size Helper ──────────────────────────────────────
+async function getStorageSize() {
+  try {
+    loadConfig();
+    const targetDb = dbConfig.database || 'kish_mandhi';
+
+    // 1. Force InnoDB to refresh table statistics on server
+    await query(`ANALYZE TABLE categories, menu_items, orders, order_items, expenses, tokens, users, restaurant_details`).catch(() => {});
+
+    let bytes = 0;
+    let tableCount = 0;
+    let totalRows = 0;
+
+    // 2. Fetch live physical table status directly from engine
+    const statusRes = await query(`SHOW TABLE STATUS FROM \`${targetDb}\``).catch(() => null);
+
+    if (statusRes && statusRes.success && Array.isArray(statusRes.data) && statusRes.data.length > 0) {
+      tableCount = statusRes.data.length;
+      for (const row of statusRes.data) {
+        const dataLen = Number(row.Data_length || row.data_length || 0);
+        const indexLen = Number(row.Index_length || row.index_length || 0);
+        const dataFree = Number(row.Data_free || row.data_free || 0);
+        const rows = Number(row.Rows || row.rows || 0);
+        bytes += (dataLen + indexLen + dataFree);
+        totalRows += rows;
+      }
+    } else {
+      // Fallback to information_schema query
+      const res = await query(`
+        SELECT 
+          SUM(COALESCE(data_length, 0) + COALESCE(index_length, 0) + COALESCE(data_free, 0)) AS bytes,
+          COUNT(*) AS table_count,
+          SUM(COALESCE(table_rows, 0)) AS total_rows
+        FROM information_schema.tables
+        WHERE table_schema = ? OR table_schema = DATABASE()
+      `, [targetDb]);
+
+      if (res.success && res.data && res.data[0]) {
+        bytes = Number(res.data[0].bytes || 0);
+        tableCount = Number(res.data[0].table_count || 0);
+        totalRows = Number(res.data[0].total_rows || 0);
+      }
+    }
+
+    // 3. Calculate exact live total record count across all 8 tables for instant feedback
+    const contentCheck = await query(`
+      SELECT 
+        (SELECT COUNT(*) FROM categories) +
+        (SELECT COUNT(*) FROM menu_items) +
+        (SELECT COUNT(*) FROM orders) +
+        (SELECT COUNT(*) FROM order_items) +
+        (SELECT COUNT(*) FROM expenses) +
+        (SELECT COUNT(*) FROM tokens) +
+        (SELECT COUNT(*) FROM users) +
+        (SELECT COUNT(*) FROM restaurant_details) AS live_records
+    `).catch(() => null);
+
+    let liveRecords = totalRows;
+    if (contentCheck && contentCheck.success && contentCheck.data && contentCheck.data[0]) {
+      liveRecords = Number(contentCheck.data[0].live_records || 0);
+    }
+
+    const isRemote = dbConfig.host && dbConfig.host !== 'localhost' && dbConfig.host !== '127.0.0.1';
+    const hostLabel = isRemote ? 'Cloud DB' : 'Local MySQL';
+
+    const sizeKb = bytes / 1024;
+    const sizeMb = bytes / (1024 * 1024);
+    const sizeGb = bytes / (1024 * 1024 * 1024);
+
+    let rawFormatted = '0 KB';
+    if (sizeGb >= 1) {
+      rawFormatted = `${sizeGb.toFixed(2)} GB`;
+    } else if (sizeMb >= 1) {
+      rawFormatted = `${sizeMb.toFixed(2)} MB`;
+    } else if (sizeKb > 0) {
+      rawFormatted = `${sizeKb.toFixed(1)} KB`;
+    } else {
+      rawFormatted = '0 KB';
+    }
+
+    const formatted = `${rawFormatted} • ${liveRecords} Records`;
+
+    return {
+      success: true,
+      bytes,
+      sizeKb,
+      sizeMb,
+      sizeGb,
+      tableCount,
+      liveRecords,
+      rawFormatted,
+      formatted,
+      isRemote,
+      hostLabel,
+      host: dbConfig.host,
+      database: targetDb
+    };
+  } catch (e) {
+    console.error('getStorageSize error:', e.message);
+  }
+
+  // Fallback if local store
+  try {
+    const cp = getConfigPath();
+    const localStorePath = path.join(path.dirname(cp), 'local-store.json');
+    if (fs.existsSync(localStorePath)) {
+      const stats = fs.statSync(localStorePath);
+      const sizeKb = (stats.size / 1024).toFixed(1);
+      return { success: true, formatted: `${sizeKb} KB (Local File)`, isRemote: false, hostLabel: 'Local File' };
+    }
+  } catch (err) {}
+
+  return { success: false, formatted: '0 KB', isRemote: false };
+}
+
 module.exports = {
   dbConfig,
   loadConfig,
   saveConfig,
   testConnection,
   query,
-  getPool
+  getPool,
+  getStorageSize
 };
 
