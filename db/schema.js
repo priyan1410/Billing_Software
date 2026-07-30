@@ -11,15 +11,21 @@ async function initializeDatabase() {
     let conn = null;
     let lastError = null;
 
+    const isRemote = dbConfig.host && dbConfig.host !== 'localhost' && dbConfig.host !== '127.0.0.1';
+
     for (const pwd of uniquePasswords) {
       try {
-        conn = await mysql.createConnection({
+        const connOpts = {
           host: dbConfig.host || 'localhost',
           port: Number(dbConfig.port || 3306),
           user: dbConfig.user || 'root',
           password: pwd,
-          connectTimeout: 5000
-        });
+          connectTimeout: 8000
+        };
+        if (isRemote) {
+          connOpts.ssl = { rejectUnauthorized: false };
+        }
+        conn = await mysql.createConnection(connOpts);
         if (dbConfig.password !== pwd) {
           dbConfig.password = pwd;
           saveConfig(dbConfig);
@@ -38,9 +44,17 @@ async function initializeDatabase() {
       throw lastError || new Error('Could not connect to MySQL server');
     }
 
-    await conn.query('CREATE DATABASE IF NOT EXISTS `kish_mandhi`;');
+    const targetDb = dbConfig.database || 'kish_mandhi';
+    try {
+      await conn.query(`CREATE DATABASE IF NOT EXISTS \`${targetDb}\`;`);
+      console.log(`✓ Database '${targetDb}' ensured.`);
+    } catch (e) {
+      console.log(`Note: Database '${targetDb}' creation check: ${e.message}`);
+    }
+    try {
+      await conn.query(`USE \`${targetDb}\`;`);
+    } catch (e) {}
     await conn.end();
-    console.log('✓ Database kish_mandhi ensured.');
 
     // Step 2: Create tables inside kish_mandhi
     await query(`
@@ -126,7 +140,7 @@ async function initializeDatabase() {
     // Ensure item_name column exists for backwards compatibility
     const orderItemsCols = await query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'order_items'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'order_items'
     `);
     if (orderItemsCols.success) {
       const existingOICols = orderItemsCols.data.map(r => r.COLUMN_NAME.toLowerCase());
@@ -169,7 +183,7 @@ async function initializeDatabase() {
     // Ensure items_summary column exists on legacy table structures
     const tokenCols = await query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'tokens'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tokens'
     `);
     if (tokenCols.success) {
       const existingTokenCols = tokenCols.data.map(r => r.COLUMN_NAME.toLowerCase());
@@ -193,7 +207,7 @@ async function initializeDatabase() {
     // Safely add missing columns to existing users table (ALTER TABLE IF NOT EXISTS column)
     const userCols = await query(`
       SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = 'kish_mandhi' AND TABLE_NAME = 'users'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
     `);
     const existingCols = userCols.success ? userCols.data.map(r => r.COLUMN_NAME.toLowerCase()) : [];
 

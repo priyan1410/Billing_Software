@@ -52,19 +52,24 @@ function getPool() {
   if (!mysql) return null;
   loadConfig();
   if (!pool) {
-    pool = mysql.createPool({
+    const isRemote = dbConfig.host && dbConfig.host !== 'localhost' && dbConfig.host !== '127.0.0.1';
+    const poolConfig = {
       host: dbConfig.host,
       port: Number(dbConfig.port),
       user: dbConfig.user,
       password: dbConfig.password,
-      database: dbConfig.database,
+      database: dbConfig.database || 'kish_mandhi',
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
-      connectTimeout: 3000,
+      connectTimeout: 8000,
       multipleStatements: false,
       dateStrings: true
-    });
+    };
+    if (isRemote) {
+      poolConfig.ssl = { rejectUnauthorized: false };
+    }
+    pool = mysql.createPool(poolConfig);
   }
   return pool;
 }
@@ -101,15 +106,22 @@ async function testConnection(customConfig = null) {
   }
 
   try {
-    const conn = await mysql.createConnection({
+    const isRemote = cfg.host && cfg.host !== 'localhost' && cfg.host !== '127.0.0.1';
+    const connOpts = {
       host: cfg.host,
       port: Number(cfg.port),
       user: cfg.user,
       password: cfg.password,
-      connectTimeout: 3000
-    });
-    const [rows] = await conn.query(`SHOW DATABASES LIKE '${cfg.database}'`);
-    const dbExists = rows.length > 0;
+      database: cfg.database || undefined,
+      connectTimeout: 8000
+    };
+    if (isRemote) {
+      connOpts.ssl = { rejectUnauthorized: false };
+    }
+    const conn = await mysql.createConnection(connOpts);
+    const targetDb = cfg.database || 'kish_mandhi';
+    const [rows] = await conn.query(`SHOW DATABASES LIKE '${targetDb}'`).catch(() => [[]]);
+    const dbExists = rows && rows.length > 0;
     await conn.end();
     const responseTime = Date.now() - startTime;
     return {
@@ -118,8 +130,8 @@ async function testConnection(customConfig = null) {
       engine: 'MySQL',
       responseTime,
       message: dbExists
-        ? `✓ Connected to MySQL Database ('${cfg.database}')! Response time: ${responseTime}ms`
-        : `✓ Connected to MySQL Server. Database '${cfg.database}' will be created/initialized.`,
+        ? `✓ Connected to MySQL Database ('${targetDb}')! Response time: ${responseTime}ms`
+        : `✓ Connected to MySQL Server. Database '${targetDb}' will be created/initialized.`,
       dbExists
     };
   } catch (err) {

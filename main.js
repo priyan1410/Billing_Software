@@ -1056,16 +1056,28 @@ ipcMain.handle('db:importFullSystem', async (evt, fullBackup) => {
 });
 
 ipcMain.handle('db:testConnection', async (evt, customConfig) => {
-  return await testConnection(customConfig);
+  try {
+    return await testConnection(customConfig || null);
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
 });
 
 ipcMain.handle('db:getConfig', async () => {
-  const cfg = loadConfig();
-  return { success: true, data: { host: cfg.host, port: cfg.port, user: cfg.user, database: cfg.database } };
+  try {
+    const cfg = loadConfig();
+    return { success: true, data: cfg };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
 });
 
 ipcMain.handle('db:saveConfig', async (evt, config) => {
-  return saveConfig(config);
+  try {
+    return await saveConfig(config);
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -1463,36 +1475,6 @@ ipcMain.handle('receipt:print', async (evt, receiptHtml, options = {}) => {
       );
     });
     return { success: true };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-});
-
-// ─────────────────────────────────────────────────────────────
-// DATABASE CONFIGURATION & MANAGEMENT
-// ─────────────────────────────────────────────────────────────
-ipcMain.handle('db:getConfig', async () => {
-  try {
-    const cfg = loadConfig();
-    return { success: true, data: cfg };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-});
-
-ipcMain.handle('db:testConnection', async (evt, customConfig) => {
-  try {
-    const res = await testConnection(customConfig || null);
-    return res;
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-});
-
-ipcMain.handle('db:saveConfig', async (evt, config) => {
-  try {
-    const res = await saveConfig(config);
-    return res;
   } catch (err) {
     return { success: false, message: err.message };
   }
