@@ -168,8 +168,23 @@ const server = http.createServer(async (req, res) => {
 
       const formatRow = (row) => {
         const out = { ...row };
-        if (out.created_at instanceof Date) out.created_at = out.created_at.toISOString();
-        if (out.expense_date instanceof Date) out.expense_date = out.expense_date.toISOString().split('T')[0];
+        if (out.created_at instanceof Date) {
+          const d = out.created_at;
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          const ss = String(d.getSeconds()).padStart(2, '0');
+          out.created_at = `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+        }
+        if (out.expense_date instanceof Date) {
+          const d = out.expense_date;
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          out.expense_date = `${y}-${m}-${day}`;
+        }
         return out;
       };
 

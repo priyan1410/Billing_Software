@@ -62,7 +62,7 @@ export const DashboardView: React.FC = () => {
               <ShoppingBag className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-xs text-olive-300 uppercase tracking-wider font-medium">Total Orders</span>
+              <span className="text-xs text-olive-300 uppercase tracking-wider font-medium">Today's Orders</span>
               <h3 className="text-2xl font-bold text-white mt-0.5">{stats.totalOrdersCount}</h3>
               <span className="text-xs text-olive-300 font-medium mt-1">Dine-In & Takeaway</span>
             </div>
@@ -76,7 +76,7 @@ export const DashboardView: React.FC = () => {
               <ArrowDownRight className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-xs text-olive-300 uppercase tracking-wider font-medium">Total Expenses</span>
+              <span className="text-xs text-olive-300 uppercase tracking-wider font-medium">Today's Expenses</span>
               <h3 className="text-2xl font-bold text-white mt-0.5">₹{stats.totalExpenseSum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
               <span className="text-xs text-rose-400 font-medium mt-1">Operational & Supplies</span>
             </div>
@@ -90,7 +90,7 @@ export const DashboardView: React.FC = () => {
               <IndianRupee className="w-6 h-6" />
             </div>
             <div>
-              <span className="text-xs text-olive-300 uppercase tracking-wider font-medium">Net Profit</span>
+              <span className="text-xs text-olive-300 uppercase tracking-wider font-medium">Today's Net Profit</span>
               <h3 className="text-2xl font-bold text-white mt-0.5">₹{stats.netProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
               <span className="text-xs text-emerald-400 font-medium mt-1">Sales minus Expenses</span>
             </div>

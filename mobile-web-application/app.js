@@ -518,30 +518,33 @@ class MobileApp {
 
   getLocalDayString(val) {
     if (!val) return '';
-    if (typeof val === 'string' && val.length >= 10) return val.slice(0, 10);
     const d = new Date(val);
-    if (isNaN(d.getTime())) return '';
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    if (!isNaN(d.getTime())) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    if (typeof val === 'string' && val.length >= 10) return val.slice(0, 10);
+    return '';
   }
 
   isSameDay(dateVal, targetDayStr) {
     if (!dateVal) return false;
+    const localDay = this.getLocalDayString(dateVal);
+    if (localDay === targetDayStr) return true;
     const str = String(dateVal);
-    if (str.startsWith(targetDayStr)) return true;
-    return this.getLocalDayString(dateVal) === targetDayStr;
+    return str.startsWith(targetDayStr);
   }
 
   renderDashboard() {
     const todayStr = this.getLocalDayString(new Date());
 
     const todayOrders = this.liveData.orders.filter(o =>
-      this.isSameDay(o.created_at, todayStr) || this.isSameDay(o.expense_date, todayStr) || this.isSameDay(o.dateStr, todayStr)
+      this.isSameDay(o.created_at, todayStr) || this.isSameDay(o.orderDate, todayStr) || this.isSameDay(o.dateStr, todayStr)
     );
-    const todayExpenses = this.liveData.expenses.filter(e =>
-      this.isSameDay(e.expense_date, todayStr) || this.isSameDay(e.created_at, todayStr)
+    const todayExpenses = (this.liveData.expenses || []).filter(e =>
+      this.isSameDay(e.expense_date || e.expenseDate || e.created_at, todayStr)
     );
 
     const totalRevenue = todayOrders.reduce((sum, o) => sum + Number(o.grand_total || o.grandTotal || 0), 0);
@@ -759,34 +762,126 @@ class MobileApp {
     }
   }
 
+  setCategoryFilter(catId) {
+    this.selectedCategoryFilter = catId;
+    this.renderDishes();
+  }
+
   renderDishes() {
     const container = document.getElementById('dishes-master-list');
+    const chipsContainer = document.getElementById('dishes-category-chips');
     if (!container) return;
 
-    const queryStr = (document.getElementById('dishes-search')?.value || '').toLowerCase();
-    const filtered = this.liveData.menuItems.filter(m => m.name.toLowerCase().includes(queryStr));
+    if (!this.selectedCategoryFilter) {
+      this.selectedCategoryFilter = 'all';
+    }
 
-    if (filtered.length === 0) {
+    const queryStr = (document.getElementById('dishes-search')?.value || '').toLowerCase();
+    const categoriesMap = new Map();
+    (this.liveData.categories || []).forEach(c => {
+      categoriesMap.set(String(c.id), c.name);
+    });
+
+    const allItems = this.liveData.menuItems || [];
+    const searchFiltered = allItems.filter(m => (m.name || '').toLowerCase().includes(queryStr));
+
+    // Render Category Filter Chips Bar
+    if (chipsContainer) {
+      const activeCat = String(this.selectedCategoryFilter);
+      let chipsHtml = `
+        <button class="period-chip ${activeCat === 'all' ? 'active' : ''}" onclick="app.setCategoryFilter('all')">
+          All (${allItems.length})
+        </button>
+      `;
+
+      (this.liveData.categories || []).forEach(cat => {
+        const catIdStr = String(cat.id);
+        const count = allItems.filter(m => String(m.category_id || m.categoryId) === catIdStr).length;
+        if (count > 0) {
+          chipsHtml += `
+            <button class="period-chip ${activeCat === catIdStr ? 'active' : ''}" onclick="app.setCategoryFilter('${catIdStr}')">
+              ${cat.name} (${count})
+            </button>
+          `;
+        }
+      });
+      chipsContainer.innerHTML = chipsHtml;
+    }
+
+    // Filter by selected category chip
+    const finalItems = this.selectedCategoryFilter === 'all'
+      ? searchFiltered
+      : searchFiltered.filter(m => String(m.category_id || m.categoryId) === String(this.selectedCategoryFilter));
+
+    if (finalItems.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
           <i class="fa-solid fa-utensils"></i>
-          <p>No menu dishes found</p>
+          <p>${queryStr ? 'No matching menu dishes found' : 'No dishes in this category'}</p>
         </div>`;
       return;
     }
 
-    container.innerHTML = filtered.map((m, idx) => `
-      <div class="feed-item" style="animation: fadeIn 0.3s ${idx * 0.04}s both;">
-        <div class="feed-item-left">
-          <div class="feed-icon gold"><i class="fa-solid fa-utensils"></i></div>
-          <div class="feed-meta-wrap">
-            <div class="feed-title">${m.name}</div>
-            <div class="feed-subtitle">Quarter ₹${m.priceQuarter || 0}<span class="dot"></span>Half ₹${m.priceHalf || 0}</div>
+    // Group menu items by category
+    const groups = new Map();
+    finalItems.forEach(item => {
+      const catId = String(item.category_id || item.categoryId || 'other');
+      const catName = categoriesMap.get(catId) || item.category_name || item.category || 'General Menu';
+      if (!groups.has(catName)) {
+        groups.set(catName, []);
+      }
+      groups.get(catName).push(item);
+    });
+
+    let html = '';
+    let totalIdx = 0;
+
+    groups.forEach((items, groupName) => {
+      html += `
+        <div class="category-group-section" style="margin-bottom: 20px;">
+          <div class="category-group-header" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 4px 10px 4px; border-bottom: 1px solid rgba(212,175,55,0.25); margin-bottom: 10px;">
+            <span style="font-weight: 700; font-size: 14px; color: var(--gold-400); display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-utensils" style="font-size: 12px;"></i> ${groupName}
+            </span>
+            <span class="badge-count" style="font-size: 11px; background: rgba(212,175,55,0.12); color: var(--gold-400); padding: 3px 10px; border-radius: 12px; border: 1px solid rgba(212,175,55,0.2);">
+              ${items.length} item${items.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div class="category-group-body">
+      `;
+
+      items.forEach(m => {
+        totalIdx++;
+        const qPrice = Number(m.price_quarter || m.priceQuarter || 0);
+        const hPrice = Number(m.price_half || m.priceHalf || 0);
+        const fPrice = Number(m.price_full || m.priceFull || m.price || 0);
+
+        let priceSub = [];
+        if (qPrice > 0) priceSub.push(`Qtr ₹${qPrice}`);
+        if (hPrice > 0) priceSub.push(`Half ₹${hPrice}`);
+        if (priceSub.length === 0) priceSub.push(`Standard Rate`);
+
+        html += `
+          <div class="feed-item" style="animation: fadeIn 0.3s ${totalIdx * 0.03}s both; margin-bottom: 8px;">
+            <div class="feed-item-left">
+              <div class="feed-icon gold"><i class="fa-solid fa-utensils"></i></div>
+              <div class="feed-meta-wrap">
+                <div class="feed-title">${m.name}</div>
+                <div class="feed-subtitle">${priceSub.join(' <span class="dot"></span> ')}</div>
+              </div>
+            </div>
+            <div class="feed-amount text-gold">₹${fPrice.toFixed(2)}</div>
+          </div>
+        `;
+      });
+
+      html += `
           </div>
         </div>
-        <div class="feed-amount text-gold">₹${m.priceFull}</div>
-      </div>
-    `).join('');
+      `;
+    });
+
+    container.innerHTML = html;
   }
 
   renderCategories() {

@@ -222,7 +222,7 @@
                 <i class="fa-solid fa-file-invoice-dollar"></i>
               </div>
               <div class="kpi-data">
-                <span class="kpi-label">Daily Expenses</span>
+                <span class="kpi-label">Today's Expenses</span>
                 <span class="kpi-value text-rose" id="dash-today-expenses">₹0.00</span>
               </div>
             </div>
@@ -237,7 +237,7 @@
                 <i class="fa-solid fa-chart-line"></i>
               </div>
               <div class="kpi-data">
-                <span class="kpi-label">Net Profit</span>
+                <span class="kpi-label">Today's Net Profit</span>
                 <span class="kpi-value text-gold" id="dash-net-profit">₹0.00</span>
               </div>
             </div>
@@ -252,7 +252,7 @@
                 <i class="fa-solid fa-utensils"></i>
               </div>
               <div class="kpi-data">
-                <span class="kpi-label">Orders Today</span>
+                <span class="kpi-label">Today's Orders</span>
                 <span class="kpi-value text-white" id="dash-orders-count">0</span>
               </div>
             </div>
@@ -432,6 +432,7 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" id="dishes-search" placeholder="Search dishes, items..." oninput="app.renderDishes()">
           </div>
+          <div class="period-bar" id="dishes-category-chips" style="margin-top: 10px; margin-bottom: 14px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none;"></div>
           <div class="feed-list" id="dishes-master-list">
             <div class="skeleton-list">
               <div class="skeleton-row">

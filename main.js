@@ -431,24 +431,30 @@ ipcMain.handle('orders:getItems', async (evt, orderIdOrNumber) => {
 // DASHBOARD STATS (live from MySQL - Today's data only)
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('dashboard:getStats', async () => {
-  const revResult = await query(`SELECT COALESCE(SUM(grand_total), 0) AS total FROM orders WHERE DATE(created_at) = CURDATE()`);
-  const cntResult = await query(`SELECT COUNT(*) AS cnt FROM orders WHERE DATE(created_at) = CURDATE()`);
-  const expResult = await query(`SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE DATE(expense_date) = CURDATE() OR DATE(created_at) = CURDATE()`);
-  const recentResult = await query(`SELECT * FROM orders WHERE DATE(created_at) = CURDATE() ORDER BY created_at DESC LIMIT 5`);
+  const revResult = await query(`SELECT COALESCE(SUM(grand_total), 0) AS total FROM orders WHERE DATE(created_at) = CURDATE() OR created_at LIKE CONCAT(CURDATE(), '%')`);
+  const cntResult = await query(`SELECT COUNT(*) AS cnt FROM orders WHERE DATE(created_at) = CURDATE() OR created_at LIKE CONCAT(CURDATE(), '%')`);
+  const expResult = await query(`SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE DATE(expense_date) = CURDATE() OR (expense_date IS NULL AND DATE(created_at) = CURDATE())`);
+  let recentResult = await query(`SELECT * FROM orders WHERE DATE(created_at) = CURDATE() OR created_at LIKE CONCAT(CURDATE(), '%') ORDER BY created_at DESC LIMIT 5`);
+
+  let recentOrdersRows = recentResult.success ? recentResult.data : [];
+  if (recentOrdersRows.length === 0) {
+    const fallbackRecent = await query(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 5`);
+    if (fallbackRecent.success) recentOrdersRows = fallbackRecent.data;
+  }
 
   const totalRevenue = revResult.success ? Number(revResult.data[0].total) : 0;
   const totalOrdersCount = cntResult.success ? Number(cntResult.data[0].cnt) : 0;
   const totalExpenseSum = expResult.success ? Number(expResult.data[0].total) : 0;
   const netProfit = totalRevenue - totalExpenseSum;
 
-  const recentOrders = recentResult.success ? recentResult.data.map(r => ({
+  const recentOrders = recentOrdersRows.map(r => ({
     id: r.id,
     orderNumber: r.order_number,
     orderType: r.order_type,
     grandTotal: Number(r.grand_total),
     paymentMode: r.payment_mode,
     createdAt: r.created_at
-  })) : [];
+  }));
 
   return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders } };
 });
