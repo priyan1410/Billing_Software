@@ -20,6 +20,7 @@ class MobileApp {
       categories: [],
       menuItems: []
     };
+    this.lastDataFingerprint = '';
 
     this.init();
   }
@@ -27,6 +28,16 @@ class MobileApp {
   init() {
     this.bindEvents();
     this.loadSavedDbConfig();
+    this.startLivePolling();
+  }
+
+  startLivePolling() {
+    if (this.pollingTimer) clearInterval(this.pollingTimer);
+    this.pollingTimer = setInterval(() => {
+      if (this.dbConfig && this.currentTab !== 'db-connect') {
+        this.fetchLiveData(true);
+      }
+    }, 3000);
   }
 
   bindEvents() {
@@ -475,25 +486,40 @@ class MobileApp {
     this.renderPnL();
   }
 
-  async fetchLiveData() {
+  computeDataFingerprint(data) {
+    if (!data) return '';
+    const ordersFP = (data.orders || []).map(o => `${o.id}_${o.grand_total}_${o.created_at || ''}_${o.status || ''}`).join('|');
+    const expFP = (data.expenses || []).map(e => `${e.id}_${e.amount}_${e.created_at || ''}_${e.expense_date || ''}`).join('|');
+    const tokFP = (data.tokens || []).map(t => `${t.id}_${t.status}`).join('|');
+    const catFP = (data.categories || []).length;
+    const itemFP = (data.menuItems || []).length;
+    return `${ordersFP}#${expFP}#${tokFP}#${catFP}#${itemFP}`;
+  }
+
+  async fetchLiveData(isSilent = false) {
     if (!this.dbConfig) return;
 
     const statusSubtitle = document.getElementById('header-status-subtitle');
     const connectedHost = document.getElementById('db-connected-host');
     const storageBadge = document.getElementById('db-storage-size');
 
-    if (statusSubtitle) {
-      statusSubtitle.innerHTML = `<span class="status-dot"></span> ${this.dbConfig.database || 'kish_mandhi'}`;
-    }
-    if (connectedHost) {
-      const hostStr = this.dbConfig.host;
-      connectedHost.textContent = hostStr.length > 24 ? hostStr.slice(0, 24) + '...' : hostStr;
+    if (!isSilent) {
+      if (statusSubtitle) {
+        statusSubtitle.innerHTML = `<span class="status-dot"></span> ${this.dbConfig.database || 'kish_mandhi'}`;
+      }
+      if (connectedHost) {
+        const hostStr = this.dbConfig.host;
+        connectedHost.textContent = hostStr.length > 24 ? hostStr.slice(0, 24) + '...' : hostStr;
+      }
     }
 
+    let dataHasChanged = false;
+
     try {
-      const apiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? 'http://localhost:3001/api/live-data'
         : '/api/live-data';
+      const apiUrl = `${baseUrl}?_t=${Date.now()}`;
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -507,6 +533,10 @@ class MobileApp {
       });
       const res = await response.json();
       if (res && res.success && res.data) {
+        const newFingerprint = this.computeDataFingerprint(res.data);
+        dataHasChanged = newFingerprint !== this.lastDataFingerprint;
+        this.lastDataFingerprint = newFingerprint;
+
         this.liveData.orders = res.data.orders || [];
         this.liveData.expenses = res.data.expenses || [];
         this.liveData.tokens = res.data.tokens || [];
@@ -516,17 +546,32 @@ class MobileApp {
         if (storageBadge && res.data.storage) {
           storageBadge.textContent = res.data.storage;
         }
+
+        const syncBadge = document.getElementById('live-sync-indicator');
+        if (syncBadge) {
+          syncBadge.classList.add('active');
+          setTimeout(() => syncBadge.classList.remove('active'), 1200);
+        }
       }
     } catch (e) {
-      console.warn('Could not fetch remote API live data, showing active state:', e);
+      if (!isSilent) console.warn('Could not fetch remote API live data, showing active state:', e);
     }
 
+    // Only re-render DOM/lists if explicitly called or if database data ACTUALLY changed!
+    if (isSilent && !dataHasChanged) {
+      return;
+    }
+
+    const activeElem = document.activeElement;
+    const isUserSearching = activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA');
+
     this.renderDashboard();
-    this.renderBillsList();
+    if (!isUserSearching || activeElem.id !== 'bills-search') this.renderBillsList();
     this.renderTokensList();
-    this.renderExpensesList();
+    if (!isUserSearching || activeElem.id !== 'expense-search') this.renderExpensesList();
     if (this.currentTab === 'restaurant') {
-      this.switchRestaurantSubTab(this.restaurantSubTab);
+      if (this.restaurantSubTab === 'pnl') this.renderPnL();
+      else if (!isUserSearching || activeElem.id !== 'dishes-search') this.switchRestaurantSubTab(this.restaurantSubTab);
     }
   }
 

@@ -159,7 +159,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (req.url === '/api/live-data' || req.url === '/api/live-data/') {
+    if (req.url === '/api/live-data' || req.url === '/api/live-data/' || req.url.startsWith('/api/live-data')) {
       const [ordersRows] = await conn.query('SELECT * FROM orders ORDER BY id DESC').catch(() => [[]]);
       const [expensesRows] = await conn.query('SELECT * FROM expenses ORDER BY id DESC').catch(() => [[]]);
       const [tokensRows] = await conn.query('SELECT * FROM tokens WHERE status = "Active" ORDER BY id DESC').catch(() => [[]]);
@@ -212,7 +212,12 @@ const server = http.createServer(async (req, res) => {
 
       await conn.end();
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
       res.end(JSON.stringify({
         success: true,
         data: {

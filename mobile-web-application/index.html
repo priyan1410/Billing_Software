@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src * 'self' 'unsafe-inline' https: http: ws: wss:;">
+    content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http:; script-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http:; script-src-elem * 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http:; style-src * 'self' 'unsafe-inline' https: http:; font-src * 'self' data: blob: https: http:; connect-src * 'self' 'unsafe-inline' https: http: ws: wss:;">
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0a0f08">
@@ -195,15 +195,6 @@
 
       <!-- VIEW: DASHBOARD -->
       <section id="view-dashboard" class="view-section hidden" aria-label="Dashboard">
-
-        <!-- Connection Status Bar -->
-        <div class="conn-status-bar">
-          <div class="conn-status-left">
-            <span class="conn-pulse"></span>
-            <span class="conn-label" id="db-connected-host">Cloud MySQL Connected</span>
-          </div>
-          <span class="conn-badge" id="db-storage-size">--</span>
-        </div>
 
         <!-- KPI Grid -->
         <div class="kpi-grid">
