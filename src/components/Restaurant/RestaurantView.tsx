@@ -803,11 +803,10 @@ export const RestaurantView: React.FC = () => {
               </span>
               <button
                 onClick={() => setDishSelectedCategory('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1.5 border ${
-                  dishSelectedCategory === 'all'
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1.5 border ${dishSelectedCategory === 'all'
                     ? 'bg-gold-500 text-olive-950 border-gold-400 shadow'
                     : 'bg-olive-950/80 text-olive-300 border-gold-500/20 hover:border-gold-500/40 hover:text-white'
-                }`}
+                  }`}
               >
                 All Categories
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${dishSelectedCategory === 'all' ? 'bg-olive-950/20 text-olive-950' : 'bg-gold-500/20 text-gold-400'}`}>
@@ -822,11 +821,10 @@ export const RestaurantView: React.FC = () => {
                   <button
                     key={cat.id}
                     onClick={() => setDishSelectedCategory(String(cat.id))}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1.5 border ${
-                      isSelected
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors shrink-0 flex items-center gap-1.5 border ${isSelected
                         ? 'bg-gold-500 text-olive-950 border-gold-400 shadow'
                         : 'bg-olive-950/80 text-olive-300 border-gold-500/20 hover:border-gold-500/40 hover:text-white'
-                    }`}
+                      }`}
                   >
                     {cat.name}
                     <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${isSelected ? 'bg-olive-950/20 text-olive-950' : 'bg-gold-500/20 text-gold-400'}`}>
@@ -1055,7 +1053,7 @@ export const RestaurantView: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 text-xs bg-olive-950 p-1.5 px-3 rounded-xl border border-gold-500/15">
                 <span className="text-olive-300 flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-gold-400" /> Custom Range:</span>
-                
+
                 {/* From Date Input (DD/MM/YYYY) */}
                 <div className="relative inline-flex items-center">
                   <input
@@ -1142,11 +1140,10 @@ export const RestaurantView: React.FC = () => {
               {/* Checkbox Pills */}
               <div className="flex flex-wrap items-center gap-2 text-xs select-none">
                 {/* [ ] Profit */}
-                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
-                  filterProfit
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${filterProfit
                     ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-sm'
                     : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
-                }`}>
+                  }`}>
                   <input
                     type="checkbox"
                     checked={filterProfit}
@@ -1158,11 +1155,10 @@ export const RestaurantView: React.FC = () => {
                 </label>
 
                 {/* [ ] Expense */}
-                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
-                  filterExpense
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${filterExpense
                     ? 'bg-rose-500/20 border-rose-500/40 text-rose-400 shadow-sm'
                     : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
-                }`}>
+                  }`}>
                   <input
                     type="checkbox"
                     checked={filterExpense}
@@ -1176,11 +1172,10 @@ export const RestaurantView: React.FC = () => {
                 <div className="h-4 w-px bg-gold-500/20 mx-1 hidden sm:block" />
 
                 {/* [ ] UPI */}
-                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
-                  filterUpi
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${filterUpi
                     ? 'bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm'
                     : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
-                }`}>
+                  }`}>
                   <input
                     type="checkbox"
                     checked={filterUpi}
@@ -1192,11 +1187,10 @@ export const RestaurantView: React.FC = () => {
                 </label>
 
                 {/* [ ] Cash */}
-                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
-                  filterCash
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${filterCash
                     ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-sm'
                     : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
-                }`}>
+                  }`}>
                   <input
                     type="checkbox"
                     checked={filterCash}
@@ -1207,11 +1201,10 @@ export const RestaurantView: React.FC = () => {
                 </label>
 
                 {/* [ ] Card */}
-                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${
-                  filterCard
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${filterCard
                     ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-sm'
                     : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
-                }`}>
+                  }`}>
                   <input
                     type="checkbox"
                     checked={filterCard}
@@ -1317,11 +1310,10 @@ export const RestaurantView: React.FC = () => {
                           className={`transition-colors ${isIncome ? 'hover:bg-gold-500/10 cursor-pointer group' : 'hover:bg-rose-500/10'}`}
                         >
                           <td className="p-3">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-extrabold ${
-                              isIncome
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-extrabold ${isIncome
                                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                                 : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                            }`}>
+                              }`}>
                               {isIncome ? '+ Revenue Bill' : '- Expense Outflow'}
                             </span>
                           </td>
@@ -1722,11 +1714,10 @@ export const RestaurantView: React.FC = () => {
                       key={p.id}
                       type="button"
                       onClick={() => setExportPeriod(p.id as PnLPeriod)}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${
-                        exportPeriod === p.id
+                      className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${exportPeriod === p.id
                           ? 'bg-gold-500 text-olive-950 shadow-md'
                           : 'bg-olive-950 text-olive-300 border border-gold-500/20 hover:text-white'
-                      }`}
+                        }`}
                     >
                       {p.label}
                     </button>
@@ -1864,11 +1855,10 @@ export const RestaurantView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setExportFormat('csv')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
-                      exportFormat === 'csv'
+                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${exportFormat === 'csv'
                         ? 'bg-gold-500/15 border-gold-500 text-gold-400 font-bold'
                         : 'bg-olive-950 border-gold-500/20 text-olive-300 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <FileSpreadsheet className="w-6 h-6" />
                     <span>CSV Spreadsheet</span>
@@ -1877,11 +1867,10 @@ export const RestaurantView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setExportFormat('json')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
-                      exportFormat === 'json'
+                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${exportFormat === 'json'
                         ? 'bg-gold-500/15 border-gold-500 text-gold-400 font-bold'
                         : 'bg-olive-950 border-gold-500/20 text-olive-300 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <FileJson className="w-6 h-6" />
                     <span>JSON Backup</span>

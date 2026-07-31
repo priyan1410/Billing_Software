@@ -10,8 +10,8 @@
 
 body {
   margin: 0;
-  background-color: #090a0f;
-  color: #f4f6f8;
+  background-color: #0b1320;
+  color: #FBE99B;
   font-family: 'Outfit', sans-serif;
   overflow: hidden;
   height: 100vh;
@@ -24,16 +24,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d130e;
+  background: #0b1320;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(212, 175, 55, 0.25);
+  background: rgba(147, 187, 216, 0.35);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 175, 55, 0.5);
+  background: rgba(251, 233, 155, 0.65);
 }
 
 /* Ensure text inputs are always selectable and editable even inside select-none containers */

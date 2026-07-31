@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src * 'self' 'unsafe-inline' https: http: ws: wss:;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; connect-src * 'self' 'unsafe-inline' https: http: ws: wss:;">
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0a0f08">
@@ -24,7 +25,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer">
 
   <link rel="stylesheet" href="styles.css">
   <base target="_blank">
@@ -76,8 +78,8 @@
         <div class="auth-card">
           <!-- Auth Tabs: Step 1 Database, Step 2 Account Sign In -->
           <div class="auth-tabs" role="tablist">
-            <button type="button" class="auth-tab active" id="login-tab-database" onclick="app.switchAuthTab('database')"
-              role="tab" aria-selected="true">
+            <button type="button" class="auth-tab active" id="login-tab-database"
+              onclick="app.switchAuthTab('database')" role="tab" aria-selected="true">
               <i class="fa-solid fa-server"></i>
               <span>Step 1: Database</span>
             </button>
@@ -92,7 +94,8 @@
           <form id="db-connect-form" class="auth-form" novalidate>
             <div class="form-group">
               <label for="db-host"><i class="fa-solid fa-globe"></i> MySQL Host</label>
-              <input type="text" id="db-host" placeholder="e.g. localhost or db.example.com" required autocomplete="off">
+              <input type="text" id="db-host" placeholder="e.g. localhost or db.example.com" required
+                autocomplete="off">
             </div>
 
             <div class="form-row">
@@ -139,7 +142,8 @@
 
           <!-- Step 2: Account Login Form -->
           <form id="account-login-form" class="auth-form hidden" novalidate>
-            <div id="db-connected-notice" class="toast-info" style="margin-bottom: 14px; font-size: 12px; display: flex; align-items: center; gap: 8px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; padding: 10px 14px; border-radius: 8px;">
+            <div id="db-connected-notice" class="toast-info"
+              style="margin-bottom: 14px; font-size: 12px; display: flex; align-items: center; gap: 8px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; padding: 10px 14px; border-radius: 8px;">
               <i class="fa-solid fa-circle-check"></i>
               <span id="db-notice-text">Database connected. Enter your account login details below.</span>
             </div>
@@ -169,14 +173,16 @@
             <div id="account-login-error" class="toast-error hidden" role="alert"></div>
 
             <button type="submit" class="btn btn-primary btn-block" id="account-login-btn">
-              <span class="btn-text"><i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Dashboard (Step 2)</span>
+              <span class="btn-text"><i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In to Dashboard (Step
+                2)</span>
               <span class="btn-loader hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...</span>
             </button>
           </form>
         </div>
 
         <div class="auth-footer">
-          <button type="button" class="link-btn" onclick="app.clearSavedSession()" style="margin-bottom: 12px; color: #f43f5e; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer;">
+          <button type="button" class="link-btn" onclick="app.clearSavedSession()"
+            style="margin-bottom: 12px; color: #f43f5e; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer;">
             <i class="fa-solid fa-trash-can"></i> Clear Saved Credentials & Reset App
           </button>
           <div class="security-row">
@@ -351,7 +357,8 @@
 
         <!-- P&L Subview -->
         <div id="rest-content-pnl" class="rest-subview">
-          <div class="period-bar" style="overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none;">
+          <div class="period-bar"
+            style="overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none;">
             <button class="period-chip active" data-period="today" onclick="app.setPnlPeriod('today')">Today</button>
             <button class="period-chip" data-period="week" onclick="app.setPnlPeriod('week')">Week</button>
             <button class="period-chip" data-period="month" onclick="app.setPnlPeriod('month')">Month</button>
@@ -360,14 +367,19 @@
             <button class="period-chip" data-period="custom" onclick="app.setPnlPeriod('custom')">Custom Range</button>
           </div>
 
-          <div id="pnl-custom-date-container" class="form-row hidden" style="margin-top: 10px; margin-bottom: 12px; gap: 8px; background: rgba(212,175,55,0.06); padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(212,175,55,0.2);">
+          <div id="pnl-custom-date-container" class="form-row hidden"
+            style="margin-top: 10px; margin-bottom: 12px; gap: 8px; background: rgba(212,175,55,0.06); padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(212,175,55,0.2);">
             <div class="form-group col-6" style="margin-bottom: 0;">
-              <label for="pnl-start-date" style="font-size: 11px; color: var(--gold-400); margin-bottom: 4px;"><i class="fa-solid fa-calendar"></i> From Date</label>
-              <input type="date" id="pnl-start-date" onchange="app.renderPnL()" style="padding: 8px 10px; font-size: 12px; border-radius: 8px;">
+              <label for="pnl-start-date" style="font-size: 11px; color: var(--gold-400); margin-bottom: 4px;"><i
+                  class="fa-solid fa-calendar"></i> From Date</label>
+              <input type="date" id="pnl-start-date" onchange="app.renderPnL()"
+                style="padding: 8px 10px; font-size: 12px; border-radius: 8px;">
             </div>
             <div class="form-group col-6" style="margin-bottom: 0;">
-              <label for="pnl-end-date" style="font-size: 11px; color: var(--gold-400); margin-bottom: 4px;"><i class="fa-solid fa-calendar"></i> To Date</label>
-              <input type="date" id="pnl-end-date" onchange="app.renderPnL()" style="padding: 8px 10px; font-size: 12px; border-radius: 8px;">
+              <label for="pnl-end-date" style="font-size: 11px; color: var(--gold-400); margin-bottom: 4px;"><i
+                  class="fa-solid fa-calendar"></i> To Date</label>
+              <input type="date" id="pnl-end-date" onchange="app.renderPnL()"
+                style="padding: 8px 10px; font-size: 12px; border-radius: 8px;">
             </div>
           </div>
 
@@ -444,7 +456,9 @@
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="text" id="dishes-search" placeholder="Search dishes, items..." oninput="app.renderDishes()">
           </div>
-          <div class="period-bar" id="dishes-category-chips" style="margin-top: 10px; margin-bottom: 14px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none;"></div>
+          <div class="period-bar" id="dishes-category-chips"
+            style="margin-top: 10px; margin-bottom: 14px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; scrollbar-width: none;">
+          </div>
           <div class="feed-list" id="dishes-master-list">
             <div class="skeleton-list">
               <div class="skeleton-row">

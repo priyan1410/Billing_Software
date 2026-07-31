@@ -8,20 +8,20 @@ export default {
     extend: {
       colors: {
         olive: {
-          950: '#090a0f',
-          900: '#11131a',
-          800: '#171a24',
-          700: '#1f2330',
-          600: '#282d3d',
-          500: '#d4af37',
-          400: '#e5b842',
-          300: '#8e96a8',
+          950: '#0b1320', // Deep Navy Black
+          900: '#142034', // Slate Dark Card
+          800: '#1e2c42', // Container Background
+          700: '#71A3CC', // Color 4: Deep Steel Blue
+          600: '#93BBD8', // Color 3: Medium Slate Blue
+          500: '#FBE99B', // Color 1: Pastel Gold Cream
+          400: '#BCE4F0', // Color 2: Ice Sky Blue
+          300: '#93BBD8', // Muted Slate Text
         },
         gold: {
-          500: '#d4af37',
-          400: '#e5b842',
-          300: '#f3e5ab',
-          dark: '#b89228',
+          500: '#FBE99B', // Color 1: Pastel Gold Cream (#FBE99B)
+          400: '#BCE4F0', // Color 2: Ice Sky Blue (#BCE4F0)
+          300: '#93BBD8', // Color 3: Medium Slate Blue (#93BBD8)
+          dark: '#71A3CC', // Color 4: Deep Steel Blue (#71A3CC)
         }
       },
       fontFamily: {

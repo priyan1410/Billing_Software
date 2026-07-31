@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
 
 export const DashboardView: React.FC = () => {
   const { setActiveSection } = useAppStore();
+  const [chartPeriod, setChartPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('today');
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalOrdersCount: 0,
     totalExpenseSum: 0,
     netProfit: 0,
-    recentOrders: [] as any[]
+    recentOrders: [] as any[],
+    allOrders: [] as any[],
+    allExpenses: [] as any[]
   });
 
   useEffect(() => {
@@ -23,11 +26,216 @@ export const DashboardView: React.FC = () => {
     }
   }, []);
 
-  const barData = [
-    { name: 'Today Sales', amount: stats.totalRevenue, fill: '#d4af37' },
-    { name: 'Expenses', amount: stats.totalExpenseSum, fill: '#d90429' },
-    { name: 'Net Profit', amount: Math.max(0, stats.netProfit), fill: '#38b000' }
-  ];
+  const getTrendData = () => {
+    const orders = stats.allOrders || [];
+    const expenses = stats.allExpenses || [];
+
+    const parseLocalDate = (dVal: any) => {
+      if (!dVal) return null;
+      const d = new Date(dVal);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const toYYYYMMDD = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const today = new Date();
+    const todayStr = toYYYYMMDD(today);
+
+    if (chartPeriod === 'today') {
+      const hoursMap: { [hourLabel: string]: { Revenue: number; Expenses: number } } = {
+        '08:00 AM': { Revenue: 0, Expenses: 0 },
+        '10:00 AM': { Revenue: 0, Expenses: 0 },
+        '12:00 PM': { Revenue: 0, Expenses: 0 },
+        '02:00 PM': { Revenue: 0, Expenses: 0 },
+        '04:00 PM': { Revenue: 0, Expenses: 0 },
+        '06:00 PM': { Revenue: 0, Expenses: 0 },
+        '08:00 PM': { Revenue: 0, Expenses: 0 },
+        '10:00 PM': { Revenue: 0, Expenses: 0 }
+      };
+
+      orders.forEach((o: any) => {
+        const d = parseLocalDate(o.created_at);
+        if (d && toYYYYMMDD(d) === todayStr) {
+          const h = d.getHours();
+          const amt = Number(o.grand_total || 0);
+          if (h < 10) hoursMap['08:00 AM'].Revenue += amt;
+          else if (h < 12) hoursMap['10:00 AM'].Revenue += amt;
+          else if (h < 14) hoursMap['12:00 PM'].Revenue += amt;
+          else if (h < 16) hoursMap['02:00 PM'].Revenue += amt;
+          else if (h < 18) hoursMap['04:00 PM'].Revenue += amt;
+          else if (h < 20) hoursMap['06:00 PM'].Revenue += amt;
+          else if (h < 22) hoursMap['08:00 PM'].Revenue += amt;
+          else hoursMap['10:00 PM'].Revenue += amt;
+        }
+      });
+
+      expenses.forEach((e: any) => {
+        const d = parseLocalDate(e.expense_date || e.created_at);
+        if (d && toYYYYMMDD(d) === todayStr) {
+          const h = d.getHours();
+          const amt = Number(e.amount || 0);
+          if (h < 10) hoursMap['08:00 AM'].Expenses += amt;
+          else if (h < 12) hoursMap['10:00 AM'].Expenses += amt;
+          else if (h < 14) hoursMap['12:00 PM'].Expenses += amt;
+          else if (h < 16) hoursMap['02:00 PM'].Expenses += amt;
+          else if (h < 18) hoursMap['04:00 PM'].Expenses += amt;
+          else if (h < 20) hoursMap['06:00 PM'].Expenses += amt;
+          else if (h < 22) hoursMap['08:00 PM'].Expenses += amt;
+          else hoursMap['10:00 PM'].Expenses += amt;
+        }
+      });
+
+      return Object.keys(hoursMap).map(label => ({
+        name: label,
+        Revenue: hoursMap[label].Revenue,
+        Expenses: hoursMap[label].Expenses,
+        NetProfit: hoursMap[label].Revenue - hoursMap[label].Expenses
+      }));
+    }
+
+    if (chartPeriod === 'week') {
+      const days: { [dayStr: string]: { label: string; Revenue: number; Expenses: number } } = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        const ymd = toYYYYMMDD(d);
+        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+        days[ymd] = { label: dayName, Revenue: 0, Expenses: 0 };
+      }
+
+      orders.forEach((o: any) => {
+        const d = parseLocalDate(o.created_at);
+        if (d) {
+          const ymd = toYYYYMMDD(d);
+          if (days[ymd]) days[ymd].Revenue += Number(o.grand_total || 0);
+        }
+      });
+
+      expenses.forEach((e: any) => {
+        const d = parseLocalDate(e.expense_date || e.created_at);
+        if (d) {
+          const ymd = toYYYYMMDD(d);
+          if (days[ymd]) days[ymd].Expenses += Number(e.amount || 0);
+        }
+      });
+
+      return Object.keys(days).map(ymd => ({
+        name: days[ymd].label,
+        Revenue: days[ymd].Revenue,
+        Expenses: days[ymd].Expenses,
+        NetProfit: days[ymd].Revenue - days[ymd].Expenses
+      }));
+    }
+
+    if (chartPeriod === 'month') {
+      const weeksMap = [
+        { name: 'Week 1', Revenue: 0, Expenses: 0 },
+        { name: 'Week 2', Revenue: 0, Expenses: 0 },
+        { name: 'Week 3', Revenue: 0, Expenses: 0 },
+        { name: 'Week 4', Revenue: 0, Expenses: 0 }
+      ];
+
+      const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+      orders.forEach((o: any) => {
+        const d = parseLocalDate(o.created_at);
+        if (d && toYYYYMMDD(d).startsWith(currentMonthStr)) {
+          const dayNum = d.getDate();
+          const amt = Number(o.grand_total || 0);
+          if (dayNum <= 7) weeksMap[0].Revenue += amt;
+          else if (dayNum <= 14) weeksMap[1].Revenue += amt;
+          else if (dayNum <= 21) weeksMap[2].Revenue += amt;
+          else weeksMap[3].Revenue += amt;
+        }
+      });
+
+      expenses.forEach((e: any) => {
+        const d = parseLocalDate(e.expense_date || e.created_at);
+        if (d && toYYYYMMDD(d).startsWith(currentMonthStr)) {
+          const dayNum = d.getDate();
+          const amt = Number(e.amount || 0);
+          if (dayNum <= 7) weeksMap[0].Expenses += amt;
+          else if (dayNum <= 14) weeksMap[1].Expenses += amt;
+          else if (dayNum <= 21) weeksMap[2].Expenses += amt;
+          else weeksMap[3].Expenses += amt;
+        }
+      });
+
+      return weeksMap.map(w => ({
+        name: w.name,
+        Revenue: w.Revenue,
+        Expenses: w.Expenses,
+        NetProfit: w.Revenue - w.Expenses
+      }));
+    }
+
+    if (chartPeriod === 'year') {
+      const monthsMap: { [monthIdx: number]: { label: string; Revenue: number; Expenses: number } } = {};
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      monthNames.forEach((m, idx) => {
+        monthsMap[idx] = { label: m, Revenue: 0, Expenses: 0 };
+      });
+
+      const currentYear = today.getFullYear();
+
+      orders.forEach((o: any) => {
+        const d = parseLocalDate(o.created_at);
+        if (d && d.getFullYear() === currentYear) {
+          monthsMap[d.getMonth()].Revenue += Number(o.grand_total || 0);
+        }
+      });
+
+      expenses.forEach((e: any) => {
+        const d = parseLocalDate(e.expense_date || e.created_at);
+        if (d && d.getFullYear() === currentYear) {
+          monthsMap[d.getMonth()].Expenses += Number(e.amount || 0);
+        }
+      });
+
+      return Object.keys(monthsMap).map(mIdx => ({
+        name: monthsMap[Number(mIdx)].label,
+        Revenue: monthsMap[Number(mIdx)].Revenue,
+        Expenses: monthsMap[Number(mIdx)].Expenses,
+        NetProfit: monthsMap[Number(mIdx)].Revenue - monthsMap[Number(mIdx)].Expenses
+      }));
+    }
+
+    const yearsMap: { [yr: number]: { Revenue: number; Expenses: number } } = {};
+
+    orders.forEach((o: any) => {
+      const d = parseLocalDate(o.created_at);
+      if (d) {
+        const yr = d.getFullYear();
+        if (!yearsMap[yr]) yearsMap[yr] = { Revenue: 0, Expenses: 0 };
+        yearsMap[yr].Revenue += Number(o.grand_total || 0);
+      }
+    });
+
+    expenses.forEach((e: any) => {
+      const d = parseLocalDate(e.expense_date || e.created_at);
+      if (d) {
+        const yr = d.getFullYear();
+        if (!yearsMap[yr]) yearsMap[yr] = { Revenue: 0, Expenses: 0 };
+        yearsMap[yr].Expenses += Number(e.amount || 0);
+      }
+    });
+
+    const sortedYears = Object.keys(yearsMap).map(Number).sort((a, b) => a - b);
+    if (sortedYears.length === 0) {
+      return [{ name: String(today.getFullYear()), Revenue: stats.totalRevenue, Expenses: stats.totalExpenseSum, NetProfit: stats.netProfit }];
+    }
+
+    return sortedYears.map(yr => ({
+      name: String(yr),
+      Revenue: yearsMap[yr].Revenue,
+      Expenses: yearsMap[yr].Expenses,
+      NetProfit: yearsMap[yr].Revenue - yearsMap[yr].Expenses
+    }));
+  };
 
   const pieData = [
     { name: 'Special Chicken Mandhi', value: 45, color: '#d4af37' },
@@ -102,19 +310,44 @@ export const DashboardView: React.FC = () => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="md:col-span-2 bg-olive-900 border border-gold-500/20 rounded-2xl p-5">
-          <h4 className="text-sm font-bold text-gold-500 mb-4">Revenue & Expenses Trend</h4>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h4 className="text-sm font-bold text-gold-500 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-gold-400" /> Revenue & Expenses Trend
+            </h4>
+
+            {/* Period Pills Filter */}
+            <div className="flex bg-olive-950 p-1 rounded-xl gap-1 border border-gold-500/15">
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'week', label: 'This Week' },
+                { id: 'month', label: 'This Month' },
+                { id: 'year', label: 'This Year' },
+                { id: 'all', label: 'All Time' }
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setChartPeriod(p.id as any)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    chartPeriod === p.id ? 'bg-gold-500 text-olive-950 font-bold shadow' : 'text-olive-300 hover:text-white'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData}>
-                <XAxis dataKey="name" stroke="#9aab9c" fontSize={12} />
-                <YAxis stroke="#9aab9c" fontSize={12} />
-                <Tooltip contentStyle={{ backgroundColor: '#1b291d', borderColor: '#d4af37', borderRadius: '8px' }} />
-                <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
-                  {barData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
+              <LineChart data={getTrendData()} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <XAxis dataKey="name" stroke="#9aab9c" fontSize={11} />
+                <YAxis stroke="#9aab9c" fontSize={11} tickFormatter={(v) => `₹${v}`} />
+                <Tooltip contentStyle={{ backgroundColor: '#1b291d', borderColor: '#d4af37', borderRadius: '8px', color: '#fff' }} />
+                <Legend wrapperStyle={{ paddingTop: '8px', fontSize: '12px' }} />
+                <Line type="monotone" dataKey="Revenue" stroke="#d4af37" strokeWidth={3} dot={{ r: 4, fill: '#d4af37' }} activeDot={{ r: 7 }} />
+                <Line type="monotone" dataKey="Expenses" stroke="#f43f5e" strokeWidth={3} dot={{ r: 4, fill: '#f43f5e' }} activeDot={{ r: 7 }} />
+                <Line type="monotone" dataKey="NetProfit" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 7 }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </div>

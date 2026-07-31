@@ -456,7 +456,13 @@ ipcMain.handle('dashboard:getStats', async () => {
     createdAt: r.created_at
   }));
 
-  return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders } };
+  const allOrdersRes = await query(`SELECT id, order_number, order_type, grand_total, payment_mode, created_at FROM orders`);
+  const allExpensesRes = await query(`SELECT id, amount, expense_date, created_at FROM expenses`);
+
+  const allOrders = allOrdersRes.success ? allOrdersRes.data : [];
+  const allExpenses = allExpensesRes.success ? allExpensesRes.data : [];
+
+  return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders, allOrders, allExpenses } };
 });
 
 // Helper for formatting date strings safely as YYYY-MM-DD

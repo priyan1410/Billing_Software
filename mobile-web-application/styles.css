@@ -4,37 +4,43 @@
    ========================================================================== */
 
 :root {
+  /* User 4-Color Palette System */
+  --user-color-1: #FBE99B; /* Pastel Cream Gold */
+  --user-color-2: #BCE4F0; /* Soft Ice Sky Blue */
+  --user-color-3: #93BBD8; /* Medium Slate Blue */
+  --user-color-4: #71A3CC; /* Deep Steel Blue */
+
   /* Base Palette */
-  --bg-root: #080c06;
-  --bg-elevated: #0d1209;
-  --bg-card: rgba(16, 22, 12, 0.72);
-  --bg-card-hover: rgba(20, 28, 15, 0.82);
-  --bg-input: rgba(10, 14, 8, 0.9);
+  --bg-root: #0b1320;
+  --bg-elevated: #142034;
+  --bg-card: rgba(20, 32, 52, 0.85);
+  --bg-card-hover: rgba(30, 44, 66, 0.9);
+  --bg-input: rgba(11, 19, 32, 0.95);
 
-  /* Olive Scale */
-  --olive-50: #f4f7f1;
-  --olive-100: #e3ead9;
-  --olive-200: #c5d4b3;
-  --olive-300: #9cb884;
-  --olive-400: #7a9a5e;
-  --olive-500: #5c7a42;
-  --olive-600: #466132;
-  --olive-700: #334825;
-  --olive-800: #223018;
-  --olive-900: #161f0f;
-  --olive-950: #0d1209;
+  /* Slate Scale */
+  --olive-50: #ffffff;
+  --olive-100: #f8fafc;
+  --olive-200: #BCE4F0;
+  --olive-300: #93BBD8;
+  --olive-400: #71A3CC;
+  --olive-500: #FBE99B;
+  --olive-600: #93BBD8;
+  --olive-700: #71A3CC;
+  --olive-800: #1e2c42;
+  --olive-900: #142034;
+  --olive-950: #0b1320;
 
-  /* Gold Scale */
-  --gold-50: #fbf8e8;
-  --gold-100: #f5edc5;
-  --gold-200: #eadb8e;
-  --gold-300: #dec455;
-  --gold-400: #d4af37;
-  --gold-500: #b8921f;
-  --gold-600: #946f16;
-  --gold-700: #6e5012;
-  --gold-800: #4a360e;
-  --gold-900: #2e2108;
+  /* Accent Scale */
+  --gold-50: #ffffff;
+  --gold-100: #FBE99B;
+  --gold-200: #BCE4F0;
+  --gold-300: #93BBD8;
+  --gold-400: #BCE4F0;
+  --gold-500: #FBE99B;
+  --gold-600: #93BBD8;
+  --gold-700: #71A3CC;
+  --gold-800: #1e2c42;
+  --gold-900: #142034;
 
   /* Semantic Colors */
   --emerald: #34d399;
