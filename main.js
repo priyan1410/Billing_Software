@@ -307,6 +307,14 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
     );
   }
 
+  if (normalizedToken) {
+    const parsedSeq = parseTokenSequence(normalizedToken);
+    if (parsedSeq > tokenState.lastTokenSeq) {
+      tokenState.lastTokenSeq = parsedSeq;
+      persistTokenState();
+    }
+  }
+
   if (!insertOrder.success) return { success: false, message: insertOrder.error };
   const orderId = insertOrder.data.insertId;
 
@@ -565,8 +573,11 @@ ipcMain.handle('expenses:delete', async (evt, id) => {
 // ─────────────────────────────────────────────────────────────
 ipcMain.handle('tokens:getNextSeq', async () => {
   const currentSeq = Number(tokenState.lastTokenSeq || 0);
-  const tokenNumber = getNextTokenNumber(currentSeq);
-  return { success: true, nextSeq: currentSeq + 1, tokenNumber };
+  const nextSeq = currentSeq + 1;
+  tokenState.lastTokenSeq = nextSeq;
+  persistTokenState();
+  const tokenNumber = formatTokenNumber(nextSeq);
+  return { success: true, nextSeq, tokenNumber };
 });
 
 ipcMain.handle('tokens:getActive', async () => {

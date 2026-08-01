@@ -473,7 +473,18 @@ export const BillingView: React.FC = () => {
     const orderDate = new Date();
     const orderDateString = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}-${String(orderDate.getDate()).padStart(2, '0')}`;
 
-    const activeTokenNo = selectedTokenNum || (editingBillNumber ? (usePosStore.getState() as any).editingBillTokenNumber : undefined);
+    let activeTokenNo = selectedTokenNum || (editingBillNumber ? (usePosStore.getState() as any).editingBillTokenNumber : undefined);
+
+    if (!activeTokenNo && !isEditing && (window as any).electronAPI?.getNextTokenSeq) {
+      try {
+        const seqRes = await (window as any).electronAPI.getNextTokenSeq();
+        if (seqRes && seqRes.tokenNumber) {
+          activeTokenNo = seqRes.tokenNumber;
+        }
+      } catch (e) {
+        console.error('Failed to get token seq:', e);
+      }
+    }
 
     const payload = {
       id: editingOrderId || undefined,
