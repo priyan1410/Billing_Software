@@ -45,6 +45,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportFullSystem: () => ipcRenderer.invoke('db:exportFullSystem'),
   importFullSystem: (fullBackupData) => ipcRenderer.invoke('db:importFullSystem', fullBackupData),
 
+  // Auto-Backup & Data Protection
+  createBackup: (customPath) => ipcRenderer.invoke('backup:create', customPath),
+  listBackups: (customPath) => ipcRenderer.invoke('backup:list', customPath),
+  getBackupConfig: () => ipcRenderer.invoke('backup:getConfig'),
+  saveBackupConfig: (config) => ipcRenderer.invoke('backup:saveConfig', config),
+
   // Thermal Receipt Printing
   printReceipt: (receiptHtml) => ipcRenderer.invoke('receipt:print', receiptHtml),
 

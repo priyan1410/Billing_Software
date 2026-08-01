@@ -33,9 +33,22 @@ export const DbSettingsView: React.FC = () => {
   const [dbStatusMsg, setDbStatusMsg] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
 
+  // Auto-Backup & Data Protection State
+  const [backupConfig, setBackupConfig] = useState({
+    enabled: true,
+    backupPath: 'C:\\kish_mandhi_backups',
+    retentionDays: 30,
+    lastBackupTime: null as string | null
+  });
+  const [backupsList, setBackupsList] = useState<any[]>([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
+  const [showBackupHistory, setShowBackupHistory] = useState(false);
+
   useEffect(() => {
     loadAllData();
     loadDbConfig();
+    loadBackupDetails();
   }, [activeTab]);
 
 
@@ -55,6 +68,51 @@ export const DbSettingsView: React.FC = () => {
       }
     } catch (e) {
       console.error('loadDbConfig error:', e);
+    }
+  };
+
+  const loadBackupDetails = async () => {
+    try {
+      const api = (window as any).electronAPI;
+      if (api) {
+        if (api.getBackupConfig) {
+          const cfgRes = await api.getBackupConfig();
+          if (cfgRes && cfgRes.success && cfgRes.data) {
+            setBackupConfig(cfgRes.data);
+          }
+        }
+        if (api.listBackups) {
+          const listRes = await api.listBackups();
+          if (listRes && listRes.success && Array.isArray(listRes.backups)) {
+            setBackupsList(listRes.backups);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('loadBackupDetails error:', e);
+    }
+  };
+
+  const handleInstantBackup = async () => {
+    setBackupLoading(true);
+    setBackupMsg('Creating full system snapshot...');
+    try {
+      const api = (window as any).electronAPI;
+      if (api?.createBackup) {
+        const res = await api.createBackup();
+        if (res && res.success) {
+          setBackupMsg(res.message);
+          await loadBackupDetails();
+        } else {
+          setBackupMsg('❌ Backup failed: ' + (res?.message || 'Unknown error'));
+        }
+      } else {
+        alert('Instant backup is available in Desktop App mode.');
+      }
+    } catch (err: any) {
+      setBackupMsg('❌ Backup Error: ' + err.message);
+    } finally {
+      setBackupLoading(false);
     }
   };
 
@@ -442,6 +500,103 @@ export const DbSettingsView: React.FC = () => {
             {migrationStatus === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
             {migrationStatus === 'error' && <AlertTriangle className="w-4 h-4 shrink-0" />}
             <span>{migrationMsg}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Auto-Backup & Data Protection Center */}
+      <div className="bg-gradient-to-r from-emerald-950/60 via-olive-900 to-teal-950/60 border border-emerald-500/40 rounded-2xl p-5 shadow-xl">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <Database className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-extrabold text-white tracking-wide">Automated Daily Backups & DLP Safeguard</h4>
+                <span className="px-2 py-0.5 text-[10px] font-black uppercase rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Active (24h Auto-Sync)
+                </span>
+              </div>
+              <p className="text-xs text-olive-300 mt-0.5">
+                Target Backup Directory: <code className="font-mono text-emerald-300 bg-black/40 px-1.5 py-0.5 rounded">{backupConfig.backupPath || 'C:\\kish_mandhi_backups'}</code>
+              </p>
+              {backupConfig.lastBackupTime && (
+                <p className="text-[11px] text-emerald-400/80 mt-0.5 font-medium">
+                  ✓ Last Automatic Backup: {formatDateDDMMYYYY(backupConfig.lastBackupTime)} ({new Date(backupConfig.lastBackupTime).toLocaleTimeString()})
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={handleInstantBackup}
+              disabled={backupLoading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50"
+              title="Trigger instant full snapshot backup of all tables right now"
+            >
+              {backupLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <span>Backup Entire System Data Now</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setShowBackupHistory(!showBackupHistory);
+                loadBackupDetails();
+              }}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-olive-800 border border-white/15 text-white/80 hover:text-white font-bold text-xs rounded-xl transition-all"
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span>{showBackupHistory ? 'Hide History' : `Backup History (${backupsList.length})`}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Backup Feedback Banner */}
+        {backupMsg && (
+          <div className="mt-4 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{backupMsg}</span>
+            </div>
+            <button onClick={() => setBackupMsg(null)} className="text-emerald-400/60 hover:text-emerald-300">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Backup History Table Accordion */}
+        {showBackupHistory && (
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <p className="text-xs font-bold text-white/80 mb-2 flex items-center justify-between">
+              <span>Saved Backup Files Snapshot List (Rolling 30-Day Retention):</span>
+              <button onClick={loadBackupDetails} className="text-emerald-400 hover:underline flex items-center gap-1 text-[11px]">
+                <RefreshCw className="w-3 h-3" /> Refresh List
+              </button>
+            </p>
+
+            {backupsList.length === 0 ? (
+              <p className="text-xs text-white/40 italic bg-black/20 p-3 rounded-xl text-center">No backup files created yet. Click "Backup Entire System Data Now" to create your first backup.</p>
+            ) : (
+              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                {backupsList.map((b, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-black/40 border border-white/10 p-2.5 rounded-xl text-xs">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div>
+                        <p className="font-mono text-white font-semibold">{b.filename} {b.isLatest && <span className="text-[10px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded ml-1 font-sans font-bold">LATEST</span>}</p>
+                        <p className="text-[10px] text-white/40">{formatDateDDMMYYYY(b.mtime)} • {b.sizeFormatted}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono text-emerald-400/80 bg-emerald-500/10 px-2 py-1 rounded-md">{b.filePath}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

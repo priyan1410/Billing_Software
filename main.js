@@ -4,6 +4,7 @@ const path = require('path');
 const { query, testConnection, saveConfig, loadConfig, dbConfig, getStorageSize } = require('./db/connection');
 const { initializeDatabase } = require('./db/schema');
 const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber } = require('./electron/tokenUtils');
+const { loadBackupConfig, saveBackupConfig, performBackup, listBackups, startBackupScheduler, shouldRunBackup } = require('./electron/backupManager');
 
 // Fix GPU rendering on Windows
 app.disableHardwareAcceleration();
@@ -91,6 +92,28 @@ app.whenReady().then(async () => {
     console.log('MySQL init error:', err.message);
   }
   createWindow();
+
+  // Initialize Auto Backup Scheduler
+  startBackupScheduler(getFullSystemExportData);
+});
+
+let isQuitting = false;
+
+app.on('before-quit', async (e) => {
+  if (!isQuitting) {
+    e.preventDefault();
+    isQuitting = true;
+    console.log('📦 App Closing Safeguard: Creating automatic backup snapshot before quit...');
+    try {
+      const res = await performBackup(getFullSystemExportData);
+      if (res && res.success) {
+        console.log(`✓ App Exit Backup completed successfully: ${res.filename}`);
+      }
+    } catch (err) {
+      console.error('App Exit Backup error:', err.message);
+    }
+    app.quit();
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -789,43 +812,61 @@ ipcMain.handle('db:importBackup', async (evt, backupData) => {
   }
 });
 
-ipcMain.handle('db:exportFullSystem', async () => {
-  try {
-    const categoriesRes = await query('SELECT * FROM categories ORDER BY id ASC');
-    const menuRes = await query('SELECT * FROM menu_items ORDER BY id ASC');
-    const ordersRes = await query('SELECT * FROM orders ORDER BY id ASC');
-    const orderItemsRes = await query('SELECT * FROM order_items ORDER BY id ASC');
-    const expensesRes = await query('SELECT * FROM expenses ORDER BY id ASC');
-    const tokensRes = await query('SELECT * FROM tokens ORDER BY id ASC');
-    const usersRes = await query('SELECT id, username, role, created_at FROM users ORDER BY id ASC');
+async function getFullSystemExportData() {
+  const categoriesRes = await query('SELECT * FROM categories ORDER BY id ASC');
+  const menuRes = await query('SELECT * FROM menu_items ORDER BY id ASC');
+  const ordersRes = await query('SELECT * FROM orders ORDER BY id ASC');
+  const orderItemsRes = await query('SELECT * FROM order_items ORDER BY id ASC');
+  const expensesRes = await query('SELECT * FROM expenses ORDER BY id ASC');
+  const tokensRes = await query('SELECT * FROM tokens ORDER BY id ASC');
+  const usersRes = await query('SELECT id, username, role, created_at FROM users ORDER BY id ASC');
 
-    let settings = {};
-    const settingsRes = await query('SELECT * FROM restaurant_details LIMIT 1');
-    if (settingsRes.success && settingsRes.data && settingsRes.data[0]) {
-      settings = settingsRes.data[0];
-    }
-
-    const fullBackup = {
-      systemInfo: {
-        application: 'Kish Mandhi Billing POS',
-        exportDate: new Date().toISOString(),
-        version: '2.0.0',
-        dataType: 'FULL_SYSTEM_MIGRATION_BACKUP'
-      },
-      restaurantDetails: settings,
-      categories: categoriesRes.data || [],
-      menuItems: menuRes.data || [],
-      orders: ordersRes.data || [],
-      orderItems: orderItemsRes.data || [],
-      expenses: expensesRes.data || [],
-      tokens: tokensRes.data || [],
-      users: usersRes.data || []
-    };
-
-    return { success: true, data: fullBackup };
-  } catch (err) {
-    return { success: false, message: err.message };
+  let settings = {};
+  const settingsRes = await query('SELECT * FROM restaurant_details LIMIT 1');
+  if (settingsRes.success && settingsRes.data && settingsRes.data[0]) {
+    settings = settingsRes.data[0];
   }
+
+  const fullBackup = {
+    systemInfo: {
+      application: 'Kish Mandhi Billing POS',
+      exportDate: new Date().toISOString(),
+      version: '2.0.0',
+      dataType: 'FULL_SYSTEM_MIGRATION_BACKUP'
+    },
+    restaurantDetails: settings,
+    categories: categoriesRes.data || [],
+    menuItems: menuRes.data || [],
+    orders: ordersRes.data || [],
+    orderItems: orderItemsRes.data || [],
+    expenses: expensesRes.data || [],
+    tokens: tokensRes.data || [],
+    users: usersRes.data || []
+  };
+
+  return { success: true, data: fullBackup };
+}
+
+ipcMain.handle('db:exportFullSystem', async () => {
+  return await getFullSystemExportData();
+});
+
+// Auto-Backup & System Recovery IPC Handlers
+ipcMain.handle('backup:create', async (evt, customPath) => {
+  return await performBackup(getFullSystemExportData, customPath);
+});
+
+ipcMain.handle('backup:list', async (evt, customPath) => {
+  return listBackups(customPath);
+});
+
+ipcMain.handle('backup:getConfig', async () => {
+  return { success: true, data: loadBackupConfig() };
+});
+
+ipcMain.handle('backup:saveConfig', async (evt, configData) => {
+  const updated = saveBackupConfig(configData);
+  return { success: true, data: updated };
 });
 
 ipcMain.handle('db:importFullSystem', async (evt, fullBackup) => {
