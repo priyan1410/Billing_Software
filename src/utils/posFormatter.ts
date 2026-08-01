@@ -52,6 +52,8 @@ export function wrapText(text: string, maxWidth: number): string[] {
 export function getPosTokenTextBody(
   data: {
     tokenNumber: string | number;
+    orderNumber?: string;
+    billNumber?: string;
     orderType: string;
     tableNo?: string;
     tableNumber?: string;
@@ -89,6 +91,9 @@ export function getPosTokenTextBody(
   }
 
   lines.push(`Token No   : ${tokenNo}`);
+  if (data.orderNumber || data.billNumber) {
+    lines.push(`Bill Ref   : ${data.orderNumber || data.billNumber}`);
+  }
   lines.push(`Order Type : ${formattedType}`);
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
   lines.push(divider('-', width));
@@ -189,7 +194,10 @@ export function getPosInvoiceTextBody(
   lines.push(centerLine('*** TAX INVOICE ***', width));
   lines.push(divider('-', width));
 
-  lines.push(`Bill No : ${billNo}`);
+  if (data.tokenNumber) {
+    lines.push(`Token No : ${data.tokenNumber}`);
+  }
+  lines.push(`Bill No  : ${billNo}`);
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
   const rawType = String(data.orderType || 'Dine-In');
   const tblVal = (data as any).tableNumber || (data as any).table_number || (data as any).tableNo;

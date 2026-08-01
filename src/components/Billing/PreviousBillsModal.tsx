@@ -279,6 +279,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
         const tokenHtml = formatPosTokenHtml(
           {
             tokenNumber: tokenNumber,
+            orderNumber: billNumber,
             orderType: selectedOrder.orderType || 'Dine-In',
             paymentMode: selectedOrder.paymentMode || 'Cash',
             items: orderItems || [],
@@ -292,6 +293,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
         const invoiceHtml = formatPosInvoiceHtml(
           {
             orderNumber: billNumber,
+            tokenNumber: tokenNumber,
             orderType: selectedOrder.orderType || 'Dine-In',
             paymentMode: selectedOrder.paymentMode || 'Cash',
             items: orderItems || [],
@@ -315,6 +317,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
           const tokenHtml = formatPosTokenHtml(
             {
               tokenNumber: tokenNumber,
+              orderNumber: billNumber,
               orderType: selectedOrder.orderType || 'Dine-In',
               paymentMode: selectedOrder.paymentMode || 'Cash',
               items: orderItems || [],

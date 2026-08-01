@@ -87,6 +87,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
       const invoiceHtml = formatPosInvoiceHtml(
         {
           orderNumber: billNumber,
+          tokenNumber: tokenNumber,
           orderType: order.orderType || order.order_type || 'Dine-In',
           paymentMode: order.paymentMode || order.payment_mode || 'Cash',
           items: items || [],
@@ -111,6 +112,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
         const tokenHtml = formatPosTokenHtml(
           {
             tokenNumber: tokenNumber,
+            orderNumber: billNumber,
             orderType: order.orderType || order.order_type || 'Dine-In',
             paymentMode: order.paymentMode || order.payment_mode || 'Cash',
             items: items || [],

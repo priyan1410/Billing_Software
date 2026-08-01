@@ -603,6 +603,7 @@ export const BillingView: React.FC = () => {
       const invoiceHtml = formatPosInvoiceHtml(
         {
           ...data,
+          tokenNumber: tokenNumber,
           tableNumber: activeTableNo,
           orderNumber: billNumber,
           orderDate: formattedDate,
@@ -619,6 +620,7 @@ export const BillingView: React.FC = () => {
         const tokenHtml = formatPosTokenHtml(
           {
             tokenNumber: tokenNumber,
+            orderNumber: billNumber,
             tableNo: activeTableNo,
             orderType: data.orderType || 'Dine-In',
             paymentMode: data.paymentMode || 'Cash',
