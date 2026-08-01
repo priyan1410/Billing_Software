@@ -216,7 +216,7 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleSaveAndConnectDb = async (e?: React.FormEvent) => {
+  const handleSaveAndConnectDb = async (e?: React.FormEvent): Promise<boolean> => {
     if (e) e.preventDefault();
     setSavingDb(true);
     clearErrors();
@@ -227,16 +227,20 @@ export const AuthModal: React.FC = () => {
         if (res && res.success) {
           setDbStatus({ connected: true, message: res.message || '✓ Database Connected & Saved!' });
           await initializeAuth();
+          return true;
         } else {
           setDbStatus({ connected: false, message: res?.message || '❌ Could not connect with these credentials.' });
           setLocalError(res?.message || 'Database connection failed.');
+          return false;
         }
       } else {
         setDbStatus({ connected: true, message: '✓ Local Browser Mode Active' });
+        return true;
       }
     } catch (err: any) {
       setDbStatus({ connected: false, message: '❌ Error: ' + err.message });
       setLocalError('Save Error: ' + err.message);
+      return false;
     } finally {
       setSavingDb(false);
     }
@@ -245,11 +249,10 @@ export const AuthModal: React.FC = () => {
   const handleProceedToAccountStep = async (e: React.FormEvent) => {
     e.preventDefault();
     clearErrors();
-    if (!dbStatus.connected) {
-      setLocalError('Database connection required! Please test and connect to your database first.');
-      return;
+    const success = await handleSaveAndConnectDb();
+    if (success) {
+      setRegStep('account');
     }
-    setRegStep('account');
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -621,14 +624,18 @@ export const AuthModal: React.FC = () => {
                   {/* Proceed to Step 2 Button */}
                   <button
                     type="submit"
-                    disabled={!dbStatus.connected}
-                    className={`w-full py-3 font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg text-sm ${
-                      dbStatus.connected
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500 shadow-amber-500/20'
-                        : 'bg-white/10 text-white/30 border border-white/10 cursor-not-allowed'
-                    }`}
+                    disabled={savingDb || testingDb}
+                    className="w-full py-3 font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg text-sm bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-400 hover:to-amber-500 shadow-amber-500/20 disabled:opacity-60"
                   >
-                    Next: Admin Account Registration <ArrowRight className="w-4 h-4" />
+                    {savingDb ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Connecting to Database...
+                      </>
+                    ) : (
+                      <>
+                        Next: Admin Account Registration <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </form>
               )}

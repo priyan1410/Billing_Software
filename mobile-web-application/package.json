@@ -1,0 +1,13 @@
+{
+  "name": "kish-mandhi-mobile-web",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Kish Mandhi Owner Mobile Companion App & Live API Server",
+  "main": "api-server.js",
+  "scripts": {
+    "start": "node api-server.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.9.0"
+  }
+}

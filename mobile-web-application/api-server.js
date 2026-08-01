@@ -6,6 +6,9 @@
 
 const http = require('http');
 const mysql = require('mysql2/promise');
+const path = require('path');
+const fs = require('fs');
+
 const PORT = process.env.PORT || 3001;
 
 const server = http.createServer(async (req, res) => {
@@ -17,6 +20,41 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  // 1. Serve Static Web App Files (index.html, styles.css, app.js, manifest.json)
+  if (!req.url.startsWith('/api')) {
+    let rawPath = req.url.split('?')[0];
+    let filePath = path.join(__dirname, rawPath === '/' ? 'index.html' : rawPath);
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes = {
+      '.html': 'text/html; charset=utf-8',
+      '.css': 'text/css; charset=utf-8',
+      '.js': 'text/javascript; charset=utf-8',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.ico': 'image/x-icon',
+      '.svg': 'image/svg+xml'
+    };
+
+    fs.readFile(filePath, (err, content) => {
+      if (err) {
+        fs.readFile(path.join(__dirname, 'index.html'), (err2, indexContent) => {
+          if (err2) {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('404 Not Found');
+          } else {
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(indexContent);
+          }
+        });
+      } else {
+        res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' });
+        res.end(content);
+      }
+    });
     return;
   }
 
