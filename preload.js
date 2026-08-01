@@ -51,8 +51,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBackupConfig: () => ipcRenderer.invoke('backup:getConfig'),
   saveBackupConfig: (config) => ipcRenderer.invoke('backup:saveConfig', config),
 
-  // Thermal Receipt Printing
-  printReceipt: (receiptHtml) => ipcRenderer.invoke('receipt:print', receiptHtml),
+  // Thermal Receipt & Dual Printing
+  printReceipt: (receiptHtml, options) => ipcRenderer.invoke('receipt:print', receiptHtml, options),
+  getSystemPrinters: () => ipcRenderer.invoke('system:getPrinters'),
 
   // Auth & Restaurant Details
   register: (userData, restaurantData) => ipcRenderer.invoke('auth:register', { userData, restaurantData }),

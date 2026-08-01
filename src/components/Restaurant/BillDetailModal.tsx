@@ -3,6 +3,7 @@ import { X, Printer, Receipt, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
+import { dispatchPrintJob } from '../../utils/printRouter';
 
 interface BillDetailModalProps {
   order: any;
@@ -103,12 +104,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
       );
 
       // Action 1: Print Bill
-      if ((window as any).electronAPI?.printReceipt) {
-        await (window as any).electronAPI.printReceipt(invoiceHtml);
-      } else {
-        const w = window.open('', '_blank', 'width=400,height=700');
-        if (w) { w.document.write(invoiceHtml); w.print(); }
-      }
+      await dispatchPrintJob('bill', invoiceHtml, restaurantDetails);
 
       // Action 2: Print Token (Separate Job)
       if (printWithToken) {
@@ -124,12 +120,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
           restaurantDetails
         );
         await new Promise((resolve) => setTimeout(resolve, 350));
-        if ((window as any).electronAPI?.printReceipt) {
-          await (window as any).electronAPI.printReceipt(tokenHtml);
-        } else {
-          const w = window.open('', '_blank', 'width=400,height=700');
-          if (w) { w.document.write(tokenHtml); w.print(); }
-        }
+        await dispatchPrintJob('token', tokenHtml, restaurantDetails);
       }
     } catch (err: any) {
       alert('Error printing bill: ' + err.message);

@@ -26,7 +26,11 @@ export const defaultRestaurant: RestaurantDetails = {
   printShowTaxBreakdown: true,
   printShowRoundOff: true,
   printShowFooterNote: true,
-  printWithToken: true
+  printWithToken: true,
+  printer1Name: '',
+  printer1Target: 'both',
+  printer2Name: '',
+  printer2Target: 'none'
 };
 
 export const syncAppIcon = (iconUrl?: string) => {

@@ -152,6 +152,10 @@ export interface RestaurantDetails {
   printShowFooterNote?: boolean;
   printWithToken?: boolean;
   totalTables?: number;
+  printer1Name?: string;
+  printer1Target?: 'bill' | 'token' | 'both' | 'none';
+  printer2Name?: string;
+  printer2Target?: 'bill' | 'token' | 'both' | 'none';
 }
 
 

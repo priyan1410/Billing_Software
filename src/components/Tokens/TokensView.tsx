@@ -5,6 +5,7 @@ import { usePosStore } from '../../store/usePosStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderType, PortionVariant } from '../../types';
 import { formatPosTokenHtml } from '../../utils/posFormatter';
+import { dispatchPrintJob } from '../../utils/printRouter';
 
 export const TokensView: React.FC = () => {
   const { activeTokensList, addActiveToken, loadActiveTokens, setActiveSection } = useAppStore();
@@ -190,10 +191,7 @@ export const TokensView: React.FC = () => {
   const triggerTokenPrint = async () => {
     if (!previewToken) return;
     const tokenHtml = formatPosTokenHtml(previewToken, restaurantDetails);
-
-    if ((window as any).electronAPI?.printReceipt) {
-      await (window as any).electronAPI.printReceipt(tokenHtml);
-    }
+    await dispatchPrintJob('token', tokenHtml, restaurantDetails);
   };
 
   return (

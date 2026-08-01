@@ -96,8 +96,28 @@ export const RestaurantSettingsView: React.FC = () => {
   const [saveMsg, setSaveMsg] = useState('');
   const [isDirty, setIsDirty] = useState(false);
 
+  const [systemPrinters, setSystemPrinters] = useState<{ name: string; displayName?: string; isDefault?: boolean }[]>([]);
+  const [loadingPrinters, setLoadingPrinters] = useState(false);
+
+  const fetchPrinters = async () => {
+    setLoadingPrinters(true);
+    try {
+      if ((window as any).electronAPI?.getSystemPrinters) {
+        const res = await (window as any).electronAPI.getSystemPrinters();
+        if (res && res.success && Array.isArray(res.printers)) {
+          setSystemPrinters(res.printers);
+        }
+      }
+    } catch (e) {
+      console.error('fetchPrinters error:', e);
+    } finally {
+      setLoadingPrinters(false);
+    }
+  };
+
   useEffect(() => {
     loadRestaurantDetails();
+    fetchPrinters();
   }, []);
 
   useEffect(() => {
@@ -143,7 +163,11 @@ export const RestaurantSettingsView: React.FC = () => {
       printShowTaxBreakdown: form.printShowTaxBreakdown ?? true,
       printShowRoundOff: form.printShowRoundOff ?? true,
       printShowFooterNote: form.printShowFooterNote ?? true,
-      printWithToken: form.printWithToken ?? true
+      printWithToken: form.printWithToken ?? true,
+      printer1Name: form.printer1Name || '',
+      printer1Target: form.printer1Target || 'both',
+      printer2Name: form.printer2Name || '',
+      printer2Target: form.printer2Target || 'none'
     };
 
     const res = await updateRestaurantDetails(payload);
@@ -651,6 +675,125 @@ export const RestaurantSettingsView: React.FC = () => {
                         <span className="text-xs font-semibold text-white">{item.label}</span>
                       </label>
                     ))}
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* DUAL PRINTER & KITCHEN KOT ROUTING CONTROLS */}
+              <SectionCard title="Dual Printer & Kitchen KOT Routing Controls" icon={<Printer className="w-5 h-5 text-amber-400" />} subtitle="Configure separate printers for Counter Bills and Kitchen LAN Tokens">
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-xl">
+                    <div className="flex items-center gap-2.5 text-xs text-amber-300 font-semibold">
+                      <Printer className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Configure 2 Independent Printers (USB Counter POS + LAN Kitchen Printer)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchPrinters}
+                      disabled={loadingPrinters}
+                      className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs rounded-lg transition-all flex items-center gap-1.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingPrinters ? 'animate-spin' : ''}`} />
+                      <span>{loadingPrinters ? 'Scanning Printers...' : 'Detect Printers'}</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* PRINTER 1 CARD */}
+                    <div className="bg-white/5 border border-white/10 p-4 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Printer 1 (Counter POS / Main)</span>
+                        <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono font-bold">PRIMARY</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-white/70 uppercase mb-1">Select System Printer Device</label>
+                        {systemPrinters.length > 0 ? (
+                          <select
+                            value={form.printer1Name || ''}
+                            onChange={(e) => update('printer1Name' as any, e.target.value)}
+                            className="w-full bg-black/40 border border-white/15 text-white rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-amber-500/50 outline-none"
+                          >
+                            <option value="">-- Default System Printer --</option>
+                            {systemPrinters.map((p, i) => (
+                              <option key={i} value={p.name}>
+                                {p.name} {p.isDefault ? '(Windows Default)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={form.printer1Name || ''}
+                            onChange={(e) => update('printer1Name' as any, e.target.value)}
+                            placeholder="e.g. POS-80-Counter or Thermal-POS"
+                            className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-3 py-2 text-xs"
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-white/70 uppercase mb-1">Printer 1 Target Role</label>
+                        <select
+                          value={form.printer1Target || 'both'}
+                          onChange={(e) => update('printer1Target' as any, e.target.value)}
+                          className="w-full bg-black/40 border border-white/15 text-amber-300 font-bold rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-amber-500/50 outline-none"
+                        >
+                          <option value="both">🖨️ Print Both (Bill & Kitchen Token)</option>
+                          <option value="bill">📄 Bill Only (Counter Receipts)</option>
+                          <option value="token">🏷️ Kitchen Token Only (KOT)</option>
+                          <option value="none">🚫 Disabled (No Print Output)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* PRINTER 2 CARD */}
+                    <div className="bg-white/5 border border-white/10 p-4 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Printer 2 (Kitchen LAN / Secondary)</span>
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono font-bold">LAN KITCHEN</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-white/70 uppercase mb-1">Select LAN / Kitchen Printer Device</label>
+                        {systemPrinters.length > 0 ? (
+                          <select
+                            value={form.printer2Name || ''}
+                            onChange={(e) => update('printer2Name' as any, e.target.value)}
+                            className="w-full bg-black/40 border border-white/15 text-white rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                          >
+                            <option value="">-- Select Kitchen LAN Printer --</option>
+                            {systemPrinters.map((p, i) => (
+                              <option key={i} value={p.name}>
+                                {p.name} {p.isDefault ? '(Default)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={form.printer2Name || ''}
+                            onChange={(e) => update('printer2Name' as any, e.target.value)}
+                            placeholder="e.g. Kitchen-LAN-Printer or 192.168.1.100"
+                            className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-3 py-2 text-xs"
+                          />
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-white/70 uppercase mb-1">Printer 2 Target Role</label>
+                        <select
+                          value={form.printer2Target || 'none'}
+                          onChange={(e) => update('printer2Target' as any, e.target.value)}
+                          className="w-full bg-black/40 border border-white/15 text-emerald-300 font-bold rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-emerald-500/50 outline-none"
+                        >
+                          <option value="token">🏷️ Kitchen Token Only (KOT)</option>
+                          <option value="bill">📄 Bill Only (Counter Receipts)</option>
+                          <option value="both">🖨️ Print Both (Bill & Kitchen Token)</option>
+                          <option value="none">🚫 Disabled (No Print Output)</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </SectionCard>

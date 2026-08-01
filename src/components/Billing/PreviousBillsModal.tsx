@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { usePosStore } from '../../store/usePosStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
+import { dispatchPrintJob } from '../../utils/printRouter';
 
 interface PreviousBillsModalProps {
   onClose: () => void;
@@ -286,12 +287,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
           },
           restaurantDetails
         );
-        if ((window as any).electronAPI?.printReceipt) {
-          await (window as any).electronAPI.printReceipt(tokenHtml);
-        } else {
-          const w = window.open('', '_blank', 'width=400,height=700');
-          if (w) { w.document.write(tokenHtml); w.print(); }
-        }
+        await dispatchPrintJob('token', tokenHtml, restaurantDetails);
       } else {
         const invoiceHtml = formatPosInvoiceHtml(
           {
@@ -312,12 +308,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
         );
 
         // Action 1: Print Bill
-        if ((window as any).electronAPI?.printReceipt) {
-          await (window as any).electronAPI.printReceipt(invoiceHtml);
-        } else {
-          const w = window.open('', '_blank', 'width=400,height=700');
-          if (w) { w.document.write(invoiceHtml); w.print(); }
-        }
+        await dispatchPrintJob('bill', invoiceHtml, restaurantDetails);
 
         // Action 2: Print Token (Separate Job)
         if (showTokenTicket) {
@@ -333,12 +324,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
             restaurantDetails
           );
           await new Promise((resolve) => setTimeout(resolve, 350));
-          if ((window as any).electronAPI?.printReceipt) {
-            await (window as any).electronAPI.printReceipt(tokenHtml);
-          } else {
-            const w = window.open('', '_blank', 'width=400,height=700');
-            if (w) { w.document.write(tokenHtml); w.print(); }
-          }
+          await dispatchPrintJob('token', tokenHtml, restaurantDetails);
         }
       }
     } catch (err: any) {

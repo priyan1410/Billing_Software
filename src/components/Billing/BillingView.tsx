@@ -9,6 +9,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderPayload, PortionVariant } from '../../types';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
+import { dispatchPrintJob } from '../../utils/printRouter';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n: number, curr = '₹') =>
@@ -597,12 +598,7 @@ export const BillingView: React.FC = () => {
         },
         rd
       );
-      if ((window as any).electronAPI) {
-        await (window as any).electronAPI.printReceipt(tokenHtml);
-      } else {
-        const w = window.open('', '_blank', 'width=400,height=700');
-        if (w) { w.document.write(tokenHtml); w.print(); }
-      }
+      await dispatchPrintJob('token', tokenHtml, rd);
     } else {
       const invoiceHtml = formatPosInvoiceHtml(
         {
@@ -616,12 +612,7 @@ export const BillingView: React.FC = () => {
       );
 
       // Print Action 1: Tax Invoice Bill
-      if ((window as any).electronAPI) {
-        await (window as any).electronAPI.printReceipt(invoiceHtml);
-      } else {
-        const w = window.open('', '_blank', 'width=400,height=700');
-        if (w) { w.document.write(invoiceHtml); w.print(); }
-      }
+      await dispatchPrintJob('bill', invoiceHtml, rd);
 
       // Print Action 2: Token Slip (Separate Job & Separate Auto-Cut)
       if (rd?.printWithToken !== false) {
@@ -638,12 +629,7 @@ export const BillingView: React.FC = () => {
           rd
         );
         await new Promise((resolve) => setTimeout(resolve, 350));
-        if ((window as any).electronAPI) {
-          await (window as any).electronAPI.printReceipt(tokenHtml);
-        } else {
-          const w = window.open('', '_blank', 'width=400,height=700');
-          if (w) { w.document.write(tokenHtml); w.print(); }
-        }
+        await dispatchPrintJob('token', tokenHtml, rd);
       }
     }
   };

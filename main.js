@@ -1424,7 +1424,11 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
       printShowTaxBreakdown: data.printShowTaxBreakdown ?? true,
       printShowRoundOff: data.printShowRoundOff ?? true,
       printShowFooterNote: data.printShowFooterNote ?? true,
-      printWithToken: data.printWithToken ?? true
+      printWithToken: data.printWithToken ?? true,
+      printer1Name: data.printer1Name || '',
+      printer1Target: data.printer1Target || 'both',
+      printer2Name: data.printer2Name || '',
+      printer2Target: data.printer2Target || 'none'
     };
 
     if (data.softwareIconUrl && mainWindow) {
@@ -1517,8 +1521,29 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// PRINT RECEIPT
+// PRINT RECEIPT & DUAL PRINTER ROUTING
 // ─────────────────────────────────────────────────────────────
+ipcMain.handle('system:getPrinters', async () => {
+  try {
+    if (mainWindow && mainWindow.webContents) {
+      const printers = await mainWindow.webContents.getPrintersAsync();
+      return {
+        success: true,
+        printers: printers.map(p => ({
+          name: p.name,
+          displayName: p.displayName || p.name,
+          isDefault: p.isDefault,
+          status: p.status
+        }))
+      };
+    }
+    return { success: true, printers: [] };
+  } catch (err) {
+    console.error('getPrinters error:', err);
+    return { success: false, message: err.message, printers: [] };
+  }
+});
+
 ipcMain.handle('receipt:print', async (evt, receiptHtml, options = {}) => {
   try {
     const printWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false } });
