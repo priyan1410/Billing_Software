@@ -22,37 +22,57 @@ export const dispatchPrintJob = async (
       return { success: true, dispatchedCount: 1 };
     }
 
-    const p1Name = restaurantDetails.printer1Name || '';
-    const p1Target = restaurantDetails.printer1Target || 'both';
+    const p1Name = (restaurantDetails?.printer1Name || '').trim();
+    const p1Target = restaurantDetails?.printer1Target || 'both';
 
-    const p2Name = restaurantDetails.printer2Name || '';
-    const p2Target = restaurantDetails.printer2Target || 'none';
+    const p2Name = (restaurantDetails?.printer2Name || '').trim();
+    const p2Target = restaurantDetails?.printer2Target || 'none';
 
     let dispatchedCount = 0;
+    const errorMessages: string[] = [];
 
     // Check Printer 1
-    const p1ShouldPrint = p1Target === 'both' || p1Target === jobType;
+    const p1ShouldPrint = p1Target !== 'none' && (p1Target === 'both' || p1Target === jobType);
     if (p1ShouldPrint) {
-      await api.printReceipt(htmlContent, { printerName: p1Name });
-      dispatchedCount++;
+      const res = await api.printReceipt(htmlContent, { printerName: p1Name });
+      if (res && res.success) {
+        dispatchedCount++;
+      } else if (res && res.message) {
+        errorMessages.push(`Printer 1 (${p1Name || 'Default'}): ${res.message}`);
+      }
     }
 
     // Check Printer 2
-    const p2ShouldPrint = (p2Target === 'both' || p2Target === jobType) && p2Target !== 'none';
+    const p2ShouldPrint = p2Target !== 'none' && (p2Target === 'both' || p2Target === jobType);
     if (p2ShouldPrint) {
-      await api.printReceipt(htmlContent, { printerName: p2Name });
-      dispatchedCount++;
+      // Avoid printing duplicate identical jobs to default printer if printer 2 name is empty and printer 1 already printed
+      const isDuplicateDefault = !p2Name && !p1Name && p1ShouldPrint;
+      if (!isDuplicateDefault) {
+        const res = await api.printReceipt(htmlContent, { printerName: p2Name });
+        if (res && res.success) {
+          dispatchedCount++;
+        } else if (res && res.message) {
+          errorMessages.push(`Printer 2 (${p2Name || 'Default'}): ${res.message}`);
+        }
+      }
     }
 
     // Fallback if neither printer was targeted or configured
-    if (dispatchedCount === 0) {
-      await api.printReceipt(htmlContent, { printerName: '' });
-      dispatchedCount = 1;
+    if (dispatchedCount === 0 && p1Target === 'none' && p2Target === 'none') {
+      const res = await api.printReceipt(htmlContent, { printerName: '' });
+      if (res && res.success) {
+        dispatchedCount = 1;
+      }
     }
 
-    return { success: true, dispatchedCount };
+    return {
+      success: dispatchedCount > 0,
+      dispatchedCount,
+      message: errorMessages.length > 0 ? errorMessages.join('; ') : undefined
+    };
   } catch (err: any) {
     console.error('dispatchPrintJob error:', err);
     return { success: false, dispatchedCount: 0, message: err.message };
   }
 };
+

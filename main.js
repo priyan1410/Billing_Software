@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { query, testConnection, saveConfig, loadConfig, dbConfig, getStorageSize } = require('./db/connection');
 const { initializeDatabase } = require('./db/schema');
-const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber } = require('./electron/tokenUtils');
+const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber, formatTokenNumber } = require('./electron/tokenUtils');
 const { loadBackupConfig, saveBackupConfig, performBackup, listBackups, startBackupScheduler, shouldRunBackup } = require('./electron/backupManager');
 
 // Fix GPU rendering on Windows
@@ -1555,25 +1555,112 @@ ipcMain.handle('system:getPrinters', async () => {
   }
 });
 
-ipcMain.handle('receipt:print', async (evt, receiptHtml, options = {}) => {
-  try {
-    const printWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false } });
-    printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml)}`);
-    printWin.webContents.on('did-finish-load', () => {
-      printWin.webContents.print(
-        {
-          silent: options.silent !== undefined ? options.silent : true,
-          printBackground: true,
-          deviceName: options.printerName || ''
-        },
-        (success, failureReason) => {
-          printWin.close();
-        }
-      );
-    });
-    return { success: true };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+// Sequenced Print Queue to prevent race conditions and Windows spooler collisions when printing to dual printers
+let printQueue = Promise.resolve();
+
+ipcMain.handle('receipt:print', (evt, receiptHtml, options = {}) => {
+  return new Promise((resolve) => {
+    printQueue = printQueue
+      .then(() => {
+        return new Promise(async (jobResolve) => {
+          let printWin = null;
+          let isHandled = false;
+
+          const finishJob = (result) => {
+            if (isHandled) return;
+            isHandled = true;
+            if (printWin && !printWin.isDestroyed()) {
+              try {
+                printWin.close();
+              } catch (e) {}
+            }
+            jobResolve(result);
+            resolve(result);
+          };
+
+          // 4-second timeout safeguard to prevent hanging print queue if printer is unresponsive
+          const timeoutTimer = setTimeout(() => {
+            console.error('Print job timed out after 4s');
+            finishJob({ success: false, message: 'Print job timed out' });
+          }, 4000);
+
+          try {
+            printWin = new BrowserWindow({
+              show: false,
+              webPreferences: { nodeIntegration: false, contextIsolation: true }
+            });
+
+            let targetDeviceName = (options.printerName || '').trim();
+            if (targetDeviceName && printWin.webContents) {
+              try {
+                const systemPrinters = await printWin.webContents.getPrintersAsync();
+                const exactMatch = systemPrinters.find(
+                  (p) => p.name.toLowerCase() === targetDeviceName.toLowerCase() || (p.displayName && p.displayName.toLowerCase() === targetDeviceName.toLowerCase())
+                );
+                if (exactMatch) {
+                  targetDeviceName = exactMatch.name;
+                } else {
+                  const partialMatch = systemPrinters.find(
+                    (p) => p.name.toLowerCase().includes(targetDeviceName.toLowerCase()) || targetDeviceName.toLowerCase().includes(p.name.toLowerCase())
+                  );
+                  if (partialMatch) {
+                    targetDeviceName = partialMatch.name;
+                  }
+                }
+              } catch (errPrinters) {
+                console.error('Error fetching system printers in queue:', errPrinters);
+              }
+            }
+
+            printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml)}`);
+
+            printWin.webContents.on('did-finish-load', () => {
+              setTimeout(() => {
+                if (!printWin || printWin.isDestroyed()) {
+                  clearTimeout(timeoutTimer);
+                  return finishJob({ success: false, message: 'Print window destroyed before printing' });
+                }
+
+                const printOptions = {
+                  silent: options.silent !== undefined ? options.silent : true,
+                  printBackground: true,
+                  margins: { marginType: 'none' }
+                };
+                if (targetDeviceName) {
+                  printOptions.deviceName = targetDeviceName;
+                }
+
+                printWin.webContents.print(
+                  printOptions,
+                  (success, failureReason) => {
+                    clearTimeout(timeoutTimer);
+                    if (success) {
+                      finishJob({ success: true });
+                    } else {
+                      console.error('Print call failed:', failureReason);
+                      finishJob({ success: false, message: failureReason || 'Print operation failed' });
+                    }
+                  }
+                );
+              }, 100);
+            });
+
+
+            printWin.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+              clearTimeout(timeoutTimer);
+              finishJob({ success: false, message: `Failed to load receipt HTML: ${errorDescription}` });
+            });
+          } catch (err) {
+            clearTimeout(timeoutTimer);
+            finishJob({ success: false, message: err.message });
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('Print queue exception:', err);
+        resolve({ success: false, message: err?.message || 'Print queue error' });
+      });
+  });
 });
+
 

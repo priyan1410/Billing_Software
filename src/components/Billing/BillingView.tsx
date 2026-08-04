@@ -545,21 +545,26 @@ export const BillingView: React.FC = () => {
       };
     }
 
-    if (shouldPrint && createdData) {
-      await triggerPrintDirect(createdData, false);
-    }
+    try {
+      if (shouldPrint && createdData) {
+        await triggerPrintDirect(createdData, false);
+      }
+    } catch (printErr) {
+      console.error('Error printing order:', printErr);
+    } finally {
+      if (selectedTokenNum) {
+        removeActiveToken(selectedTokenNum);
+        setSelectedTokenNum('');
+      }
 
-    if (selectedTokenNum) {
-      removeActiveToken(selectedTokenNum);
-      setSelectedTokenNum('');
+      setShowConfirmModal(false);
+      clearCart();
+      setIsCheckingOut(false);
+      fetchNextBillNumber();
+      loadRecentBills();
     }
-
-    setShowConfirmModal(false);
-    clearCart();
-    setIsCheckingOut(false);
-    fetchNextBillNumber();
-    loadRecentBills();
   };
+
 
   const triggerPrintDirect = async (data: any, isKot = false) => {
     if (!data) return;

@@ -326,20 +326,112 @@ ipcMain.handle('expenses:delete', async (_evt: any, id: any) => {
   return { success: true };
 });
 
-ipcMain.handle('receipt:print', async (_evt: any, receiptHtml: string) => {
-  try {
-    const printWin = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: false } });
-    printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml)}`);
-    printWin.webContents.on('did-finish-load', () => {
-      printWin.webContents.print({ silent: false, printBackground: true, margins: { marginType: 'none' } }, () => {
-        printWin.close();
+let printQueueTS: Promise<any> = Promise.resolve();
+
+ipcMain.handle('receipt:print', (_evt: any, receiptHtml: string, options: any = {}) => {
+  return new Promise((resolve) => {
+    printQueueTS = printQueueTS
+      .then(() => {
+        return new Promise(async (jobResolve) => {
+          let printWin: any = null;
+          let isHandled = false;
+
+          const finishJob = (result: any) => {
+            if (isHandled) return;
+            isHandled = true;
+            if (printWin && !printWin.isDestroyed()) {
+              try {
+                printWin.close();
+              } catch (e) {}
+            }
+            jobResolve(result);
+            resolve(result);
+          };
+
+          const timeoutTimer = setTimeout(() => {
+            console.error('Print job timed out after 4s');
+            finishJob({ success: false, message: 'Print job timed out' });
+          }, 4000);
+
+          try {
+            printWin = new BrowserWindow({
+              show: false,
+              webPreferences: { nodeIntegration: false, contextIsolation: true }
+            });
+
+            let targetDeviceName = (options.printerName || '').trim();
+            if (targetDeviceName && printWin.webContents) {
+              try {
+                const systemPrinters = await printWin.webContents.getPrintersAsync();
+                const exactMatch = systemPrinters.find(
+                  (p: any) => p.name.toLowerCase() === targetDeviceName.toLowerCase() || (p.displayName && p.displayName.toLowerCase() === targetDeviceName.toLowerCase())
+                );
+                if (exactMatch) {
+                  targetDeviceName = exactMatch.name;
+                } else {
+                  const partialMatch = systemPrinters.find(
+                    (p: any) => p.name.toLowerCase().includes(targetDeviceName.toLowerCase()) || targetDeviceName.toLowerCase().includes(p.name.toLowerCase())
+                  );
+                  if (partialMatch) {
+                    targetDeviceName = partialMatch.name;
+                  }
+                }
+              } catch (errPrinters) {
+                console.error('Error fetching system printers in TS queue:', errPrinters);
+              }
+            }
+
+            printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(receiptHtml)}`);
+
+            printWin.webContents.on('did-finish-load', () => {
+              setTimeout(() => {
+                if (!printWin || printWin.isDestroyed()) {
+                  clearTimeout(timeoutTimer);
+                  return finishJob({ success: false, message: 'Print window destroyed before printing' });
+                }
+
+                const printOptions: any = {
+                  silent: options.silent !== undefined ? options.silent : true,
+                  printBackground: true,
+                  margins: { marginType: 'none' }
+                };
+                if (targetDeviceName) {
+                  printOptions.deviceName = targetDeviceName;
+                }
+
+                printWin.webContents.print(
+                  printOptions,
+                  (success: boolean, failureReason: string) => {
+                    clearTimeout(timeoutTimer);
+                    if (success) {
+                      finishJob({ success: true });
+                    } else {
+                      console.error('Print call failed:', failureReason);
+                      finishJob({ success: false, message: failureReason || 'Print operation failed' });
+                    }
+                  }
+                );
+              }, 100);
+            });
+
+
+            printWin.webContents.on('did-fail-load', (_event: any, _errorCode: any, errorDescription: string) => {
+              clearTimeout(timeoutTimer);
+              finishJob({ success: false, message: `Failed to load receipt HTML: ${errorDescription}` });
+            });
+          } catch (err: any) {
+            clearTimeout(timeoutTimer);
+            finishJob({ success: false, message: err.message });
+          }
+        });
+      })
+      .catch((err: any) => {
+        console.error('Print queue exception:', err);
+        resolve({ success: false, message: err?.message || 'Print queue error' });
       });
-    });
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, message: err.message };
-  }
+  });
 });
+
 
 // ─── Token IPC Handlers ───────────────────────────────────────────────────────
 
