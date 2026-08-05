@@ -91,6 +91,9 @@ export const ExpensesView: React.FC = () => {
   };
 
   const handleDeleteExpense = async (id: number) => {
+    if ((document.activeElement as HTMLElement)?.blur) {
+      (document.activeElement as HTMLElement).blur();
+    }
     if (!confirm('Are you sure you want to delete this expense entry?')) return;
     try {
       if ((window as any).electronAPI) {

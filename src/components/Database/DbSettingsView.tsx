@@ -309,7 +309,14 @@ export const DbSettingsView: React.FC = () => {
   };
 
   const handleDeleteDish = async (id: number) => {
+    if ((document.activeElement as HTMLElement)?.blur) {
+      (document.activeElement as HTMLElement).blur();
+    }
     if (confirm('Delete this dish item from database?')) {
+      if (editingId === id) {
+        setEditingId(null);
+        setEditForm({});
+      }
       if ((window as any).electronAPI) {
         await (window as any).electronAPI.deleteMenuItem(id);
         await loadAllData();
@@ -318,6 +325,9 @@ export const DbSettingsView: React.FC = () => {
   };
 
   const handleDeleteExpense = async (id: number) => {
+    if ((document.activeElement as HTMLElement)?.blur) {
+      (document.activeElement as HTMLElement).blur();
+    }
     if (confirm('Delete this expense record?')) {
       if ((window as any).electronAPI) {
         await (window as any).electronAPI.deleteExpense(id);
@@ -685,6 +695,7 @@ export const DbSettingsView: React.FC = () => {
                     <td className="py-3 px-3 font-bold text-white max-w-xs">
                       {editingId === dish.id ? (
                         <input
+                          autoFocus
                           type="text"
                           value={editForm.name || ''}
                           onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}

@@ -167,6 +167,9 @@ export const TokensView: React.FC = () => {
   };
 
   const cancelEditToken = () => {
+    if ((document.activeElement as HTMLElement)?.blur) {
+      (document.activeElement as HTMLElement).blur();
+    }
     setEditingTokenNumber(null);
     setTokenCart([]);
   };
