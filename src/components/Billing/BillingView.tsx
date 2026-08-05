@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderPayload, PortionVariant } from '../../types';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
 import { dispatchPrintJob, dispatchOrderPrintJobs } from '../../utils/printRouter';
+import { ConfirmDialog } from '../UI/ConfirmDialog';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n: number, curr = '₹') =>
@@ -333,6 +334,9 @@ export const BillingView: React.FC = () => {
   const [customTable, setCustomTable] = useState<string>('');
   const [isCustomTableMode, setIsCustomTableMode] = useState<boolean>(false);
 
+  // In-app cart clear confirm dialog (replaces window.confirm for Electron focus-loss cursor bug fix)
+  const [confirmClearCart, setConfirmClearCart] = useState(false);
+
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 0;
 
@@ -575,6 +579,17 @@ export const BillingView: React.FC = () => {
 
   return (
     <div className="flex gap-4 h-[calc(100vh-110px)] select-none overflow-hidden">
+      {/* In-app Cart Clear Confirm Dialog */}
+      <ConfirmDialog
+        open={confirmClearCart}
+        title="Clear Cart"
+        message="Are you sure you want to remove all items from the cart?"
+        confirmLabel="Clear All"
+        cancelLabel="Keep Items"
+        variant="warning"
+        onConfirm={() => { setConfirmClearCart(false); clearCart(); }}
+        onCancel={() => setConfirmClearCart(false)}
+      />
 
       {/* ══ LEFT: FOOD CATALOG (scrollable) ═══════════════════════════ */}
       <div className="flex-1 flex flex-col min-w-0 gap-3 overflow-hidden">
@@ -965,7 +980,7 @@ export const BillingView: React.FC = () => {
           </button>
 
           {cart.length > 0 && (
-            <button onClick={() => { if (confirm('Clear all items?')) clearCart(); }}
+            <button onClick={() => setConfirmClearCart(true)}
               className="w-full py-2 bg-olive-900 border border-rose-500/20 text-rose-400 rounded-xl text-xs font-semibold hover:bg-rose-500/10 transition-colors flex items-center justify-center gap-1.5"
             >
               <Trash2 className="w-3.5 h-3.5" /> Clear Cart

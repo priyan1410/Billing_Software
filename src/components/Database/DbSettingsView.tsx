@@ -4,6 +4,7 @@ import { Dish, Order, Expense } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
+import { ConfirmDialog } from '../UI/ConfirmDialog';
 
 export const DbSettingsView: React.FC = () => {
   const { isDbConnected, dbErrorMessage, checkDbStatus } = useAppStore();
@@ -15,6 +16,12 @@ export const DbSettingsView: React.FC = () => {
   const [testing, setTesting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Dish>>({});
+
+  // In-app confirm dialog state — replaces window.confirm() to avoid Electron focus-loss cursor bug
+  const [confirmDishOpen, setConfirmDishOpen] = useState(false);
+  const [pendingDeleteDishId, setPendingDeleteDishId] = useState<number | null>(null);
+  const [confirmExpOpen, setConfirmExpOpen] = useState(false);
+  const [pendingDeleteExpId, setPendingDeleteExpId] = useState<number | null>(null);
 
   // Full PC Migration & Backup State
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'working' | 'success' | 'error'>('idle');
@@ -308,31 +315,39 @@ export const DbSettingsView: React.FC = () => {
     }
   };
 
-  const handleDeleteDish = async (id: number) => {
-    if ((document.activeElement as HTMLElement)?.blur) {
-      (document.activeElement as HTMLElement).blur();
+  const handleDeleteDish = (id: number) => {
+    if (editingId === id) {
+      setEditingId(null);
+      setEditForm({});
     }
-    if (confirm('Delete this dish item from database?')) {
-      if (editingId === id) {
-        setEditingId(null);
-        setEditForm({});
-      }
-      if ((window as any).electronAPI) {
-        await (window as any).electronAPI.deleteMenuItem(id);
-        await loadAllData();
-      }
+    setPendingDeleteDishId(id);
+    setConfirmDishOpen(true);
+  };
+
+  const executeDeleteDish = async () => {
+    setConfirmDishOpen(false);
+    if (pendingDeleteDishId == null) return;
+    const id = pendingDeleteDishId;
+    setPendingDeleteDishId(null);
+    if ((window as any).electronAPI) {
+      await (window as any).electronAPI.deleteMenuItem(id);
+      await loadAllData();
     }
   };
 
-  const handleDeleteExpense = async (id: number) => {
-    if ((document.activeElement as HTMLElement)?.blur) {
-      (document.activeElement as HTMLElement).blur();
-    }
-    if (confirm('Delete this expense record?')) {
-      if ((window as any).electronAPI) {
-        await (window as any).electronAPI.deleteExpense(id);
-        await loadAllData();
-      }
+  const handleDeleteExpense = (id: number) => {
+    setPendingDeleteExpId(id);
+    setConfirmExpOpen(true);
+  };
+
+  const executeDeleteExpense = async () => {
+    setConfirmExpOpen(false);
+    if (pendingDeleteExpId == null) return;
+    const id = pendingDeleteExpId;
+    setPendingDeleteExpId(null);
+    if ((window as any).electronAPI) {
+      await (window as any).electronAPI.deleteExpense(id);
+      await loadAllData();
     }
   };
 
@@ -415,6 +430,25 @@ export const DbSettingsView: React.FC = () => {
 
   return (
     <div className="space-y-6 select-none max-w-5xl pb-10">
+      {/* In-app Delete Confirmation Dialogs (replaces window.confirm to fix Electron cursor bug) */}
+      <ConfirmDialog
+        open={confirmDishOpen}
+        title="Delete Menu Dish"
+        message="Are you sure you want to permanently delete this dish from the database? This action cannot be undone."
+        confirmLabel="Delete Dish"
+        cancelLabel="Cancel"
+        onConfirm={executeDeleteDish}
+        onCancel={() => { setConfirmDishOpen(false); setPendingDeleteDishId(null); }}
+      />
+      <ConfirmDialog
+        open={confirmExpOpen}
+        title="Delete Expense Record"
+        message="Are you sure you want to permanently delete this expense record? This action cannot be undone."
+        confirmLabel="Delete Record"
+        cancelLabel="Cancel"
+        onConfirm={executeDeleteExpense}
+        onCancel={() => { setConfirmExpOpen(false); setPendingDeleteExpId(null); }}
+      />
       {/* Database Engine Header */}
       <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

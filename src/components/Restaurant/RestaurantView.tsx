@@ -4,6 +4,7 @@ import { Dish, PnLPeriod } from '../../types';
 import { BillDetailModal } from './BillDetailModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatDateDDMMYYYY, displayDateRange, isoToDDMMYYYY, ddmmyyyyToIso } from '../../utils/dateUtils';
+import { ConfirmDialog } from '../UI/ConfirmDialog';
 
 export const RestaurantView: React.FC = () => {
   const { restaurantDetails } = useAuthStore();
@@ -54,6 +55,12 @@ export const RestaurantView: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPnlBill, setSelectedPnlBill] = useState<any | null>(null);
+
+  // In-app confirm dialog state — replaces window.confirm() to avoid Electron focus-loss cursor bug
+  const [confirmDishOpen, setConfirmDishOpen] = useState(false);
+  const [pendingDeleteDishId, setPendingDeleteDishId] = useState<number | null>(null);
+  const [confirmCatOpen, setConfirmCatOpen] = useState(false);
+  const [pendingDeleteCat, setPendingDeleteCat] = useState<{ id: number; name: string } | null>(null);
 
   // Category Management State
   const [showAddCatModal, setShowAddCatModal] = useState(false);
@@ -263,17 +270,23 @@ export const RestaurantView: React.FC = () => {
     setShowEditCatModal(false);
   };
 
-  const handleDeleteCategory = async (id: number, name: string) => {
-    if ((document.activeElement as HTMLElement)?.blur) {
-      (document.activeElement as HTMLElement).blur();
-    }
+  const handleDeleteCategory = (id: number, name: string) => {
     const dishCount = dishes.filter(d => Number(d.categoryId) === Number(id)).length;
     if (dishCount > 0) {
+      // Use alert replacement — a temporary info dialog; since no text input follows, alert is fine here
+      // but we still use in-app pattern for future consistency
       alert(`Cannot delete category "${name}" because it contains ${dishCount} menu dish(es). Please delete or reassign those dishes first.`);
       return;
     }
+    setPendingDeleteCat({ id, name });
+    setConfirmCatOpen(true);
+  };
 
-    if (!confirm(`Are you sure you want to delete category "${name}"?`)) return;
+  const executeDeleteCategory = async () => {
+    setConfirmCatOpen(false);
+    if (!pendingDeleteCat) return;
+    const { id } = pendingDeleteCat;
+    setPendingDeleteCat(null);
 
     if (editCatId === id) {
       setEditCatId(null);
@@ -420,12 +433,18 @@ export const RestaurantView: React.FC = () => {
   };
 
 
-  // Delete Dish
-  const handleDeleteDish = async (id: number) => {
-    if ((document.activeElement as HTMLElement)?.blur) {
-      (document.activeElement as HTMLElement).blur();
-    }
-    if (!confirm('Are you sure you want to remove this dish from the menu?')) return;
+  // Delete Dish — queues confirmation in-app (avoids Electron focus-loss cursor bug)
+  const handleDeleteDish = (id: number) => {
+    setPendingDeleteDishId(id);
+    setConfirmDishOpen(true);
+  };
+
+  const executeDeleteDish = async () => {
+    setConfirmDishOpen(false);
+    if (pendingDeleteDishId == null) return;
+    const id = pendingDeleteDishId;
+    setPendingDeleteDishId(null);
+
     if (editId === id) {
       setEditId(null);
       setShowEditModal(false);
@@ -684,6 +703,25 @@ export const RestaurantView: React.FC = () => {
 
   return (
     <div className="space-y-6 select-none">
+      {/* In-app Delete Confirmation Dialogs (replaces window.confirm to fix Electron cursor bug) */}
+      <ConfirmDialog
+        open={confirmDishOpen}
+        title="Remove Menu Dish"
+        message="Are you sure you want to permanently remove this dish from the menu? This action cannot be undone."
+        confirmLabel="Remove Dish"
+        cancelLabel="Cancel"
+        onConfirm={executeDeleteDish}
+        onCancel={() => { setConfirmDishOpen(false); setPendingDeleteDishId(null); }}
+      />
+      <ConfirmDialog
+        open={confirmCatOpen}
+        title="Delete Food Category"
+        message={`Are you sure you want to delete category "${pendingDeleteCat?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete Category"
+        cancelLabel="Cancel"
+        onConfirm={executeDeleteCategory}
+        onCancel={() => { setConfirmCatOpen(false); setPendingDeleteCat(null); }}
+      />
       {/* Sub Navigation Bar */}
       <div className="flex bg-olive-900 p-1 border border-gold-500/20 rounded-xl w-fit gap-1">
         <button

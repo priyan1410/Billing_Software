@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, Plus, Trash2 } from 'lucide-react';
 import { Expense } from '../../types';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../../utils/dateUtils';
+import { ConfirmDialog } from '../UI/ConfirmDialog';
 
 const getTodayString = () => {
   const d = new Date();
@@ -22,6 +23,10 @@ export const ExpensesView: React.FC = () => {
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [saving, setSaving] = useState(false);
   const [errMsg, setErrMsg] = useState('');
+
+  // In-app confirm dialog state (replaces window.confirm to avoid Electron focus-loss cursor bug)
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
     loadExpenses();
@@ -90,11 +95,16 @@ export const ExpensesView: React.FC = () => {
     }
   };
 
-  const handleDeleteExpense = async (id: number) => {
-    if ((document.activeElement as HTMLElement)?.blur) {
-      (document.activeElement as HTMLElement).blur();
-    }
-    if (!confirm('Are you sure you want to delete this expense entry?')) return;
+  const handleDeleteExpense = (id: number) => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  const executeDeleteExpense = async () => {
+    setConfirmOpen(false);
+    if (pendingDeleteId == null) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
       if ((window as any).electronAPI) {
         const res = await (window as any).electronAPI.deleteExpense(id);
@@ -109,6 +119,15 @@ export const ExpensesView: React.FC = () => {
 
   return (
     <div className="space-y-6 select-none">
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete Expense Entry"
+        message="Are you sure you want to permanently delete this expense entry? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={executeDeleteExpense}
+        onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+      />
       {/* Top Section: Log Expense Input Form */}
       <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 shadow-lg">
         <h3 className="text-base font-bold text-gold-500 flex items-center gap-2 mb-4">
