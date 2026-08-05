@@ -164,10 +164,11 @@ export const RestaurantSettingsView: React.FC = () => {
       printShowRoundOff: form.printShowRoundOff ?? true,
       printShowFooterNote: form.printShowFooterNote ?? true,
       printWithToken: form.printWithToken ?? true,
+      printOption: form.printOption || 'both',
       printer1Name: form.printer1Name || '',
       printer1Target: form.printer1Target || 'both',
       printer2Name: form.printer2Name || '',
-      printer2Target: form.printer2Target || 'none'
+      printer2Target: form.printer2Target || (form.printer2Name ? 'token' : 'none')
     };
 
     const res = await updateRestaurantDetails(payload);

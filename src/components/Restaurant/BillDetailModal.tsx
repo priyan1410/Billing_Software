@@ -3,7 +3,7 @@ import { X, Printer, Receipt, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
-import { dispatchPrintJob } from '../../utils/printRouter';
+import { dispatchPrintJob, dispatchOrderPrintJobs } from '../../utils/printRouter';
 
 interface BillDetailModalProps {
   order: any;
@@ -58,72 +58,22 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
   const handlePrint = async () => {
     setIsPrinting(true);
     try {
-      const rName = String(restaurantDetails?.companyName || 'KISH MANDHI');
-      const rTagline = String(restaurantDetails?.tagline || '');
-      const rAddr = String(restaurantDetails?.address || '');
-      const rawPhone = String(restaurantDetails?.phone || '');
-      const rPhone = rawPhone ? (rawPhone.startsWith('Phone:') ? rawPhone : `Phone: ${rawPhone}`) : '';
-      const rawGst = String(restaurantDetails?.gstNumber || restaurantDetails?.gstNo || '');
-      const gstVal = rawGst.replace(/^GSTIN:\s*/i, '').trim();
-      const rawFssai = String(restaurantDetails?.fssaiNumber || restaurantDetails?.fssaiNo || '');
-      const fssaiVal = rawFssai.replace(/^FSSAI:\s*/i, '').trim();
-
-      let rGstFssaiLine = '';
-      if (gstVal && fssaiVal) {
-        rGstFssaiLine = `GSTIN: ${gstVal}  |  FSSAI: ${fssaiVal}`;
-      } else if (gstVal) {
-        rGstFssaiLine = `GSTIN: ${gstVal}`;
-      } else if (fssaiVal) {
-        rGstFssaiLine = `FSSAI: ${fssaiVal}`;
-      }
-
-      const cgstRate = (taxRate / 2).toFixed(1);
-      const sgstRate = (taxRate / 2).toFixed(1);
-      const roundOffVal = Number(order.roundOff ?? order.round_off ?? 0);
-
-      const printWithToken = restaurantDetails?.printWithToken ?? true;
       const tokenNumber = order.tokenNumber || order.token_number || `KMKOT001`;
-
-      const invoiceHtml = formatPosInvoiceHtml(
-        {
-          orderNumber: billNumber,
-          tokenNumber: tokenNumber,
-          orderType: order.orderType || order.order_type || 'Dine-In',
-          paymentMode: order.paymentMode || order.payment_mode || 'Cash',
-          items: items || [],
-          subtotal: subtotal,
-          discount: discount,
-          tax: taxAmt,
-          grandTotal: grandTotal,
-          roundOff: roundOffVal,
-          orderDate: formattedDate,
-          customerName: order.customerName || order.customer_name || '',
-          customerPhone: order.customerPhone || order.customer_phone || '',
-          createdAt: order.createdAt || order.created_at
-        },
-        restaurantDetails
-      );
-
-      // Action 1: Print Bill
-      await dispatchPrintJob('bill', invoiceHtml, restaurantDetails);
-
-      // Action 2: Print Token (Separate Job)
-      if (printWithToken) {
-        const tokenHtml = formatPosTokenHtml(
-          {
-            tokenNumber: tokenNumber,
-            orderNumber: billNumber,
-            orderType: order.orderType || order.order_type || 'Dine-In',
-            paymentMode: order.paymentMode || order.payment_mode || 'Cash',
-            items: items || [],
-            date: formattedDate,
-            timestamp: formattedTime
-          },
-          restaurantDetails
-        );
-        await new Promise((resolve) => setTimeout(resolve, 350));
-        await dispatchPrintJob('token', tokenHtml, restaurantDetails);
-      }
+      const orderData = {
+        ...order,
+        orderNumber: billNumber,
+        tokenNumber,
+        items: items || [],
+        subtotal,
+        discount,
+        tax: taxAmt,
+        grandTotal,
+        orderDate: formattedDate
+      };
+      await dispatchOrderPrintJobs(orderData, restaurantDetails, {
+        formattedDate,
+        formattedTime
+      });
     } catch (err: any) {
       alert('Error printing bill: ' + err.message);
     } finally {

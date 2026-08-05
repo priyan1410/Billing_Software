@@ -8,7 +8,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { usePosStore } from '../../store/usePosStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
-import { dispatchPrintJob } from '../../utils/printRouter';
+import { dispatchPrintJob, dispatchOrderPrintJobs } from '../../utils/printRouter';
 
 interface PreviousBillsModalProps {
   onClose: () => void;
@@ -275,61 +275,24 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
       const billNumber = selectedOrder.orderNumber || `KMIV-001`;
       const tokenNumber = selectedOrder.tokenNumber || `KMKOT001`;
 
-      if (isKot) {
-        const tokenHtml = formatPosTokenHtml(
-          {
-            tokenNumber: tokenNumber,
-            orderNumber: billNumber,
-            orderType: selectedOrder.orderType || 'Dine-In',
-            paymentMode: selectedOrder.paymentMode || 'Cash',
-            items: orderItems || [],
-            date: printDateStr,
-            timestamp: printTimeStr
-          },
-          restaurantDetails
-        );
-        await dispatchPrintJob('token', tokenHtml, restaurantDetails);
-      } else {
-        const invoiceHtml = formatPosInvoiceHtml(
-          {
-            orderNumber: billNumber,
-            tokenNumber: tokenNumber,
-            orderType: selectedOrder.orderType || 'Dine-In',
-            paymentMode: selectedOrder.paymentMode || 'Cash',
-            items: orderItems || [],
-            subtotal: rawSubtotal,
-            discount: effectiveDiscount,
-            tax: taxAmt,
-            grandTotal: calculatedGrandTotal,
-            orderDate: printDateStr,
-            customerName: selectedOrder.customerName || selectedOrder.customer_name || '',
-            customerPhone: selectedOrder.customerPhone || selectedOrder.customer_phone || '',
-            createdAt: selectedOrder.createdAt || selectedOrder.created_at
-          },
-          restaurantDetails
-        );
+      const orderData = {
+        ...selectedOrder,
+        orderNumber: billNumber,
+        tokenNumber: tokenNumber,
+        items: orderItems || [],
+        subtotal: rawSubtotal,
+        discount: effectiveDiscount,
+        tax: taxAmt,
+        grandTotal: calculatedGrandTotal,
+        orderDate: printDateStr
+      };
 
-        // Action 1: Print Bill
-        await dispatchPrintJob('bill', invoiceHtml, restaurantDetails);
-
-        // Action 2: Print Token (Separate Job)
-        if (showTokenTicket) {
-          const tokenHtml = formatPosTokenHtml(
-            {
-              tokenNumber: tokenNumber,
-              orderNumber: billNumber,
-              orderType: selectedOrder.orderType || 'Dine-In',
-              paymentMode: selectedOrder.paymentMode || 'Cash',
-              items: orderItems || [],
-              date: printDateStr,
-              timestamp: printTimeStr
-            },
-            restaurantDetails
-          );
-          await new Promise((resolve) => setTimeout(resolve, 350));
-          await dispatchPrintJob('token', tokenHtml, restaurantDetails);
-        }
-      }
+      await dispatchOrderPrintJobs(orderData, restaurantDetails, {
+        printOption: showTokenTicket ? 'both' : 'bill',
+        isKotOnly: isKot,
+        formattedDate: printDateStr,
+        formattedTime: printTimeStr
+      });
     } catch (err: any) {
       alert('Error printing bill: ' + err.message);
     } finally {

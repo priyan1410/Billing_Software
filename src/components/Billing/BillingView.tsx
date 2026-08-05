@@ -9,7 +9,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Dish, OrderPayload, PortionVariant } from '../../types';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
-import { dispatchPrintJob } from '../../utils/printRouter';
+import { dispatchPrintJob, dispatchOrderPrintJobs } from '../../utils/printRouter';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (n: number, curr = '₹') =>
@@ -39,11 +39,12 @@ const ConfirmOrderModal: React.FC<{
   curr: string;
   billNumber: string;
   restaurantDetails?: any;
+  updateRestaurantDetails?: (details: any) => void;
   onSaveOnly: () => void;
   onPrintAndSave: () => void;
   onCancel: () => void;
   isLoading: boolean;
-}> = ({ cart, orderType, paymentMode, subtotal, tax, discount, grandTotal, taxRate, curr, billNumber, restaurantDetails, onSaveOnly, onPrintAndSave, onCancel, isLoading }) => {
+}> = ({ cart, orderType, paymentMode, subtotal, tax, discount, grandTotal, taxRate, curr, billNumber, restaurantDetails, updateRestaurantDetails, onSaveOnly, onPrintAndSave, onCancel, isLoading }) => {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -568,88 +569,8 @@ export const BillingView: React.FC = () => {
 
   const triggerPrintDirect = async (data: any, isKot = false) => {
     if (!data) return;
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    const formattedDate = `${day}/${month}/${year}`;
-
-    let hours = now.getHours();
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
-
     const rd = restaurantDetails;
-    const billNumber = data.orderNumber || `KMIV-001`;
-
-    let tokenNumber = data.tokenNumber || data.token_number;
-    if (!tokenNumber) {
-      if ((window as any).electronAPI?.getNextTokenSeq) {
-        const seqRes = await (window as any).electronAPI.getNextTokenSeq();
-        if (seqRes && seqRes.tokenNumber) {
-          tokenNumber = seqRes.tokenNumber;
-        }
-      }
-    }
-    if (!tokenNumber) {
-      tokenNumber = 'KMKOT001';
-    } else if (!String(tokenNumber).startsWith('KMKOT')) {
-      tokenNumber = `KMKOT${String(tokenNumber).padStart(3, '0')}`;
-    }
-
-    const activeTableNo = data.tableNumber || data.table_number || data.tableNo || (data.orderType === 'Takeaway' ? 'TA' : '');
-
-    if (isKot) {
-      const tokenHtml = formatPosTokenHtml(
-        {
-          tokenNumber: tokenNumber,
-          tableNo: activeTableNo,
-          orderType: data.orderType || 'Dine-In',
-          paymentMode: data.paymentMode || 'Cash',
-          items: data.items || [],
-          date: formattedDate,
-          timestamp: formattedTime
-        },
-        rd
-      );
-      await dispatchPrintJob('token', tokenHtml, rd);
-    } else {
-      const invoiceHtml = formatPosInvoiceHtml(
-        {
-          ...data,
-          tokenNumber: tokenNumber,
-          tableNumber: activeTableNo,
-          orderNumber: billNumber,
-          orderDate: formattedDate,
-          createdAt: new Date().toISOString()
-        },
-        rd
-      );
-
-      // Print Action 1: Tax Invoice Bill
-      await dispatchPrintJob('bill', invoiceHtml, rd);
-
-      // Print Action 2: Token Slip (Separate Job & Separate Auto-Cut)
-      if (rd?.printWithToken !== false) {
-        const tokenHtml = formatPosTokenHtml(
-          {
-            tokenNumber: tokenNumber,
-            orderNumber: billNumber,
-            tableNo: activeTableNo,
-            orderType: data.orderType || 'Dine-In',
-            paymentMode: data.paymentMode || 'Cash',
-            items: data.items || [],
-            date: formattedDate,
-            timestamp: formattedTime
-          },
-          rd
-        );
-        await new Promise((resolve) => setTimeout(resolve, 350));
-        await dispatchPrintJob('token', tokenHtml, rd);
-      }
-    }
+    await dispatchOrderPrintJobs(data, rd, { isKotOnly: isKot });
   };
 
   return (
@@ -1058,7 +979,9 @@ export const BillingView: React.FC = () => {
         <ConfirmOrderModal
           cart={cart} orderType={orderType} paymentMode={paymentMode}
           subtotal={subtotal} tax={taxAmt} discount={discount} grandTotal={grandTotal}
-          taxRate={taxRate} curr={curr} billNumber={editingBillNumber || nextBillNumber} restaurantDetails={restaurantDetails}
+          taxRate={taxRate} curr={curr} billNumber={editingBillNumber || nextBillNumber}
+          restaurantDetails={restaurantDetails}
+          updateRestaurantDetails={updateRestaurantDetails}
           onSaveOnly={() => handleSaveOrder(false)}
           onPrintAndSave={() => handleSaveOrder(true)}
           onCancel={() => setShowConfirmModal(false)}

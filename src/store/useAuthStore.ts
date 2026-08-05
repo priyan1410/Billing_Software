@@ -27,28 +27,15 @@ export const defaultRestaurant: RestaurantDetails = {
   printShowRoundOff: true,
   printShowFooterNote: true,
   printWithToken: true,
+  printOption: 'both',
   printer1Name: '',
   printer1Target: 'both',
   printer2Name: '',
-  printer2Target: 'none'
+  printer2Target: 'token'
 };
 
-export const syncAppIcon = (iconUrl?: string) => {
-  if (!iconUrl) return;
-  if ((window as any).electronAPI?.updateWindowIcon) {
-    (window as any).electronAPI.updateWindowIcon(iconUrl);
-  }
-  try {
-    let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'shortcut icon';
-      document.getElementsByTagName('head')[0].appendChild(link);
-    }
-    link.href = iconUrl;
-  } catch (e) {
-    // Ignore DOM errors if rendering headless
-  }
+export const syncAppIcon = (_iconUrl?: string) => {
+  // Logo is only displayed inside the POS dashboard UI and receipts, not as the client computer window/taskbar icon
 };
 
 interface AuthState {
