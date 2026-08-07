@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Database, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp, Package } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Database, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle, Trash2, Edit3, Save, Search, Utensils, Receipt, Wallet, Table, FileSpreadsheet, Settings, Server, X, HelpCircle, ChevronDown, ChevronUp, Package, Cloud, Wifi, WifiOff, Clock, ShieldCheck, Maximize2, Minimize2 } from 'lucide-react';
 import { Dish, Order, Expense } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -13,6 +13,7 @@ export const DbSettingsView: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showRawTables, setShowRawTables] = useState(true);
   const [testing, setTesting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Dish>>({});
@@ -22,6 +23,19 @@ export const DbSettingsView: React.FC = () => {
   const [pendingDeleteDishId, setPendingDeleteDishId] = useState<number | null>(null);
   const [confirmExpOpen, setConfirmExpOpen] = useState(false);
   const [pendingDeleteExpId, setPendingDeleteExpId] = useState<number | null>(null);
+
+  // ─── Cloud Sync State (Phase 5) ───────────────────────────────────────────
+  const [showCloudPanel, setShowCloudPanel] = useState(false);
+  const [cloudForm, setCloudForm] = useState({
+    host: '', port: '3306', user: '', password: '', database: 'kish_mandhi',
+    useSSL: true
+  });
+  const [cloudTestMsg, setCloudTestMsg] = useState<string | null>(null);
+  const [cloudTestOk, setCloudTestOk] = useState<boolean | null>(null);
+  const [cloudSaving, setCloudSaving] = useState(false);
+  const [cloudTesting, setCloudTesting] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<any>(null);
+  const sslInputRef = useRef<HTMLInputElement>(null);
 
   // Full PC Migration & Backup State
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'working' | 'success' | 'error'>('idle');
@@ -56,7 +70,129 @@ export const DbSettingsView: React.FC = () => {
     loadAllData();
     loadDbConfig();
     loadBackupDetails();
+    loadCloudConfig();
+    loadSyncStatus();
   }, [activeTab]);
+
+  const loadCloudConfig = async () => {
+    try {
+      const api = (window as any).electronAPI;
+      if (api?.getCloudConfig) {
+        const res = await api.getCloudConfig();
+        if (res?.success && res.data) {
+          setCloudForm(prev => ({ ...prev, ...res.data, password: '' }));
+        }
+      }
+    } catch (e) {}
+  };
+
+  const loadSyncStatus = async () => {
+    try {
+      const api = (window as any).electronAPI;
+      if (api?.getSyncStatus) {
+        const res = await api.getSyncStatus();
+        if (res?.success) setSyncStatus(res.data);
+      }
+    } catch (e) {}
+  };
+
+  const handleTestCloudConnection = async () => {
+    setCloudTesting(true);
+    setCloudTestMsg('Connecting to cloud server...');
+    setCloudTestOk(null);
+    try {
+      const api = (window as any).electronAPI;
+      if (api?.testCloudConnection) {
+        const res = await api.testCloudConnection({ ...cloudForm });
+        setCloudTestOk(!!res.success);
+        setCloudTestMsg(res.message || (res.success ? '✓ Connected!' : '❌ Failed'));
+      } else {
+        setCloudTestMsg('❌ Cloud API not initialized in running process. Please restart app.');
+        setCloudTestOk(false);
+      }
+    } catch (e: any) {
+      setCloudTestOk(false);
+      setCloudTestMsg('❌ Error: ' + e.message);
+    } finally {
+      setCloudTesting(false);
+    }
+  };
+
+  const handleSaveCloudConfig = async () => {
+    if (!cloudForm.host || !cloudForm.user) {
+      setCloudTestMsg('❌ Please enter Host and Username.');
+      setCloudTestOk(false);
+      return;
+    }
+    setCloudSaving(true);
+    setCloudTestMsg('Saving cloud configuration...');
+    try {
+      const api = (window as any).electronAPI;
+      if (api?.saveCloudConfig) {
+        const res = await api.saveCloudConfig({ ...cloudForm });
+        setCloudTestOk(!!res.success);
+        setCloudTestMsg(res.message || (res.success ? '✓ Saved! Sync starting...' : '❌ Failed to save'));
+        if (res.success) await loadSyncStatus();
+      } else {
+        setCloudTestMsg('❌ Cloud API not initialized in running process. Please restart app.');
+        setCloudTestOk(false);
+      }
+    } catch (e: any) {
+      setCloudTestOk(false);
+      setCloudTestMsg('❌ Error: ' + e.message);
+    } finally {
+      setCloudSaving(false);
+    }
+  };
+
+  const handleSslUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const content = await file.text();
+      const api = (window as any).electronAPI;
+      if (api?.saveSslCert) {
+        const res = await api.saveSslCert(content);
+        if (res?.success) {
+          setCloudForm(prev => ({ ...prev, sslCertPath: res.certPath } as any));
+          setCloudTestMsg('✓ SSL certificate uploaded and saved.');
+          setCloudTestOk(true);
+        }
+      }
+    } catch (e: any) {
+      setCloudTestMsg('❌ SSL upload error: ' + e.message);
+      setCloudTestOk(false);
+    }
+  };
+
+  const [manualSyncing, setManualSyncing] = useState(false);
+
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      loadSyncStatus();
+    }, 4000);
+    return () => clearInterval(syncInterval);
+  }, []);
+
+  const handleTriggerSync = async () => {
+    setManualSyncing(true);
+    try {
+      const api = (window as any).electronAPI;
+      if (api?.triggerSync) {
+        await api.triggerSync();
+        setTimeout(loadSyncStatus, 1000);
+        setTimeout(loadSyncStatus, 2500);
+        setTimeout(() => {
+          loadSyncStatus();
+          setManualSyncing(false);
+        }, 4000);
+      } else {
+        setManualSyncing(false);
+      }
+    } catch (e) {
+      setManualSyncing(false);
+    }
+  };
 
 
   const loadDbConfig = async () => {
@@ -464,17 +600,6 @@ export const DbSettingsView: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
-              onClick={() => {
-                setDbStatusMsg(null);
-                loadDbConfig();
-                setShowConfigModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 hover:opacity-90 font-extrabold text-xs rounded-xl shadow-md transition-all"
-            >
-              <Settings className="w-3.5 h-3.5" /> Configure MySQL
-            </button>
-
-            <button
               onClick={
                 activeTab === 'menu_items'
                   ? handleExportMenuExcel
@@ -548,167 +673,113 @@ export const DbSettingsView: React.FC = () => {
         )}
       </div>
 
-      {/* Auto-Backup & Data Protection Center */}
-      <div className="bg-gradient-to-r from-emerald-950/60 via-olive-900 to-teal-950/60 border border-emerald-500/40 rounded-2xl p-5 shadow-xl">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-              <Database className="w-6 h-6" />
+      {/* Auto-Backup & Data Protection Center (Hidden per UX layout preferences) */}
+
+
+      {/* ─── RAW DATABASE TABLES INSPECTOR (COLLAPSIBLE / MINIMIZE & MAXIMIZE) ─── */}
+      <div className="bg-olive-900 border border-gold-500/20 rounded-2xl shadow-lg overflow-hidden">
+        {/* Collapsible Card Header */}
+        <button
+          onClick={() => setShowRawTables(p => !p)}
+          className="w-full flex items-center justify-between p-4 bg-olive-900 hover:bg-olive-800/40 transition-colors border-b border-gold-500/10"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400">
+              <Table className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-extrabold text-white tracking-wide">Automated Daily Backups & DLP Safeguard</h4>
-                <span className="px-2 py-0.5 text-[10px] font-black uppercase rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Active (24h Auto-Sync)
+            <div className="text-left">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Raw Database Tables Inspector
+                <span className="text-[10px] bg-gold-500/20 text-gold-300 px-2 py-0.5 rounded-full border border-gold-500/30 font-semibold font-mono">
+                  {menuItems.length + orders.length + expenses.length} Total Records
                 </span>
-              </div>
-              <p className="text-xs text-olive-300 mt-0.5">
-                Target Backup Directory: <code className="font-mono text-emerald-300 bg-black/40 px-1.5 py-0.5 rounded">{backupConfig.backupPath || 'C:\\kish_mandhi_backups'}</code>
+              </h3>
+              <p className="text-xs text-olive-300">
+                Inspect, search, edit dishes & prices, export/import raw data tables
               </p>
-              {backupConfig.lastBackupTime && (
-                <p className="text-[11px] text-emerald-400/80 mt-0.5 font-medium">
-                  ✓ Last Automatic Backup: {formatDateDDMMYYYY(backupConfig.lastBackupTime)} ({new Date(backupConfig.lastBackupTime).toLocaleTimeString()})
-                </p>
-              )}
             </div>
           </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={handleInstantBackup}
-              disabled={backupLoading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50"
-              title="Trigger instant full snapshot backup of all tables right now"
-            >
-              {backupLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              <span>Backup Entire System Data Now</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setShowBackupHistory(!showBackupHistory);
-                loadBackupDetails();
-              }}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-olive-800 border border-white/15 text-white/80 hover:text-white font-bold text-xs rounded-xl transition-all"
-            >
-              <Table className="w-3.5 h-3.5" />
-              <span>{showBackupHistory ? 'Hide History' : `Backup History (${backupsList.length})`}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Backup Feedback Banner */}
-        {backupMsg && (
-          <div className="mt-4 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-              <span>{backupMsg}</span>
-            </div>
-            <button onClick={() => setBackupMsg(null)} className="text-emerald-400/60 hover:text-emerald-300">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Backup History Table Accordion */}
-        {showBackupHistory && (
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <p className="text-xs font-bold text-white/80 mb-2 flex items-center justify-between">
-              <span>Saved Backup Files Snapshot List (Rolling 30-Day Retention):</span>
-              <button onClick={loadBackupDetails} className="text-emerald-400 hover:underline flex items-center gap-1 text-[11px]">
-                <RefreshCw className="w-3 h-3" /> Refresh List
-              </button>
-            </p>
-
-            {backupsList.length === 0 ? (
-              <p className="text-xs text-white/40 italic bg-black/20 p-3 rounded-xl text-center">No backup files created yet. Click "Backup Entire System Data Now" to create your first backup.</p>
+          <div className="flex items-center gap-2 text-xs text-gold-400 font-semibold bg-olive-950/60 px-3 py-1.5 rounded-xl border border-gold-500/20">
+            {showRawTables ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>Minimize Table</span>
+              </>
             ) : (
-              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                {backupsList.map((b, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-black/40 border border-white/10 p-2.5 rounded-xl text-xs">
-                    <div className="flex items-center gap-2">
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <div>
-                        <p className="font-mono text-white font-semibold">{b.filename} {b.isLatest && <span className="text-[10px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded ml-1 font-sans font-bold">LATEST</span>}</p>
-                        <p className="text-[10px] text-white/40">{formatDateDDMMYYYY(b.mtime)} • {b.sizeFormatted}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-emerald-400/80 bg-emerald-500/10 px-2 py-1 rounded-md">{b.filePath}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <>
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Maximize Table</span>
+              </>
             )}
           </div>
-        )}
-      </div>
+        </button>
 
-      {/* Record Counter Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-olive-900 border border-gold-500/20 p-2 rounded-2xl">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('menu_items')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-              activeTab === 'menu_items'
-                ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md'
-                : 'text-olive-300 hover:text-white'
-            }`}
-          >
-            <Utensils className="w-4 h-4" /> `menu_items` ({menuItems.length})
-          </button>
+        {showRawTables && (
+          <div className="p-5 space-y-4">
+            {/* Record Counter Tabs & Search */}
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-olive-950/80 border border-gold-500/20 p-2 rounded-2xl">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('menu_items')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                    activeTab === 'menu_items'
+                      ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md'
+                      : 'text-olive-300 hover:text-white'
+                  }`}
+                >
+                  <Utensils className="w-4 h-4" /> `menu_items` ({menuItems.length})
+                </button>
 
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-              activeTab === 'orders'
-                ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md'
-                : 'text-olive-300 hover:text-white'
-            }`}
-          >
-            <Receipt className="w-4 h-4" /> `orders` ({orders.length})
-          </button>
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                    activeTab === 'orders'
+                      ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md'
+                      : 'text-olive-300 hover:text-white'
+                  }`}
+                >
+                  <Receipt className="w-4 h-4" /> `orders` ({orders.length})
+                </button>
 
-          <button
-            onClick={() => setActiveTab('expenses')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
-              activeTab === 'expenses'
-                ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md'
-                : 'text-olive-300 hover:text-white'
-            }`}
-          >
-            <Wallet className="w-4 h-4" /> `expenses` ({expenses.length})
-          </button>
-        </div>
+                <button
+                  onClick={() => setActiveTab('expenses')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                    activeTab === 'expenses'
+                      ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md'
+                      : 'text-olive-300 hover:text-white'
+                  }`}
+                >
+                  <Wallet className="w-4 h-4" /> `expenses` ({expenses.length})
+                </button>
+              </div>
 
-        {/* Live Search */}
-        <div className="relative min-w-[240px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-olive-300" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Search ${activeTab} data...`}
-            className="w-full pl-9 pr-3 py-1.5 bg-olive-950 border border-gold-500/20 rounded-xl text-xs text-white placeholder-olive-300 focus:outline-none focus:border-gold-500"
-          />
-        </div>
-      </div>
+              {/* Live Search */}
+              <div className="relative min-w-[240px]">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-olive-300" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={`Search ${activeTab} data...`}
+                  className="w-full pl-9 pr-3 py-1.5 bg-olive-950 border border-gold-500/20 rounded-xl text-xs text-white placeholder-olive-300 focus:outline-none focus:border-gold-500"
+                />
+              </div>
+            </div>
 
-      {/* Table 1: menu_items Data Editor */}
-      {activeTab === 'menu_items' && (
-        <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 space-y-4">
-          <div className="flex justify-between items-center">
-            <h4 className="text-sm font-bold text-gold-500 flex items-center gap-2">
-              <Table className="w-4 h-4" /> Raw Table: `menu_items` (Dishes & Prices Editor)
-            </h4>
-            <button
-              onClick={handleExportMenuExcel}
-              className="text-xs text-emerald-400 hover:underline font-bold flex items-center gap-1"
-            >
-              <Download className="w-3.5 h-3.5" /> Download Excel Sheet
-            </button>
-          </div>
+            {/* Table 1: menu_items Data Editor */}
+            {activeTab === 'menu_items' && (
+              <div className="bg-olive-950/60 border border-gold-500/20 rounded-2xl p-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-bold text-gold-500 flex items-center gap-2">
+                    <Table className="w-4 h-4" /> Raw Table: `menu_items` (Dishes & Prices Editor)
+                  </h4>
+                  <button
+                    onClick={handleExportMenuExcel}
+                    className="text-xs text-emerald-400 hover:underline font-bold flex items-center gap-1"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download Excel Sheet
+                  </button>
+                </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
@@ -882,68 +953,89 @@ export const DbSettingsView: React.FC = () => {
         </div>
       )}
 
-      {/* Table 3: expenses Data Inspector */}
-      {activeTab === 'expenses' && (
-        <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 space-y-4">
-          <div className="flex justify-between items-center">
-            <h4 className="text-sm font-bold text-gold-500 flex items-center gap-2">
-              <Table className="w-4 h-4" /> Raw Table: `expenses` (Financial Ledger)
-            </h4>
-            <button
-              onClick={handleExportExpensesExcel}
-              className="text-xs text-emerald-400 hover:underline font-bold flex items-center gap-1"
-            >
-              <Download className="w-3.5 h-3.5" /> Download Excel Sheet
-            </button>
-          </div>
+            {/* Table 3: expenses Data Inspector */}
+            {activeTab === 'expenses' && (
+              <div className="bg-olive-950/60 border border-gold-500/20 rounded-2xl p-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-bold text-gold-500 flex items-center gap-2">
+                    <Table className="w-4 h-4" /> Raw Table: `expenses` (Financial Ledger)
+                  </h4>
+                  <button
+                    onClick={handleExportExpensesExcel}
+                    className="text-xs text-emerald-400 hover:underline font-bold flex items-center gap-1"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Download Excel Sheet
+                  </button>
+                </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-olive-950 text-gold-400 border-b border-gold-500/20">
-                  <th className="py-2.5 px-3">Category</th>
-                  <th className="py-2.5 px-3">Description</th>
-                  <th className="py-2.5 px-3">Amount (₹)</th>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gold-500/10">
-                {filteredExpenses.map((exp) => (
-                  <tr key={exp.id} className="hover:bg-olive-800/40">
-                    <td className="py-3 px-3 font-bold text-white">{exp.category}</td>
-                    <td className="py-3 px-3 text-olive-300">{exp.description}</td>
-                    <td className="py-3 px-3 font-bold text-rose-400">₹{Number(exp.amount || 0).toFixed(2)}</td>
-                    <td className="py-3 px-3 font-mono text-olive-300">
-                      {formatDateDDMMYYYY(exp.expenseDate || (exp as any).expense_date)}
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <button onClick={() => handleDeleteExpense(exp.id)} className="p-1.5 bg-olive-800 text-rose-400 border border-rose-500/30 rounded hover:bg-rose-600 hover:text-white transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* MySQL Connection Configuration Modal */}
-      {showConfigModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-olive-900 border border-gold-500 rounded-2xl p-6 w-full max-w-lg space-y-4 relative shadow-2xl">
-            <div className="flex justify-between items-center pb-3 border-b border-gold-500/20">
-              <div className="flex items-center gap-2 text-gold-500">
-                <Server className="w-5 h-5" />
-                <h4 className="text-base font-bold">Configure MySQL Database Connection</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-olive-950 text-gold-400 border-b border-gold-500/20">
+                        <th className="py-2.5 px-3">Category</th>
+                        <th className="py-2.5 px-3">Description</th>
+                        <th className="py-2.5 px-3">Amount (₹)</th>
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gold-500/10">
+                      {filteredExpenses.map((exp) => (
+                        <tr key={exp.id} className="hover:bg-olive-800/40">
+                          <td className="py-3 px-3 font-bold text-white">{exp.category}</td>
+                          <td className="py-3 px-3 text-olive-300">{exp.description}</td>
+                          <td className="py-3 px-3 font-bold text-rose-400">₹{Number(exp.amount || 0).toFixed(2)}</td>
+                          <td className="py-3 px-3 font-mono text-olive-300">
+                            {formatDateDDMMYYYY(exp.expenseDate || (exp as any).expense_date)}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <button onClick={() => handleDeleteExpense(exp.id)} className="p-1.5 bg-olive-800 text-rose-400 border border-rose-500/30 rounded hover:bg-rose-600 hover:text-white transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <button onClick={() => setShowConfigModal(false)} className="text-olive-300 hover:text-white transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            )}
+          </div>
+        )}
+      </div>
 
+      {/* ─── PRIMARY DATABASE PANEL (Local MySQL - Required) ─── */}
+      <div className="bg-olive-900 border border-gold-500/30 rounded-2xl shadow-lg overflow-hidden">
+        <button
+          onClick={() => setShowConfigModal(p => !p)}
+          className="w-full flex items-center justify-between p-5 hover:bg-olive-800/40 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              isDbConnected
+                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                : 'bg-rose-500/15 border border-rose-500/30 text-rose-400'
+            }`}>
+              <Database className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Primary Database (Local MySQL)
+                {isDbConnected
+                  ? <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-semibold">CONNECTED</span>
+                  : <span className="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full border border-rose-500/30 font-semibold">DISCONNECTED</span>
+                }
+              </h3>
+              <p className="text-xs text-olive-300">
+                Primary database engine for instant local billing (Host: {dbConfig.host || 'localhost'}:{dbConfig.port || '3306'})
+              </p>
+            </div>
+          </div>
+          {showConfigModal ? <ChevronUp className="w-4 h-4 text-olive-300" /> : <ChevronDown className="w-4 h-4 text-olive-300" />}
+        </button>
+
+        {showConfigModal && (
+          <div className="border-t border-gold-500/20 p-5 space-y-4">
             {dbStatusMsg && (
               <div className={`p-3 rounded-xl text-xs font-semibold ${dbStatusMsg.includes('✓') ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300' : dbStatusMsg.includes('Connecting') ? 'bg-amber-500/20 border border-amber-500/30 text-amber-300 animate-pulse' : 'bg-rose-500/20 border border-rose-500/30 text-rose-300'}`}>
                 {dbStatusMsg}
@@ -1061,7 +1153,7 @@ export const DbSettingsView: React.FC = () => {
                   type="button"
                   onClick={handleTestCustomDbConnection}
                   disabled={testing}
-                  className="flex-1 py-2.5 bg-olive-800 border border-gold-500/30 text-gold-400 font-bold rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 bg-olive-800 border border-gold-500/30 text-gold-400 font-bold rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-colors flex items-center justify-center gap-1.5 text-xs"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${testing ? 'animate-spin' : ''}`} /> Test Connection
                 </button>
@@ -1069,15 +1161,207 @@ export const DbSettingsView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={savingConfig}
-                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold rounded-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold rounded-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-1.5 text-xs"
                 >
                   <Save className="w-3.5 h-3.5" /> Save & Connect
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* ─── CLOUD SYNC PANEL (Phase 5) ───────────────────────────────────── */}
+      <div className="bg-olive-900 border border-gold-500/20 rounded-2xl shadow-lg overflow-hidden">
+        {/* Header toggle */}
+        <button
+          onClick={() => setShowCloudPanel(p => !p)}
+          className="w-full flex items-center justify-between p-5 hover:bg-olive-800/40 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              syncStatus?.isCloudConfigured
+                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                : 'bg-gold-500/10 border border-gold-500/30 text-gold-400'
+            }`}>
+              <Cloud className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Cloud Sync
+                {syncStatus?.isCloudConfigured ? (
+                  manualSyncing || syncStatus?.isSyncing ? (
+                    <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 font-semibold animate-pulse flex items-center gap-1">
+                      <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-400" /> SYNCING...
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-semibold">ACTIVE</span>
+                  )
+                ) : (
+                  <span className="text-[10px] bg-gold-500/10 text-gold-400 px-2 py-0.5 rounded-full border border-gold-500/30 font-semibold">NOT CONFIGURED</span>
+                )}
+              </h3>
+              <p className="text-xs text-olive-300">
+                {syncStatus?.isCloudConfigured
+                  ? `Last sync: ${syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleTimeString() : 'Never'} • ${syncStatus.pendingCount || 0} pending`
+                  : 'Connect any cloud MySQL provider — Aiven, AWS RDS, Railway, DigitalOcean, VPS...'}
+              </p>
+            </div>
+          </div>
+          {showCloudPanel ? <ChevronUp className="w-4 h-4 text-olive-300" /> : <ChevronDown className="w-4 h-4 text-olive-300" />}
+        </button>
+
+        {showCloudPanel && (
+          <div className="border-t border-gold-500/20 p-5 space-y-5">
+
+            {/* Sync Status Bar */}
+            {syncStatus?.isCloudConfigured && (
+              <div className="flex flex-wrap items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <div className="flex items-center gap-1.5 text-xs text-emerald-300">
+                  <Wifi className="w-3.5 h-3.5" /> Cloud Connected
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-olive-300">
+                  <Clock className="w-3.5 h-3.5" />
+                  Last sync: {syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleString() : 'Pending first sync...'}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-gold-400">
+                  Pending: {syncStatus.pendingCount || 0} records
+                </div>
+                <button
+                  type="button"
+                  onClick={handleTriggerSync}
+                  disabled={manualSyncing || syncStatus?.isSyncing}
+                  className="ml-auto text-[11px] px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-60"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${manualSyncing || syncStatus?.isSyncing ? 'animate-spin' : ''}`} />
+                  {manualSyncing || syncStatus?.isSyncing ? 'Syncing...' : 'Sync Now'}
+                </button>
+              </div>
+            )}
+
+            {/* Credentials Form */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-olive-300 block mb-1 font-semibold">Host / Server Address</label>
+                <input
+                  type="text"
+                  value={cloudForm.host}
+                  onChange={e => setCloudForm(p => ({ ...p, host: e.target.value }))}
+                  placeholder="mysql-xxx.aivencloud.com"
+                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white text-xs focus:outline-none focus:border-gold-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-olive-300 block mb-1 font-semibold">Port</label>
+                <input
+                  type="number"
+                  value={cloudForm.port}
+                  onChange={e => setCloudForm(p => ({ ...p, port: e.target.value }))}
+                  placeholder="3306"
+                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white text-xs focus:outline-none focus:border-gold-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-olive-300 block mb-1 font-semibold">Username</label>
+                <input
+                  type="text"
+                  value={cloudForm.user}
+                  onChange={e => setCloudForm(p => ({ ...p, user: e.target.value }))}
+                  placeholder="avnadmin or db_user"
+                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white text-xs focus:outline-none focus:border-gold-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-olive-300 block mb-1 font-semibold">Password</label>
+                <input
+                  type="password"
+                  value={cloudForm.password}
+                  onChange={e => setCloudForm(p => ({ ...p, password: e.target.value }))}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white text-xs focus:outline-none focus:border-gold-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-olive-300 block mb-1 font-semibold">Database Name</label>
+                <input
+                  type="text"
+                  value={cloudForm.database}
+                  onChange={e => setCloudForm(p => ({ ...p, database: e.target.value }))}
+                  placeholder="kish_mandhi"
+                  className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-white text-xs focus:outline-none focus:border-gold-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-olive-300 block mb-1 font-semibold">SSL Certificate (optional)</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => sslInputRef.current?.click()}
+                    className="flex-1 px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-olive-300 text-xs hover:border-gold-500/50 flex items-center gap-1.5 transition-colors"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-gold-400" />
+                    {(cloudForm as any).sslCertPath ? 'SSL Cert Saved ✓' : 'Upload CA Certificate .pem'}
+                  </button>
+                  <input
+                    ref={sslInputRef}
+                    type="file"
+                    accept=".pem,.crt,.cer"
+                    className="hidden"
+                    onChange={handleSslUpload}
+                  />
+                  <label className="flex items-center gap-1.5 text-xs text-olive-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={cloudForm.useSSL}
+                      onChange={e => setCloudForm(p => ({ ...p, useSSL: e.target.checked }))}
+                      className="w-3.5 h-3.5 rounded"
+                    />
+                    Use SSL
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Provider Note */}
+            <p className="text-[11px] text-olive-400 bg-olive-950/60 px-3 py-2 rounded-lg border border-gold-500/10">
+              Compatible with: Aiven • AWS RDS • Google Cloud SQL • DigitalOcean • Railway • Hostinger • Any VPS running MySQL
+            </p>
+
+            {/* Feedback Message */}
+            {cloudTestMsg && (
+              <div className={`text-xs px-3 py-2 rounded-xl border font-semibold ${
+                cloudTestOk
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+              }`}>
+                {cloudTestMsg}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleTestCloudConnection}
+                disabled={cloudTesting || !cloudForm.host}
+                className="flex-1 py-2.5 bg-olive-800 border border-gold-500/30 text-gold-400 font-bold rounded-xl hover:bg-gold-500 hover:text-olive-950 transition-colors flex items-center justify-center gap-1.5 text-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${cloudTesting ? 'animate-spin' : ''}`} />
+                {cloudTesting ? 'Testing...' : 'Test Connection'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCloudConfig}
+                disabled={cloudSaving || !cloudForm.host || !cloudForm.user}
+                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold rounded-xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-1.5 text-xs disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {cloudSaving ? 'Saving...' : 'Save & Enable Sync'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

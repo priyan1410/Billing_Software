@@ -81,7 +81,7 @@ export const AuthModal: React.FC = () => {
   const [showDbGuide, setShowDbGuide] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // Database Connection State
+  // Primary Database Connection State (Local MySQL)
   const [dbConfig, setDbConfig] = useState({
     host: 'localhost',
     port: '3306',
@@ -89,12 +89,22 @@ export const AuthModal: React.FC = () => {
     password: '',
     database: 'kish_mandhi'
   });
-  const [dbPreset, setDbPreset] = useState<'local' | 'online'>('local');
   const [testingDb, setTestingDb] = useState(false);
   const [savingDb, setSavingDb] = useState(false);
   const [dbStatus, setDbStatus] = useState<{ connected: boolean; message: string | null }>({
     connected: false,
     message: null
+  });
+
+  // Secondary Database State (Optional Cloud Sync)
+  const [showSecondaryDb, setShowSecondaryDb] = useState(false);
+  const [cloudConfig, setCloudConfig] = useState({
+    host: '',
+    port: '3306',
+    user: '',
+    password: '',
+    database: 'kish_mandhi',
+    useSSL: true
   });
 
   const [loginForm, setLoginForm] = useState<LoginFormState>({ emailOrPhone: '', password: '' });
@@ -114,7 +124,6 @@ export const AuthModal: React.FC = () => {
   useEffect(() => {
     if (!hasExistingUsers) {
       setMode('register');
-      setRegStep('database');
     }
   }, [hasExistingUsers]);
 
@@ -137,9 +146,6 @@ export const AuthModal: React.FC = () => {
               password: res.data.password || '',
               database: res.data.database || 'kish_mandhi'
             });
-            if (res.data.host && res.data.host !== 'localhost' && res.data.host !== '127.0.0.1') {
-              setDbPreset('online');
-            }
           }
         }
         if (api.testDbConnection) {
@@ -151,7 +157,6 @@ export const AuthModal: React.FC = () => {
           }
         }
       } else {
-        // Browser / Web mode
         setDbStatus({ connected: true, message: '✓ Running in Local Browser Mode' });
       }
     } catch (e: any) {
@@ -170,28 +175,6 @@ export const AuthModal: React.FC = () => {
     clearErrors();
   };
 
-  const applyPreset = (preset: 'local' | 'online') => {
-    setDbPreset(preset);
-    clearErrors();
-    if (preset === 'local') {
-      setDbConfig({
-        host: 'localhost',
-        port: '3306',
-        user: 'root',
-        password: '',
-        database: 'kish_mandhi'
-      });
-    } else {
-      setDbConfig({
-        host: '',
-        port: '3306',
-        user: 'root',
-        password: '',
-        database: 'kish_mandhi'
-      });
-    }
-  };
-
   const handleTestDb = async () => {
     setTestingDb(true);
     clearErrors();
@@ -203,14 +186,12 @@ export const AuthModal: React.FC = () => {
           setDbStatus({ connected: true, message: res.message || '✓ Database Connected Successfully!' });
         } else {
           setDbStatus({ connected: false, message: res?.message || '❌ Connection Failed. Check Host/Port/Password.' });
-          setLocalError(res?.message || 'Failed to connect to MySQL database.');
         }
       } else {
         setDbStatus({ connected: true, message: '✓ Running in Web Mode' });
       }
     } catch (err: any) {
       setDbStatus({ connected: false, message: '❌ Error: ' + err.message });
-      setLocalError('Database Ping Error: ' + err.message);
     } finally {
       setTestingDb(false);
     }
@@ -226,11 +207,16 @@ export const AuthModal: React.FC = () => {
         const res = await api.saveDbConfig(dbConfig);
         if (res && res.success) {
           setDbStatus({ connected: true, message: res.message || '✓ Database Connected & Saved!' });
+
+          // Also save Secondary Cloud DB if configured
+          if (cloudConfig.host && cloudConfig.user && api.saveCloudConfig) {
+            await api.saveCloudConfig(cloudConfig);
+          }
+
           await initializeAuth();
           return true;
         } else {
           setDbStatus({ connected: false, message: res?.message || '❌ Could not connect with these credentials.' });
-          setLocalError(res?.message || 'Database connection failed.');
           return false;
         }
       } else {
@@ -239,7 +225,6 @@ export const AuthModal: React.FC = () => {
       }
     } catch (err: any) {
       setDbStatus({ connected: false, message: '❌ Error: ' + err.message });
-      setLocalError('Save Error: ' + err.message);
       return false;
     } finally {
       setSavingDb(false);
@@ -249,6 +234,10 @@ export const AuthModal: React.FC = () => {
   const handleProceedToAccountStep = async (e: React.FormEvent) => {
     e.preventDefault();
     clearErrors();
+    if (dbStatus.connected) {
+      setRegStep('account');
+      return;
+    }
     const success = await handleSaveAndConnectDb();
     if (success) {
       setRegStep('account');
@@ -492,40 +481,27 @@ export const AuthModal: React.FC = () => {
                 </div>
               )}
 
-              {/* ─── STEP 1: DATABASE SETUP (MANDATORY) ─── */}
+              {/* ─── STEP 1: DATABASE SETUP (PRIMARY & SECONDARY) ─── */}
               {regStep === 'database' && (
                 <form onSubmit={handleProceedToAccountStep} className="flex flex-col gap-4">
                   <div className="text-center mb-1">
                     <p className="text-sm font-semibold text-amber-400 flex items-center justify-center gap-1.5">
-                      <Database className="w-4 h-4" /> Step 1: Connect Your Database First
+                      <Database className="w-4 h-4" /> Step 1: Configure System Databases
                     </p>
-                    <p className="text-xs text-white/40 mt-0.5">Configure your Local MySQL or Online Remote Database</p>
+                    <p className="text-xs text-white/40 mt-0.5">Primary Local MySQL for offline billing + optional Cloud DB for remote web monitoring</p>
                   </div>
 
-                  {/* Preset Selector */}
-                  <div className="grid grid-cols-2 gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('local')}
-                      className={`py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                        dbPreset === 'local' ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300' : 'text-white/40 hover:text-white/70'
-                      }`}
-                    >
-                      <Database className="w-3.5 h-3.5" /> Local MySQL
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => applyPreset('online')}
-                      className={`py-2 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                        dbPreset === 'online' ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300' : 'text-white/40 hover:text-white/70'
-                      }`}
-                    >
-                      <Server className="w-3.5 h-3.5" /> Online / Remote DB
-                    </button>
-                  </div>
+                  {/* PRIMARY DATABASE SECTION (MANDATORY) */}
+                  <div className="space-y-3 bg-amber-500/5 p-4 rounded-2xl border border-amber-500/30">
+                    <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                      <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 uppercase tracking-wider">
+                        <Database className="w-3.5 h-3.5 text-amber-400" /> Primary Database (Local MySQL - Required)
+                      </span>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-mono">
+                        Fast & Offline First
+                      </span>
+                    </div>
 
-                  {/* DB Connection Form Fields */}
-                  <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/10">
                     <div className="grid grid-cols-3 gap-3">
                       <div className="col-span-2">
                         <InputField
@@ -533,7 +509,7 @@ export const AuthModal: React.FC = () => {
                           label="Host / Server IP"
                           value={dbConfig.host}
                           onChange={(v) => setDbConfig(p => ({ ...p, host: v }))}
-                          placeholder={dbPreset === 'local' ? 'localhost' : 'e.g. 103.x.x.x or db.example.com'}
+                          placeholder="localhost"
                           icon={<Server className="w-4 h-4" />}
                           required
                         />
@@ -585,28 +561,93 @@ export const AuthModal: React.FC = () => {
                       icon={<Database className="w-4 h-4" />}
                       required
                     />
+                  </div>
 
-                    {/* Test & Save Action Buttons */}
-                    <div className="flex gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleTestDb}
-                        disabled={testingDb || savingDb}
-                        className="flex-1 py-2.5 bg-white/10 border border-white/15 text-amber-300 font-semibold rounded-xl hover:bg-white/15 transition-all text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-                      >
-                        {testingDb ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                        Test Connection
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveAndConnectDb}
-                        disabled={testingDb || savingDb}
-                        className="flex-1 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold rounded-xl hover:bg-amber-500/30 transition-all text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-                      >
-                        {savingDb ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                        Save & Connect DB
-                      </button>
-                    </div>
+                  {/* SECONDARY CLOUD DATABASE SECTION (OPTIONAL) */}
+                  <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowSecondaryDb(!showSecondaryDb)}
+                      className="w-full px-4 py-3 bg-white/5 hover:bg-white/10 text-white/80 font-semibold flex items-center justify-between text-xs transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Server className="w-4 h-4 text-emerald-400" />
+                        <span>Secondary Cloud Database for Remote Web Monitoring (Optional)</span>
+                      </div>
+                      {showSecondaryDb ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+
+                    {showSecondaryDb && (
+                      <div className="p-4 space-y-3 border-t border-white/10 bg-black/40">
+                        <p className="text-[11px] text-white/60">
+                          Automatically syncs local billing data to Cloud MySQL (Aiven, AWS RDS, DigitalOcean, etc.) so you can monitor live analytics on your phone or web dashboard.
+                        </p>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="col-span-2">
+                            <InputField
+                              id="cloud-host"
+                              label="Cloud Host Address"
+                              value={cloudConfig.host}
+                              onChange={(v) => setCloudConfig(p => ({ ...p, host: v }))}
+                              placeholder="e.g. mysql-xxx.aivencloud.com"
+                              icon={<Server className="w-4 h-4" />}
+                            />
+                          </div>
+                          <div>
+                            <InputField
+                              id="cloud-port"
+                              label="Port"
+                              value={cloudConfig.port}
+                              onChange={(v) => setCloudConfig(p => ({ ...p, port: v }))}
+                              placeholder="3306"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <InputField
+                            id="cloud-user"
+                            label="Cloud Username"
+                            value={cloudConfig.user}
+                            onChange={(v) => setCloudConfig(p => ({ ...p, user: v }))}
+                            placeholder="avnadmin or db_user"
+                            icon={<User className="w-4 h-4" />}
+                          />
+                          <InputField
+                            id="cloud-password"
+                            label="Cloud Password"
+                            type={showPwd ? 'text' : 'password'}
+                            value={cloudConfig.password}
+                            onChange={(v) => setCloudConfig(p => ({ ...p, password: v }))}
+                            placeholder="Cloud password"
+                            icon={<Lock className="w-4 h-4" />}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Test & Save Action Buttons */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleTestDb}
+                      disabled={testingDb || savingDb}
+                      className="flex-1 py-2.5 bg-white/10 border border-white/15 text-amber-300 font-semibold rounded-xl hover:bg-white/15 transition-all text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {testingDb ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                      Test Primary Connection
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveAndConnectDb}
+                      disabled={testingDb || savingDb}
+                      className="flex-1 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold rounded-xl hover:bg-amber-500/30 transition-all text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {savingDb ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      Save & Connect DB
+                    </button>
                   </div>
 
                   {/* Connection Status Badge */}

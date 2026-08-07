@@ -52,6 +52,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   register: (userData: any, restaurantData: any) => ipcRenderer.invoke('auth:register', { userData, restaurantData }),
   login: (emailOrPhone: string, password: string) => ipcRenderer.invoke('auth:login', { emailOrPhone, password }),
   hasUsers: () => ipcRenderer.invoke('auth:hasUsers'),
-  verifyUser: (userId: number) => ipcRenderer.invoke('auth:verifyUser', userId)
+  verifyUser: (userId: number) => ipcRenderer.invoke('auth:verifyUser', userId),
+
+  // Cloud Sync (Phase 5 + 6) — works with any cloud MySQL provider
+  getCloudConfig: () => ipcRenderer.invoke('cloud:getConfig'),
+  saveCloudConfig: (config: any) => ipcRenderer.invoke('cloud:saveConfig', config),
+  testCloudConnection: (config: any) => ipcRenderer.invoke('cloud:testConnection', config),
+  getSyncStatus: () => ipcRenderer.invoke('cloud:getSyncStatus'),
+  triggerSync: () => ipcRenderer.invoke('cloud:triggerSync'),
+  saveSslCert: (certContent: string) => ipcRenderer.invoke('cloud:saveSslCert', certContent),
+  cloudGetOrders: (options?: any) => ipcRenderer.invoke('cloud:getOrders', options),
+  cloudGetExpenses: (options?: any) => ipcRenderer.invoke('cloud:getExpenses', options)
 });
 

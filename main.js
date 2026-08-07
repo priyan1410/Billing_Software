@@ -5,6 +5,7 @@ const { query, testConnection, saveConfig, loadConfig, dbConfig, getStorageSize 
 const { initializeDatabase } = require('./db/schema');
 const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber, formatTokenNumber } = require('./electron/tokenUtils');
 const { loadBackupConfig, saveBackupConfig, performBackup, listBackups, startBackupScheduler, shouldRunBackup } = require('./electron/backupManager');
+const { startSyncEngine, getSyncStatus, triggerImmediateSync, refreshPendingCount } = require('./electron/syncEngine');
 
 // Fix GPU rendering on Windows
 app.disableHardwareAcceleration();
@@ -95,6 +96,9 @@ app.whenReady().then(async () => {
 
   // Initialize Auto Backup Scheduler
   startBackupScheduler(getFullSystemExportData);
+
+  // Initialize Hybrid Background Sync Engine
+  startSyncEngine();
 });
 
 let isQuitting = false;
@@ -1662,5 +1666,99 @@ ipcMain.handle('receipt:print', (evt, receiptHtml, options = {}) => {
       });
   });
 });
+
+// ─── Cloud Sync IPC Handlers (Phase 5) ───────────────────────────────────────
+
+ipcMain.handle('cloud:getConfig', async () => {
+  try {
+    const { getCloudConfig } = require('./db/cloudAdapter');
+    return { success: true, data: getCloudConfig() };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('cloud:saveConfig', async (_evt, config) => {
+  try {
+    const { saveCloudConfig } = require('./db/cloudAdapter');
+    const saved = saveCloudConfig(config);
+    if (saved) {
+      setTimeout(() => triggerImmediateSync(), 2000);
+      return { success: true, message: 'Cloud config saved. Syncing now...' };
+    }
+    return { success: false, message: 'Failed to save cloud config file.' };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('cloud:testConnection', async (_evt, testConfig) => {
+  try {
+    const { testCloudConnection } = require('./db/cloudAdapter');
+    return await testCloudConnection(testConfig || null);
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('cloud:getSyncStatus', async () => {
+  try {
+    const status = getSyncStatus();
+    await refreshPendingCount();
+    return { success: true, data: getSyncStatus() };
+  } catch (err) {
+    return { success: false, data: null };
+  }
+});
+
+ipcMain.handle('cloud:triggerSync', async () => {
+  try {
+    await triggerImmediateSync();
+    return { success: true, message: 'Sync triggered.' };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('cloud:saveSslCert', async (_evt, certContent) => {
+  try {
+    const certPath = path.join(app.getPath('userData'), 'cloud-ssl-ca.pem');
+    fs.writeFileSync(certPath, certContent, 'utf8');
+    return { success: true, certPath };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('cloud:getOrders', async (_evt, options) => {
+  try {
+    const { cloudQuery, getCloudConfig } = require('./db/cloudAdapter');
+    if (!getCloudConfig()) return { success: false, message: 'Cloud not configured' };
+    const limit = options?.limit || 1000;
+    const result = await cloudQuery(
+      `SELECT * FROM orders ORDER BY created_at DESC LIMIT ?`,
+      [limit]
+    );
+    return result;
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('cloud:getExpenses', async (_evt, options) => {
+  try {
+    const { cloudQuery, getCloudConfig } = require('./db/cloudAdapter');
+    if (!getCloudConfig()) return { success: false, message: 'Cloud not configured' };
+    const limit = options?.limit || 1000;
+    const result = await cloudQuery(
+      `SELECT * FROM expenses ORDER BY created_at DESC LIMIT ?`,
+      [limit]
+    );
+    return result;
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
 
 
