@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight } from 'lucide-react';
+import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, BarChart2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
 
@@ -26,23 +26,48 @@ export const DashboardView: React.FC = () => {
     }
   }, []);
 
+  // Robust date parser for all string/Date formats
+  const parseLocalDate = (dVal: any): Date | null => {
+    if (!dVal) return null;
+    if (dVal instanceof Date) return isNaN(dVal.getTime()) ? null : dVal;
+
+    const str = String(dVal).trim();
+    if (!str) return null;
+
+    // Match DD/MM/YYYY, HH:MM:SS AM/PM
+    const ddMmyyyyRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)?)?/i;
+    const match = str.match(ddMmyyyyRegex);
+
+    if (match) {
+      let day = parseInt(match[1], 10);
+      let month = parseInt(match[2], 10) - 1;
+      let year = parseInt(match[3], 10);
+      let hours = match[4] ? parseInt(match[4], 10) : 0;
+      let minutes = match[5] ? parseInt(match[5], 10) : 0;
+      let seconds = match[6] ? parseInt(match[6], 10) : 0;
+      const ampm = match[7] ? match[7].toUpperCase() : null;
+
+      if (ampm === 'PM' && hours < 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+
+      const d = new Date(year, month, day, hours, minutes, seconds);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const toYYYYMMDD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const getTrendData = () => {
     const orders = stats.allOrders || [];
     const expenses = stats.allExpenses || [];
-
-    const parseLocalDate = (dVal: any) => {
-      if (!dVal) return null;
-      const d = new Date(dVal);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    const toYYYYMMDD = (d: Date) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    };
-
     const today = new Date();
     const todayStr = toYYYYMMDD(today);
 
@@ -59,10 +84,10 @@ export const DashboardView: React.FC = () => {
       };
 
       orders.forEach((o: any) => {
-        const d = parseLocalDate(o.created_at);
+        const d = parseLocalDate(o.created_at || o.createdAt);
         if (d && toYYYYMMDD(d) === todayStr) {
           const h = d.getHours();
-          const amt = Number(o.grand_total || 0);
+          const amt = Number(o.grand_total || o.grandTotal || 0);
           if (h < 10) hoursMap['08:00 AM'].Revenue += amt;
           else if (h < 12) hoursMap['10:00 AM'].Revenue += amt;
           else if (h < 14) hoursMap['12:00 PM'].Revenue += amt;
@@ -75,7 +100,7 @@ export const DashboardView: React.FC = () => {
       });
 
       expenses.forEach((e: any) => {
-        const d = parseLocalDate(e.expense_date || e.created_at);
+        const d = parseLocalDate(e.expense_date || e.expenseDate || e.created_at);
         if (d && toYYYYMMDD(d) === todayStr) {
           const h = d.getHours();
           const amt = Number(e.amount || 0);
@@ -108,15 +133,15 @@ export const DashboardView: React.FC = () => {
       }
 
       orders.forEach((o: any) => {
-        const d = parseLocalDate(o.created_at);
+        const d = parseLocalDate(o.created_at || o.createdAt);
         if (d) {
           const ymd = toYYYYMMDD(d);
-          if (days[ymd]) days[ymd].Revenue += Number(o.grand_total || 0);
+          if (days[ymd]) days[ymd].Revenue += Number(o.grand_total || o.grandTotal || 0);
         }
       });
 
       expenses.forEach((e: any) => {
-        const d = parseLocalDate(e.expense_date || e.created_at);
+        const d = parseLocalDate(e.expense_date || e.expenseDate || e.created_at);
         if (d) {
           const ymd = toYYYYMMDD(d);
           if (days[ymd]) days[ymd].Expenses += Number(e.amount || 0);
@@ -142,10 +167,10 @@ export const DashboardView: React.FC = () => {
       const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
 
       orders.forEach((o: any) => {
-        const d = parseLocalDate(o.created_at);
+        const d = parseLocalDate(o.created_at || o.createdAt);
         if (d && toYYYYMMDD(d).startsWith(currentMonthStr)) {
           const dayNum = d.getDate();
-          const amt = Number(o.grand_total || 0);
+          const amt = Number(o.grand_total || o.grandTotal || 0);
           if (dayNum <= 7) weeksMap[0].Revenue += amt;
           else if (dayNum <= 14) weeksMap[1].Revenue += amt;
           else if (dayNum <= 21) weeksMap[2].Revenue += amt;
@@ -154,7 +179,7 @@ export const DashboardView: React.FC = () => {
       });
 
       expenses.forEach((e: any) => {
-        const d = parseLocalDate(e.expense_date || e.created_at);
+        const d = parseLocalDate(e.expense_date || e.expenseDate || e.created_at);
         if (d && toYYYYMMDD(d).startsWith(currentMonthStr)) {
           const dayNum = d.getDate();
           const amt = Number(e.amount || 0);
@@ -183,14 +208,14 @@ export const DashboardView: React.FC = () => {
       const currentYear = today.getFullYear();
 
       orders.forEach((o: any) => {
-        const d = parseLocalDate(o.created_at);
+        const d = parseLocalDate(o.created_at || o.createdAt);
         if (d && d.getFullYear() === currentYear) {
-          monthsMap[d.getMonth()].Revenue += Number(o.grand_total || 0);
+          monthsMap[d.getMonth()].Revenue += Number(o.grand_total || o.grandTotal || 0);
         }
       });
 
       expenses.forEach((e: any) => {
-        const d = parseLocalDate(e.expense_date || e.created_at);
+        const d = parseLocalDate(e.expense_date || e.expenseDate || e.created_at);
         if (d && d.getFullYear() === currentYear) {
           monthsMap[d.getMonth()].Expenses += Number(e.amount || 0);
         }
@@ -204,19 +229,20 @@ export const DashboardView: React.FC = () => {
       }));
     }
 
+    // 'all' period
     const yearsMap: { [yr: number]: { Revenue: number; Expenses: number } } = {};
 
     orders.forEach((o: any) => {
-      const d = parseLocalDate(o.created_at);
+      const d = parseLocalDate(o.created_at || o.createdAt);
       if (d) {
         const yr = d.getFullYear();
         if (!yearsMap[yr]) yearsMap[yr] = { Revenue: 0, Expenses: 0 };
-        yearsMap[yr].Revenue += Number(o.grand_total || 0);
+        yearsMap[yr].Revenue += Number(o.grand_total || o.grandTotal || 0);
       }
     });
 
     expenses.forEach((e: any) => {
-      const d = parseLocalDate(e.expense_date || e.created_at);
+      const d = parseLocalDate(e.expense_date || e.expenseDate || e.created_at);
       if (d) {
         const yr = d.getFullYear();
         if (!yearsMap[yr]) yearsMap[yr] = { Revenue: 0, Expenses: 0 };
@@ -237,15 +263,54 @@ export const DashboardView: React.FC = () => {
     }));
   };
 
+  const trendData = getTrendData();
+
+  // Dynamic Y-axis scale calculation
+  const allValues = trendData.flatMap(d => [d.Revenue, d.Expenses, d.NetProfit]);
+  const maxDataVal = Math.max(...allValues, 0);
+  const minDataVal = Math.min(...allValues, 0);
+
+  const yMax = maxDataVal === 0 ? 1000 : Math.ceil(maxDataVal * 1.15);
+  const yMin = minDataVal < 0 ? Math.floor(minDataVal * 1.15) : 0;
+  const yDomain = [yMin, yMax];
+
+  // Check if all data is zero for empty state display
+  const isDataEmpty = trendData.every(d => d.Revenue === 0 && d.Expenses === 0);
+
   const pieData = [
     { name: 'Special Chicken Mandhi', value: 45, color: '#d4af37' },
     { name: 'Mutton Raan Mandhi', value: 25, color: '#6b8e23' },
-    { name: 'Peri Peri Alfaham', value: 20, color: '#556b2f' },
-    { name: 'Kunafa Dessert', value: 10, color: '#38b000' }
+    { name: 'Peri Peri Alfaham', value: 20, color: '#e11d48' },
+    { name: 'Kunafa Dessert', value: 10, color: '#10b981' }
   ];
 
+  // Render direct percentage labels on Pie Chart Slices
+  const renderPieSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    if (!percent || percent < 0.04) return null;
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#ffffff"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight="bold"
+        className="drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none">
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         <div className="bg-olive-900 border border-gold-500/30 rounded-2xl p-5 relative overflow-hidden shadow-lg shadow-black/40">
@@ -309,7 +374,9 @@ export const DashboardView: React.FC = () => {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="md:col-span-2 bg-olive-900 border border-gold-500/20 rounded-2xl p-5">
+
+        {/* Revenue & Expenses Line Chart */}
+        <div className="md:col-span-2 bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h4 className="text-sm font-bold text-gold-500 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-gold-400" /> Revenue & Expenses Trend
@@ -337,45 +404,110 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={getTrendData()} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                <XAxis dataKey="name" stroke="#9aab9c" fontSize={11} />
-                <YAxis stroke="#9aab9c" fontSize={11} tickFormatter={(v) => `₹${v}`} />
-                <Tooltip contentStyle={{ backgroundColor: '#1b291d', borderColor: '#d4af37', borderRadius: '8px', color: '#fff' }} />
-                <Legend wrapperStyle={{ paddingTop: '8px', fontSize: '12px' }} />
-                <Line type="monotone" dataKey="Revenue" stroke="#d4af37" strokeWidth={3} dot={{ r: 4, fill: '#d4af37' }} activeDot={{ r: 7 }} />
-                <Line type="monotone" dataKey="Expenses" stroke="#f43f5e" strokeWidth={3} dot={{ r: 4, fill: '#f43f5e' }} activeDot={{ r: 7 }} />
-                <Line type="monotone" dataKey="NetProfit" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} activeDot={{ r: 7 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {/* Line Chart or Empty State */}
+          {isDataEmpty ? (
+            <div className="h-64 flex flex-col items-center justify-center text-center p-6 bg-olive-950/40 rounded-xl border border-gold-500/10">
+              <BarChart2 className="w-10 h-10 text-olive-400/40 mb-2" />
+              <p className="text-sm font-semibold text-olive-200">No Sales or Expenses Recorded {chartPeriod === 'today' ? 'Today Yet' : 'For This Period'}</p>
+              <p className="text-xs text-olive-400 mt-1 max-w-xs">New POS bills and ledger entries will automatically plot live trends here.</p>
+            </div>
+          ) : (
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
+                  <XAxis dataKey="name" stroke="#9aab9c" fontSize={11} tickLine={false} />
+                  <YAxis
+                    stroke="#9aab9c"
+                    fontSize={11}
+                    domain={yDomain}
+                    tickLine={false}
+                    tickFormatter={(v) => `₹${Number(v).toLocaleString('en-IN')}`}
+                  />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#131e15', borderColor: '#d4af37', borderRadius: '12px', color: '#fff', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}
+                    formatter={(value: any) => [`₹${Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, '']}
+                  />
+                  <Legend
+                    wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }}
+                    formatter={(value) => <span className="text-olive-200 font-semibold px-1">{value}</span>}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Revenue"
+                    name="Revenue"
+                    stroke="#d4af37"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#d4af37' }}
+                    activeDot={{ r: 7 }}
+                    connectNulls={true}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Expenses"
+                    name="Expenses"
+                    stroke="#ef4444"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#ef4444' }}
+                    activeDot={{ r: 7 }}
+                    connectNulls={true}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="NetProfit"
+                    name="Net Profit"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#10b981' }}
+                    activeDot={{ r: 7 }}
+                    connectNulls={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
-        <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5">
-          <h4 className="text-sm font-bold text-gold-500 mb-4">Top Selling Mandhi Dishes</h4>
-          <div className="h-64 flex items-center justify-center">
+        {/* Top Selling Dishes Pie Chart */}
+        <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col justify-between">
+          <h4 className="text-sm font-bold text-gold-500 mb-2">Top Selling Mandhi Dishes</h4>
+
+          <div className="h-56 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75}>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={75}
+                  labelLine={false}
+                  label={renderPieSliceLabel}
+                >
                   {pieData.map((entry, index) => (
-                    <Cell key={`pie-${index}`} fill={entry.color} />
+                    <Cell key={`pie-${index}`} fill={entry.color} stroke="#1b291d" strokeWidth={2} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#1b291d', borderColor: '#d4af37', borderRadius: '8px' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#131e15', borderColor: '#d4af37', borderRadius: '10px', color: '#fff' }}
+                  formatter={(val: any) => [`${val}%`, 'Share']}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-4 grid gap-2 text-sm">
+
+          {/* Pie Chart Legend List */}
+          <div className="mt-2 grid gap-2 text-xs">
             {pieData.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-2">
-                <span className="inline-flex h-3.5 w-3.5 rounded-full" style={{ backgroundColor: entry.color }} />
-                <span className="text-slate-100">{entry.name}</span>
-                <span className="ml-auto text-emerald-300">{entry.value}%</span>
+              <div key={entry.name} className="flex items-center gap-2 px-2 py-1 bg-olive-950/60 rounded-lg border border-gold-500/10">
+                <span className="inline-flex h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+                <span className="text-slate-200 font-medium truncate">{entry.name}</span>
+                <span className="ml-auto font-bold text-emerald-400">{entry.value}%</span>
               </div>
             ))}
           </div>
         </div>
+
       </div>
 
       {/* Recent Orders Table */}
@@ -384,7 +516,7 @@ export const DashboardView: React.FC = () => {
           <h4 className="text-sm font-bold text-gold-500">Recent Completed Bills</h4>
           <button
             onClick={() => setActiveSection('billing')}
-            className="text-xs font-semibold text-gold-400 flex items-center gap-1"
+            className="text-xs font-semibold text-gold-400 flex items-center gap-1 hover:text-gold-300 transition-colors"
           >
             Go to Billing POS <ChevronRight className="w-4 h-4" />
           </button>
@@ -402,17 +534,25 @@ export const DashboardView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gold-500/10">
-              {stats.recentOrders.map((order: any) => (
-                <tr key={order.id} className="hover:bg-olive-800/40 transition-colors">
-                  <td className="p-3 font-bold text-white">{order.orderNumber}</td>
-                  <td className="p-3 text-olive-300">{order.orderType}</td>
-                  <td className="p-3 font-bold text-gold-400">₹{order.grandTotal.toFixed(2)}</td>
-                  <td className="p-3 text-emerald-400 font-medium">{order.paymentMode}</td>
-                  <td className="p-3 text-xs text-olive-300">
-                    {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {stats.recentOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-6 text-center text-xs text-olive-400">
+                    No orders recorded today yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                stats.recentOrders.map((order: any) => (
+                  <tr key={order.id} className="hover:bg-olive-800/40 transition-colors">
+                    <td className="p-3 font-bold text-white">{order.orderNumber}</td>
+                    <td className="p-3 text-olive-300">{order.orderType}</td>
+                    <td className="p-3 font-bold text-gold-400">₹{order.grandTotal.toFixed(2)}</td>
+                    <td className="p-3 text-emerald-400 font-medium">{order.paymentMode}</td>
+                    <td className="p-3 text-xs text-olive-300">
+                      {order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -420,3 +560,4 @@ export const DashboardView: React.FC = () => {
     </div>
   );
 };
+

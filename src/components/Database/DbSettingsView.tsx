@@ -13,7 +13,7 @@ export const DbSettingsView: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showRawTables, setShowRawTables] = useState(true);
+  const [showRawTables, setShowRawTables] = useState(false);
   const [testing, setTesting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<Dish>>({});
@@ -585,40 +585,7 @@ export const DbSettingsView: React.FC = () => {
         onConfirm={executeDeleteExpense}
         onCancel={() => { setConfirmExpOpen(false); setPendingDeleteExpId(null); }}
       />
-      {/* Database Engine Header */}
-      <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isDbConnected ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'}`}>
-              <Database className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-white">Database Controller & Excel Spreadsheet Manager</h3>
-              <p className="text-xs text-olive-300 mt-1">Configure MySQL database server or export/import tables as Excel spreadsheets</p>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button
-              onClick={
-                activeTab === 'menu_items'
-                  ? handleExportMenuExcel
-                  : activeTab === 'orders'
-                  ? handleExportOrdersExcel
-                  : handleExportExpensesExcel
-              }
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:scale-[1.02] transition-transform"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel (.CSV)
-            </button>
-
-            <label className="flex items-center gap-1.5 px-3.5 py-2 bg-olive-800 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-olive-950 font-extrabold text-xs rounded-xl cursor-pointer transition-all">
-              <Upload className="w-3.5 h-3.5" /> Import Excel (.CSV)
-              <input type="file" accept=".csv, .xlsx" onChange={handleImportExcel} className="hidden" />
-            </label>
-          </div>
-        </div>
-      </div>
 
       {/* Full System PC Migration & Backup Card */}
       <div className="bg-gradient-to-r from-amber-950/70 via-olive-900 to-amber-950/70 border border-gold-500/40 rounded-2xl p-5 shadow-xl">
