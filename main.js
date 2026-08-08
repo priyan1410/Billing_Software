@@ -494,10 +494,26 @@ ipcMain.handle('dashboard:getStats', async () => {
   const allOrdersRes = await query(`SELECT id, order_number, order_type, grand_total, payment_mode, created_at FROM orders`);
   const allExpensesRes = await query(`SELECT id, amount, expense_date, created_at FROM expenses`);
 
+  const topDishesRes = await query(`
+    SELECT 
+      COALESCE(NULLIF(dish_name, ''), NULLIF(item_name, ''), 'Mandhi Special') AS name,
+      SUM(quantity) AS quantity,
+      SUM(total_price) AS total_sales
+    FROM order_items
+    GROUP BY name
+    ORDER BY quantity DESC
+    LIMIT 5
+  `);
+
   const allOrders = allOrdersRes.success ? allOrdersRes.data : [];
   const allExpenses = allExpensesRes.success ? allExpensesRes.data : [];
+  const topDishes = topDishesRes.success ? topDishesRes.data.map(r => ({
+    name: r.name,
+    quantity: Number(r.quantity || 0),
+    totalSales: Number(r.total_sales || 0)
+  })) : [];
 
-  return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders, allOrders, allExpenses } };
+  return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders, allOrders, allExpenses, topDishes } };
 });
 
 // Helper for formatting date strings safely as YYYY-MM-DD

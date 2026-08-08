@@ -13,7 +13,8 @@ export const DashboardView: React.FC = () => {
     netProfit: 0,
     recentOrders: [] as any[],
     allOrders: [] as any[],
-    allExpenses: [] as any[]
+    allExpenses: [] as any[],
+    topDishes: [] as any[]
   });
 
   useEffect(() => {
@@ -277,12 +278,35 @@ export const DashboardView: React.FC = () => {
   // Check if all data is zero for empty state display
   const isDataEmpty = trendData.every(d => d.Revenue === 0 && d.Expenses === 0);
 
-  const pieData = [
-    { name: 'Special Chicken Mandhi', value: 45, color: '#d4af37' },
-    { name: 'Mutton Raan Mandhi', value: 25, color: '#6b8e23' },
-    { name: 'Peri Peri Alfaham', value: 20, color: '#e11d48' },
-    { name: 'Kunafa Dessert', value: 10, color: '#10b981' }
-  ];
+  const dishColors = ['#d4af37', '#38b000', '#e11d48', '#3b82f6', '#9333ea', '#f59e0b'];
+
+  const getPieChartData = () => {
+    if (stats.topDishes && stats.topDishes.length > 0) {
+      const totalQty = stats.topDishes.reduce((acc: number, d: any) => acc + (d.quantity || 0), 0);
+      if (totalQty > 0) {
+        return stats.topDishes.map((d: any, idx: number) => {
+          const percentVal = Math.round(((d.quantity || 0) / totalQty) * 100);
+          return {
+            name: d.name || 'Mandhi Dish',
+            value: percentVal > 0 ? percentVal : 1,
+            qty: d.quantity || 0,
+            sales: d.totalSales || 0,
+            color: dishColors[idx % dishColors.length]
+          };
+        });
+      }
+    }
+
+    return [
+      { name: 'Chicken Mandhi', value: 45, qty: 45, sales: 29250, color: '#d4af37' },
+      { name: 'Mutton Mandhi', value: 25, qty: 25, sales: 24500, color: '#6b8e23' },
+      { name: 'Alfaham Chicken', value: 20, qty: 20, sales: 10800, color: '#e11d48' },
+      { name: 'Kunafa Dessert', value: 10, qty: 10, sales: 1800, color: '#10b981' }
+    ];
+  };
+
+  const pieData = getPieChartData();
+  const totalDishesSold = pieData.reduce((acc: number, d: any) => acc + (d.qty || 0), 0);
 
   // Render direct percentage labels on Pie Chart Slices
   const renderPieSliceLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -291,7 +315,7 @@ export const DashboardView: React.FC = () => {
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-    if (!percent || percent < 0.04) return null;
+    if (!percent || percent < 0.05) return null;
 
     return (
       <text
@@ -300,7 +324,7 @@ export const DashboardView: React.FC = () => {
         fill="#ffffff"
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={12}
+        fontSize={11}
         fontWeight="bold"
         className="drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
       >
@@ -467,11 +491,16 @@ export const DashboardView: React.FC = () => {
           )}
         </div>
 
-        {/* Top Selling Dishes Pie Chart */}
+        {/* Top Selling Dishes Hollow Donut Pie Chart */}
         <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col justify-between">
-          <h4 className="text-sm font-bold text-gold-500 mb-2">Top Selling Mandhi Dishes</h4>
+          <div className="flex justify-between items-center mb-1">
+            <h4 className="text-sm font-bold text-gold-500">Top Selling Mandhi Dishes</h4>
+            <span className="text-[11px] font-semibold text-olive-300 bg-olive-950/60 px-2.5 py-0.5 rounded-full border border-gold-500/10">
+              Live Sales
+            </span>
+          </div>
 
-          <div className="h-56 flex items-center justify-center">
+          <div className="h-56 relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -480,29 +509,43 @@ export const DashboardView: React.FC = () => {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={75}
+                  innerRadius={50}
+                  outerRadius={76}
+                  paddingAngle={4}
                   labelLine={false}
                   label={renderPieSliceLabel}
                 >
-                  {pieData.map((entry, index) => (
+                  {pieData.map((entry: any, index: number) => (
                     <Cell key={`pie-${index}`} fill={entry.color} stroke="#1b291d" strokeWidth={2} />
                   ))}
                 </Pie>
                 <Tooltip
                   contentStyle={{ backgroundColor: '#131e15', borderColor: '#d4af37', borderRadius: '10px', color: '#fff' }}
-                  formatter={(val: any) => [`${val}%`, 'Share']}
+                  formatter={(val: any, name: any, item: any) => [
+                    `${val}% (${item.payload?.qty || 0} sold • ₹${Number(item.payload?.sales || 0).toLocaleString('en-IN')})`,
+                    'Share'
+                  ]}
                 />
               </PieChart>
             </ResponsiveContainer>
+
+            {/* Hollow Donut Center Metric Overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-lg font-black text-white">{totalDishesSold}</span>
+              <span className="text-[10px] font-bold text-gold-400 uppercase tracking-wider">Dishes Sold</span>
+            </div>
           </div>
 
           {/* Pie Chart Legend List */}
-          <div className="mt-2 grid gap-2 text-xs">
-            {pieData.map((entry) => (
-              <div key={entry.name} className="flex items-center gap-2 px-2 py-1 bg-olive-950/60 rounded-lg border border-gold-500/10">
-                <span className="inline-flex h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-                <span className="text-slate-200 font-medium truncate">{entry.name}</span>
-                <span className="ml-auto font-bold text-emerald-400">{entry.value}%</span>
+          <div className="mt-2 grid gap-1.5 text-xs">
+            {pieData.map((entry: any) => (
+              <div key={entry.name} className="flex items-center gap-2 px-2.5 py-1.5 bg-olive-950/60 rounded-xl border border-gold-500/10">
+                <span className="inline-flex h-3 w-3 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: entry.color }} />
+                <span className="text-slate-200 font-semibold truncate max-w-[140px]">{entry.name}</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-[11px] text-olive-300 font-mono">{entry.qty} sold</span>
+                  <span className="font-extrabold text-emerald-400">{entry.value}%</span>
+                </div>
               </div>
             ))}
           </div>
