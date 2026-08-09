@@ -94,8 +94,7 @@ export const dispatchOrderPrintJobs = async (
   // Determine effective print mode ('both' | 'bill' | 'token')
   let mode: 'both' | 'bill' | 'token' =
     options?.printOption ||
-    rd?.printOption ||
-    (rd?.printWithToken === false ? 'bill' : 'both');
+    (rd?.printWithToken === false ? 'bill' : (rd?.printOption || 'both'));
 
   if (options?.isKotOnly) {
     mode = 'token';

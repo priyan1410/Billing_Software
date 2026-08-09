@@ -141,11 +141,6 @@ const ConfirmOrderModal: React.FC<{
             {/* Dashed Line */}
             <div className="border-b border-dashed border-black my-2.5"></div>
 
-            {/* Tax Invoice Subheader */}
-            <div className="text-center font-bold text-xs tracking-wider uppercase mb-2">
-              *** TAX INVOICE ***
-            </div>
-
             {/* Invoice Metadata */}
             <div className="text-[11px] leading-relaxed mb-2">
               <div className="flex justify-between">
@@ -992,7 +987,11 @@ export const BillingView: React.FC = () => {
           <div
             onClick={() => {
               const currentVal = restaurantDetails?.printWithToken ?? true;
-              updateRestaurantDetails({ printWithToken: !currentVal });
+              const nextVal = !currentVal;
+              updateRestaurantDetails({
+                printWithToken: nextVal,
+                printOption: nextVal ? 'both' : 'bill'
+              });
             }}
             className="flex items-center justify-between px-3 py-2 bg-olive-900 border border-gold-500/20 rounded-xl cursor-pointer hover:border-gold-500/50 transition-all select-none"
           >

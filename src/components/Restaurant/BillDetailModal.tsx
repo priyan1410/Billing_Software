@@ -130,7 +130,6 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
               </div>
 
               <div className="border-b border-dashed border-black my-2"></div>
-              <div className="text-center font-bold text-xs tracking-wider uppercase mb-1">*** TAX INVOICE ***</div>
 
               <div className="text-[10px] leading-tight my-2 space-y-0.5">
                 <div className="flex justify-between">

@@ -196,8 +196,6 @@ export function getPosInvoiceTextBody(
   if (fssaiVal) lines.push(centerLine(`FSSAI: ${fssaiVal}`, width));
 
   lines.push(divider('-', width));
-  lines.push(centerLine('*** TAX INVOICE ***', width));
-  lines.push(divider('-', width));
 
   if (data.tokenNumber) {
     lines.push(`Token No : ${data.tokenNumber}`);
