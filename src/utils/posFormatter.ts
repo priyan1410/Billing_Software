@@ -83,11 +83,13 @@ export function getPosTokenTextBody(
 
   const rawType = String(data.orderType || 'Dine-In');
   const tbl = data.tableNo || data.tableNumber || '';
-  let formattedType = 'Takeaway';
+  let formattedType = 'TAKEAWAY';
   if (rawType.toLowerCase().includes('dine')) {
-    formattedType = (tbl && tbl !== 'N/A' && tbl !== 'TA') ? `DI-${tbl}` : 'DI-Dine-In';
+    formattedType = (tbl && tbl !== 'N/A' && tbl !== 'TA' && tbl !== 'DEL') ? `DI-${tbl}` : 'DI-Dine-In';
+  } else if (rawType.toLowerCase().includes('delivery') || tbl === 'DEL') {
+    formattedType = 'DELIVERY';
   } else {
-    formattedType = 'Takeaway';
+    formattedType = 'TAKEAWAY';
   }
 
   lines.push(`Token No   : ${tokenNo}`);
@@ -146,6 +148,9 @@ export function getPosInvoiceTextBody(
     tokenNumber?: string | number;
     orderType?: string;
     paymentMode?: string;
+    cashAmount?: number;
+    upiAmount?: number;
+    deliveryAddress?: string;
     items: Array<{ name: string; variant?: string; quantity: number | string; unitPrice?: number; price?: number; totalPrice?: number }>;
     subtotal: number;
     discount?: number;
@@ -201,11 +206,13 @@ export function getPosInvoiceTextBody(
   lines.push(padLine(`Date: ${dateStr}`, `Time: ${timeStr}`, width));
   const rawType = String(data.orderType || 'Dine-In');
   const tblVal = (data as any).tableNumber || (data as any).table_number || (data as any).tableNo;
-  let formattedType = 'Takeaway';
+  let formattedType = 'TAKEAWAY';
   if (rawType.toLowerCase().includes('dine')) {
-    formattedType = (tblVal && tblVal !== 'N/A' && tblVal !== 'TA') ? `DI-${tblVal}` : 'DI-Dine-In';
+    formattedType = (tblVal && tblVal !== 'N/A' && tblVal !== 'TA' && tblVal !== 'DEL') ? `DI-${tblVal}` : 'DI-Dine-In';
+  } else if (rawType.toLowerCase().includes('delivery') || tblVal === 'DEL') {
+    formattedType = 'DELIVERY';
   } else {
-    formattedType = 'Takeaway';
+    formattedType = 'TAKEAWAY';
   }
   lines.push(padLine(`Type: ${formattedType}`, `Pay: ${data.paymentMode || 'Cash'}`, width));
 
@@ -217,6 +224,12 @@ export function getPosInvoiceTextBody(
     lines.push(divider('-', width));
     if (!isWalkIn) lines.push(`Cust : ${custName}`);
     if (custPhone) lines.push(`Phone: ${custPhone}`);
+  }
+
+  if (data.deliveryAddress && data.deliveryAddress.trim()) {
+    lines.push(divider('-', width));
+    lines.push('DELIVERY ADDRESS:');
+    wrapText(data.deliveryAddress.trim(), width).forEach((l) => lines.push(l));
   }
 
   lines.push(divider('-', width));
@@ -268,6 +281,13 @@ export function getPosInvoiceTextBody(
   lines.push(divider('=', width));
   lines.push(padLine('GRAND TOTAL', `RS.${Number(data.grandTotal || 0).toFixed(2)}`, width));
   lines.push(divider('=', width));
+
+  if (data.paymentMode === 'DEO' || (data.cashAmount && data.upiAmount)) {
+    lines.push(centerLine('PAYMENT BREAKDOWN (DEO)', width));
+    lines.push(padLine('  Cash Paid', `RS.${Number(data.cashAmount || 0).toFixed(2)}`, width));
+    lines.push(padLine('  UPI Paid', `RS.${Number(data.upiAmount || 0).toFixed(2)}`, width));
+    lines.push(divider('-', width));
+  }
 
   if (restaurantDetails?.footerNote) {
     wrapText(restaurantDetails.footerNote, width).forEach((l) => lines.push(centerLine(l, width)));

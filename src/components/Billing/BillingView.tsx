@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search, ShoppingCart, Trash2, Printer, Utensils, ShoppingBag,
+  Search, ShoppingCart, Trash2, Printer, Utensils, ShoppingBag, Truck, Wallet,
   CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone,
-  Edit3, History
+  Edit3, History, MapPin
 } from 'lucide-react';
 import { usePosStore } from '../../store/usePosStore';
 import { useAppStore } from '../../store/useAppStore';
@@ -253,6 +253,23 @@ const ConfirmOrderModal: React.FC<{
               <span className="text-base">{curr} {Number(finalTotal || 0).toFixed(2)}</span>
             </div>
 
+            {paymentMode === 'DEO' && (
+              <div className="text-[10px] text-black font-semibold my-1 border-y border-dashed border-black py-1">
+                <div className="flex justify-between font-bold">
+                  <span>PAYMENT MODE:</span>
+                  <span>DEO (DUAL PAYMENT)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>• Cash Received</span>
+                  <span>{curr} {Number(usePosStore.getState().deoCashAmount || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>• UPI Received</span>
+                  <span>{curr} {Number(usePosStore.getState().deoUpiAmount || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
             {/* Dashed Line */}
             <div className="border-b border-dashed border-black my-2"></div>
 
@@ -302,8 +319,10 @@ const ConfirmOrderModal: React.FC<{
 export const BillingView: React.FC = () => {
   const {
     cart, orderType, tableNumber, paymentMode, discount,
+    deoCashAmount, deoUpiAmount, deliveryAddress,
     editingBillNumber, editingOrderId,
     setOrderType, setTableNumber, setPaymentMode, setDiscount,
+    setDeoSplit, setDeliveryAddress,
     addToCart, updateQty, clearCart, loadTokenToCart,
     startEditingBill, cancelEditBill
   } = usePosStore();
@@ -491,16 +510,22 @@ export const BillingView: React.FC = () => {
       }
     }
 
+    const computedCash = paymentMode === 'DEO' ? (deoCashAmount || 0) : (paymentMode === 'Cash' ? grandTotal : 0);
+    const computedUpi = paymentMode === 'DEO' ? (deoUpiAmount || Math.max(0, grandTotal - computedCash)) : (paymentMode === 'UPI' ? grandTotal : 0);
+
     const payload = {
       id: editingOrderId || undefined,
       order_number: currentBillNumber,
       order_type: orderType,
-      table_number: tableNumber || (orderType === 'Takeaway' ? 'TA' : 'N/A'),
+      table_number: tableNumber || (orderType === 'Delivery' ? 'DEL' : orderType === 'Takeaway' ? 'TA' : 'N/A'),
       subtotal,
       tax_amount: taxAmt,
       discount_amount: discount,
       grand_total: grandTotal,
       payment_mode: paymentMode,
+      cash_amount: computedCash,
+      upi_amount: computedUpi,
+      delivery_address: orderType === 'Delivery' ? deliveryAddress : '',
       token_number: activeTokenNo || undefined,
       items: cart,
       order_date: orderDateString,
@@ -513,7 +538,7 @@ export const BillingView: React.FC = () => {
       id: editingOrderId || undefined,
       orderNumber: currentBillNumber,
       tokenNumber: activeTokenNo || undefined,
-      tableNumber: tableNumber || (orderType === 'Takeaway' ? 'TA' : 'N/A'),
+      tableNumber: tableNumber || (orderType === 'Delivery' ? 'DEL' : orderType === 'Takeaway' ? 'TA' : 'N/A'),
       items: [...cart],
       subtotal,
       tax: taxAmt,
@@ -522,6 +547,9 @@ export const BillingView: React.FC = () => {
       roundOff,
       orderType,
       paymentMode,
+      cashAmount: computedCash,
+      upiAmount: computedUpi,
+      deliveryAddress: orderType === 'Delivery' ? deliveryAddress : '',
       customerName: 'Walk-in',
       cashierName: (useAuthStore.getState().user?.name || 'Staff') as string,
     };
@@ -807,13 +835,30 @@ export const BillingView: React.FC = () => {
         {/* Order Type & Table Selection */}
         <div className="flex flex-col gap-1.5 flex-shrink-0">
           <div className="flex bg-olive-950 p-1 rounded-xl gap-1">
-            {[{ id: 'Dine-In', icon: <Utensils className="w-3.5 h-3.5" /> }, { id: 'Takeaway', icon: <ShoppingBag className="w-3.5 h-3.5" /> }].map((t) => (
+            {[
+              { id: 'Dine-In', icon: <Utensils className="w-3.5 h-3.5" /> },
+              { id: 'Takeaway', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
+              { id: 'Delivery', icon: <Truck className="w-3.5 h-3.5" /> }
+            ].map((t) => (
               <button key={t.id} onClick={() => setOrderType(t.id as any)}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${orderType === t.id ? 'bg-olive-800 text-gold-400 border border-gold-500/30' : 'text-olive-400'
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all ${orderType === t.id ? 'bg-olive-800 text-gold-400 border border-gold-500/30' : 'text-olive-400'
                   }`}
               >{t.icon} {t.id}</button>
             ))}
           </div>
+
+          {orderType === 'Delivery' && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-olive-950/80 border border-amber-500/30 rounded-xl text-xs">
+              <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Delivery address / customer phone..."
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                className="w-full bg-transparent text-white placeholder-olive-400 focus:outline-none text-xs font-sans"
+              />
+            </div>
+          )}
 
           {orderType === 'Dine-In' && (
             <div className="relative mb-1 flex-shrink-0">
@@ -965,13 +1010,68 @@ export const BillingView: React.FC = () => {
           </div>
 
           <div className="flex gap-1.5">
-            {[{ id: 'Cash', icon: <Banknote className="w-3.5 h-3.5" /> }, { id: 'UPI', icon: <QrCode className="w-3.5 h-3.5" /> }, { id: 'Card', icon: <CreditCard className="w-3.5 h-3.5" /> }].map((mode) => (
-              <button key={mode.id} onClick={() => setPaymentMode(mode.id as any)}
+            {[
+              { id: 'Cash', icon: <Banknote className="w-3.5 h-3.5" /> },
+              { id: 'UPI', icon: <QrCode className="w-3.5 h-3.5" /> },
+              { id: 'Card', icon: <CreditCard className="w-3.5 h-3.5" /> },
+              { id: 'DEO', icon: <Wallet className="w-3.5 h-3.5" />, label: 'DEO (Dual)' }
+            ].map((mode) => (
+              <button key={mode.id} onClick={() => {
+                setPaymentMode(mode.id as any);
+                if (mode.id === 'DEO' && deoCashAmount === 0 && deoUpiAmount === 0) {
+                  const defaultCash = Math.round(grandTotal / 2);
+                  setDeoSplit(defaultCash, Math.max(0, grandTotal - defaultCash));
+                }
+              }}
                 className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all ${paymentMode === mode.id ? 'bg-gold-500/10 border border-gold-500 text-gold-400' : 'bg-olive-900 border border-gold-500/20 text-olive-400'
                   }`}
-              >{mode.icon} {mode.id}</button>
+              >{mode.icon} {mode.label || mode.id}</button>
             ))}
           </div>
+
+          {paymentMode === 'DEO' && (
+            <div className="p-2.5 bg-olive-950/90 border border-amber-500/30 rounded-xl space-y-2 text-xs select-none">
+              <div className="flex justify-between items-center text-gold-400 font-bold text-[11px] uppercase tracking-wider border-b border-gold-500/15 pb-1">
+                <span>DEO Dual Payment (Cash + UPI)</span>
+                <span className="text-[10px] text-emerald-400 font-mono">Total: ₹{grandTotal}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-olive-300 font-semibold block mb-0.5">Cash Paid (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={grandTotal}
+                    value={deoCashAmount || ''}
+                    onChange={(e) => {
+                      const cashVal = Math.min(grandTotal, Math.max(0, Number(e.target.value) || 0));
+                      setDeoSplit(cashVal, Math.max(0, grandTotal - cashVal));
+                    }}
+                    placeholder="Cash Paid..."
+                    className="w-full px-2.5 py-1.5 bg-olive-900 border border-emerald-500/40 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-olive-300 font-semibold block mb-0.5">UPI Paid (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={grandTotal}
+                    value={deoUpiAmount || ''}
+                    onChange={(e) => {
+                      const upiVal = Math.min(grandTotal, Math.max(0, Number(e.target.value) || 0));
+                      setDeoSplit(Math.max(0, grandTotal - upiVal), upiVal);
+                    }}
+                    placeholder="UPI Paid..."
+                    className="w-full px-2.5 py-1.5 bg-olive-900 border border-cyan-500/40 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+              </div>
+              <div className="text-[10px] text-olive-300 text-center font-mono pt-0.5">
+                Split: <span className="text-emerald-400 font-bold">₹{deoCashAmount || 0} Cash</span> + <span className="text-cyan-400 font-bold">₹{deoUpiAmount || 0} UPI</span>
+              </div>
+            </div>
+          )}
 
           <button onClick={handleCheckoutClick}
             className={`w-full py-3 ${editingBillNumber ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-amber-500/30' : 'bg-gradient-to-r from-gold-500 to-gold-dark text-olive-950 shadow-gold-500/20'} font-extrabold rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform`}

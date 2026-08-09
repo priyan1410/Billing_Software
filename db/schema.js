@@ -123,6 +123,9 @@ async function initializeDatabase() {
 
     await query(`ALTER TABLE orders ADD COLUMN token_number VARCHAR(50) DEFAULT NULL`).catch(() => { });
     await query(`ALTER TABLE orders ADD COLUMN table_number VARCHAR(50) DEFAULT NULL`).catch(() => { });
+    await query(`ALTER TABLE orders ADD COLUMN cash_amount DECIMAL(10,2) DEFAULT 0`).catch(() => { });
+    await query(`ALTER TABLE orders ADD COLUMN upi_amount DECIMAL(10,2) DEFAULT 0`).catch(() => { });
+    await query(`ALTER TABLE orders ADD COLUMN delivery_address TEXT DEFAULT NULL`).catch(() => { });
     // Phase 1 — Hybrid Sync: track upload status to cloud MySQL
     await query(`ALTER TABLE orders ADD COLUMN synced TINYINT(1) DEFAULT 0`).catch(() => { });
     await query(`ALTER TABLE expenses ADD COLUMN synced TINYINT(1) DEFAULT 0`).catch(() => { });

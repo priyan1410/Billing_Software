@@ -270,11 +270,14 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   const rawToken = orderData.token_number || orderData.tokenNumber || orderData.token_id || orderData.tokenId || '';
   const normalizedToken = rawToken ? normalizeTokenNumber(rawToken) : null;
 
-  const tableNum = orderData.table_number || orderData.tableNumber || (orderData.order_type === 'Takeaway' ? 'TA' : 'N/A');
+  const tableNum = orderData.table_number || orderData.tableNumber || (orderData.order_type === 'Delivery' ? 'DEL' : orderData.order_type === 'Takeaway' ? 'TA' : 'N/A');
+  const cashAmt = Number(orderData.cash_amount || orderData.cashAmount || 0);
+  const upiAmt = Number(orderData.upi_amount || orderData.upiAmount || 0);
+  const delAddress = orderData.delivery_address || orderData.deliveryAddress || null;
 
   let insertOrder = await query(
-    `INSERT INTO orders (order_number, order_type, table_number, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+    `INSERT INTO orders (order_number, order_type, table_number, subtotal, tax_amount, discount_amount, grand_total, payment_mode, cash_amount, upi_amount, delivery_address, token_number, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
     [
       orderNumber,
       orderData.order_type || orderData.orderType || 'Dine-In',
@@ -284,6 +287,9 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
       Number(orderData.discount_amount || orderData.discountAmount || 0),
       Number(orderData.grand_total || orderData.grandTotal || 0),
       orderData.payment_mode || orderData.paymentMode || 'Cash',
+      cashAmt,
+      upiAmt,
+      delAddress,
       normalizedToken
     ]
   );
@@ -295,8 +301,8 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
     orderNumber = `KMIV-${String(seqRetry).padStart(3, '0')}`;
 
     insertOrder = await query(
-      `INSERT INTO orders (order_number, order_type, table_number, subtotal, tax_amount, discount_amount, grand_total, payment_mode, token_number, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
+      `INSERT INTO orders (order_number, order_type, table_number, subtotal, tax_amount, discount_amount, grand_total, payment_mode, cash_amount, upi_amount, delivery_address, token_number, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
       [
         orderNumber,
         orderData.order_type || orderData.orderType || 'Dine-In',
@@ -306,6 +312,9 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
         Number(orderData.discount_amount || orderData.discountAmount || 0),
         Number(orderData.grand_total || orderData.grandTotal || 0),
         orderData.payment_mode || orderData.paymentMode || 'Cash',
+        cashAmt,
+        upiAmt,
+        delAddress,
         normalizedToken
       ]
     );
@@ -363,7 +372,10 @@ ipcMain.handle('orders:update', async (evt, orderData) => {
 
   const rawToken = orderData.token_number || orderData.tokenNumber || '';
   const normalizedToken = rawToken ? normalizeTokenNumber(rawToken) : null;
-  const tableNum = orderData.table_number || orderData.tableNumber || (orderData.order_type === 'Takeaway' ? 'TA' : 'N/A');
+  const tableNum = orderData.table_number || orderData.tableNumber || (orderData.order_type === 'Delivery' ? 'DEL' : orderData.order_type === 'Takeaway' ? 'TA' : 'N/A');
+  const cashAmt = Number(orderData.cash_amount || orderData.cashAmount || 0);
+  const upiAmt = Number(orderData.upi_amount || orderData.upiAmount || 0);
+  const delAddress = orderData.delivery_address || orderData.deliveryAddress || null;
 
   const updateRes = await query(
     `UPDATE orders SET 
@@ -374,6 +386,9 @@ ipcMain.handle('orders:update', async (evt, orderData) => {
       discount_amount = ?, 
       grand_total = ?, 
       payment_mode = ?,
+      cash_amount = ?,
+      upi_amount = ?,
+      delivery_address = ?,
       token_number = ?
      WHERE id = ? OR order_number = ?`,
     [
@@ -384,6 +399,9 @@ ipcMain.handle('orders:update', async (evt, orderData) => {
       Number(orderData.discount_amount || orderData.discountAmount || 0),
       Number(orderData.grand_total || orderData.grandTotal || 0),
       orderData.payment_mode || orderData.paymentMode || 'Cash',
+      cashAmt,
+      upiAmt,
+      delAddress,
       normalizedToken,
       orderId,
       orderNumber
@@ -429,6 +447,9 @@ ipcMain.handle('orders:getAll', async () => {
       discountAmount: Number(r.discount_amount),
       grandTotal: Number(r.grand_total),
       paymentMode: r.payment_mode,
+      cashAmount: Number(r.cash_amount || 0),
+      upiAmount: Number(r.upi_amount || 0),
+      deliveryAddress: r.delivery_address || '',
       status: r.status,
       createdAt: r.created_at
     }))

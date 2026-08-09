@@ -102,9 +102,13 @@ export const RestaurantView: React.FC = () => {
   const [filterUpi, setFilterUpi] = useState<boolean>(true);
   const [filterCash, setFilterCash] = useState<boolean>(true);
   const [filterCard, setFilterCard] = useState<boolean>(true);
+  const [filterDeo, setFilterDeo] = useState<boolean>(true);
 
   const matchesPaymentModeFilter = (pm: string) => {
     const norm = (pm || '').toLowerCase().trim();
+    if (norm.includes('deo')) {
+      return filterDeo || filterCash || filterUpi;
+    }
     if (norm.includes('upi') || norm.includes('gpay') || norm.includes('phonepe') || norm.includes('paytm')) {
       return filterUpi;
     }
@@ -114,7 +118,7 @@ export const RestaurantView: React.FC = () => {
     if (norm.includes('cash')) {
       return filterCash;
     }
-    return filterCash || filterUpi || filterCard;
+    return filterCash || filterUpi || filterCard || filterDeo;
   };
 
   const handleSelectPeriod = (selectedP: PnLPeriod) => {
@@ -516,19 +520,40 @@ export const RestaurantView: React.FC = () => {
 
   // Combine orders (Revenue +) and expenses (Outflow -) into one unified timeline ledger sorted chronologically by date/time
   const combinedPnlTransactions = [
-    ...filteredOrders.map(o => ({
-      id: `ORDER-${o.id}`,
-      type: 'INCOME' as const,
-      refNo: o.orderNumber || o.order_number || `KM-${o.id}`,
-      category: o.orderType || 'Dine-In',
-      description: 'Customer Invoice Bill',
-      amount: Number(o.grandTotal || o.grand_total || o.total || 0),
-      paymentMode: o.paymentMode || o.payment_mode || 'Cash',
-      timestamp: new Date(o.createdAt || o.orderDate || o.created_at || Date.now()).getTime(),
-      dateStr: formatDateDDMMYYYY(o.createdAt || o.orderDate || o.created_at),
-      timeStr: (o.createdAt || o.orderDate || o.created_at) ? new Date(o.createdAt || o.orderDate || o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
-      originalData: o
-    })),
+    ...filteredOrders.map(o => {
+      const mode = String(o.paymentMode || o.payment_mode || '').toUpperCase();
+      let displayedAmt = Number(o.grandTotal || o.grand_total || o.total || 0);
+      let modeLabel = o.paymentMode || o.payment_mode || 'Cash';
+      if (mode === 'DEO') {
+        const c = Number(o.cashAmount || o.cash_amount || 0);
+        const u = Number(o.upiAmount || o.upi_amount || 0);
+        if (filterDeo || (filterCash && filterUpi)) {
+          displayedAmt = Number(o.grandTotal || o.grand_total || (c + u) || 0);
+          modeLabel = `DEO (Cash: ₹${c} + UPI: ₹${u})`;
+        } else if (filterCash && !filterUpi) {
+          displayedAmt = c;
+          modeLabel = `DEO (Cash Portion)`;
+        } else if (filterUpi && !filterCash) {
+          displayedAmt = u;
+          modeLabel = `DEO (UPI Portion)`;
+        } else {
+          modeLabel = `DEO (Cash: ₹${c} + UPI: ₹${u})`;
+        }
+      }
+      return {
+        id: `ORDER-${o.id}`,
+        type: 'INCOME' as const,
+        refNo: o.orderNumber || o.order_number || `KM-${o.id}`,
+        category: o.orderType || 'Dine-In',
+        description: 'Customer Invoice Bill',
+        amount: displayedAmt,
+        paymentMode: modeLabel,
+        timestamp: new Date(o.createdAt || o.orderDate || o.created_at || Date.now()).getTime(),
+        dateStr: formatDateDDMMYYYY(o.createdAt || o.orderDate || o.created_at),
+        timeStr: (o.createdAt || o.orderDate || o.created_at) ? new Date(o.createdAt || o.orderDate || o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+        originalData: o
+      };
+    }),
     ...filteredExpenses.map(e => {
       const dateTimeVal = e.createdAt || e.created_at || e.expenseDate || e.expense_date;
       return {
@@ -547,7 +572,22 @@ export const RestaurantView: React.FC = () => {
     })
   ].sort((a, b) => b.timestamp - a.timestamp);
 
-  const pnlRevenue = filteredOrders.reduce((sum, o) => sum + Number(o.grandTotal || 0), 0);
+  const pnlRevenue = filteredOrders.reduce((sum, o) => {
+    const mode = String(o.paymentMode || o.payment_mode || '').toUpperCase();
+    if (mode === 'DEO') {
+      const c = Number(o.cashAmount || o.cash_amount || 0);
+      const u = Number(o.upiAmount || o.upi_amount || 0);
+      if (filterDeo || (filterCash && filterUpi)) {
+        return sum + Number(o.grandTotal || o.grand_total || (c + u) || 0);
+      }
+      let val = 0;
+      if (filterCash) val += c;
+      if (filterUpi) val += u;
+      if (!filterCash && !filterUpi && !filterDeo) val = Number(o.grandTotal || o.grand_total || 0);
+      return sum + val;
+    }
+    return sum + Number(o.grandTotal || o.grand_total || 0);
+  }, 0);
   const pnlExpenses = filteredExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
   const pnlNet = pnlRevenue - pnlExpenses;
   const pnlMargin = pnlRevenue > 0 ? ((pnlNet / pnlRevenue) * 100).toFixed(1) : '0';
@@ -1269,6 +1309,21 @@ export const RestaurantView: React.FC = () => {
                   />
                   <span>Card</span>
                 </label>
+
+                {/* [ ] DEO (Dual) */}
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer font-bold border transition-all ${filterDeo
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-sm'
+                    : 'bg-olive-950/60 border-gold-500/10 text-olive-400 hover:text-olive-200'
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={filterDeo}
+                    onChange={(e) => setFilterDeo(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-emerald-500 rounded cursor-pointer"
+                  />
+                  <Wallet className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>DEO (Dual)</span>
+                </label>
               </div>
             </div>
 
@@ -1282,6 +1337,7 @@ export const RestaurantView: React.FC = () => {
                   setFilterUpi(true);
                   setFilterCash(true);
                   setFilterCard(true);
+                  setFilterDeo(true);
                 }}
                 className="px-3 py-1 bg-olive-950 border border-gold-500/20 hover:border-gold-500/40 text-olive-300 hover:text-gold-400 text-xs font-semibold rounded-xl transition-colors"
                 title="Reset all filters to select everything"

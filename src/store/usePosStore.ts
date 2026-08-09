@@ -6,12 +6,17 @@ interface PosState {
   orderType: OrderType;
   tableNumber: string;
   paymentMode: PaymentMode;
+  deoCashAmount: number;
+  deoUpiAmount: number;
+  deliveryAddress: string;
   discount: number;
   editingBillNumber: string | null;
   editingOrderId: any | null;
   setOrderType: (type: OrderType) => void;
   setTableNumber: (tableNumber: string) => void;
   setPaymentMode: (mode: PaymentMode) => void;
+  setDeoSplit: (cash: number, upi: number) => void;
+  setDeliveryAddress: (address: string) => void;
   setDiscount: (discount: number) => void;
   addToCart: (dish: Dish, variant: PortionVariant) => void;
   updateQty: (cartKey: string, delta: number) => void;
@@ -24,14 +29,22 @@ interface PosState {
 export const usePosStore = create<PosState>((set: any) => ({
   cart: [],
   orderType: 'Dine-In',
-  tableNumber: 'N/A',
+  tableNumber: 'Table 1',
   paymentMode: 'Cash',
+  deoCashAmount: 0,
+  deoUpiAmount: 0,
+  deliveryAddress: '',
   discount: 0,
   editingBillNumber: null,
   editingOrderId: null,
-  setOrderType: (orderType: OrderType) => set({ orderType }),
+  setOrderType: (orderType: OrderType) => set((state: PosState) => ({
+    orderType,
+    tableNumber: orderType === 'Delivery' ? 'DEL' : orderType === 'Takeaway' ? 'TA' : (state.tableNumber === 'DEL' || state.tableNumber === 'TA' ? 'Table 1' : state.tableNumber)
+  })),
   setTableNumber: (tableNumber: string) => set({ tableNumber }),
   setPaymentMode: (paymentMode: PaymentMode) => set({ paymentMode }),
+  setDeoSplit: (deoCashAmount: number, deoUpiAmount: number) => set({ deoCashAmount, deoUpiAmount }),
+  setDeliveryAddress: (deliveryAddress: string) => set({ deliveryAddress }),
   setDiscount: (discount: number) => set({ discount }),
   addToCart: (dish: Dish, variant: PortionVariant) =>
     set((state: PosState) => {

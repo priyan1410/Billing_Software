@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, X, CheckCircle2, Receipt, Edit3, History } from 'lucide-react';
+import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, Truck, X, CheckCircle2, Receipt, Edit3, History } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -367,6 +367,13 @@ export const TokensView: React.FC = () => {
               }`}
           >
             <ShoppingBag className="w-3.5 h-3.5" /> Takeaway
+          </button>
+          <button
+            onClick={() => setOrderType('Delivery')}
+            className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${orderType === 'Delivery' ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md' : 'text-olive-300 hover:text-white'
+              }`}
+          >
+            <Truck className="w-3.5 h-3.5" /> Delivery
           </button>
         </div>
 

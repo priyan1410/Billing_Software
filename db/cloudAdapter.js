@@ -242,6 +242,9 @@ async function initializeCloudSchema() {
         discount_amount DECIMAL(10,2) DEFAULT 0,
         grand_total DECIMAL(10,2) NOT NULL DEFAULT 0,
         payment_mode VARCHAR(30) DEFAULT 'Cash',
+        cash_amount DECIMAL(10,2) DEFAULT 0,
+        upi_amount DECIMAL(10,2) DEFAULT 0,
+        delivery_address TEXT DEFAULT NULL,
         token_number VARCHAR(50) DEFAULT NULL,
         table_number VARCHAR(50) DEFAULT NULL,
         status VARCHAR(30) DEFAULT 'Completed',
@@ -250,6 +253,10 @@ async function initializeCloudSchema() {
         source_pc_id VARCHAR(100) DEFAULT NULL
       ) ENGINE=InnoDB
     `);
+
+    await cloudQuery(`ALTER TABLE orders ADD COLUMN cash_amount DECIMAL(10,2) DEFAULT 0`).catch(() => { });
+    await cloudQuery(`ALTER TABLE orders ADD COLUMN upi_amount DECIMAL(10,2) DEFAULT 0`).catch(() => { });
+    await cloudQuery(`ALTER TABLE orders ADD COLUMN delivery_address TEXT DEFAULT NULL`).catch(() => { });
 
     // Order Items
     await cloudQuery(`

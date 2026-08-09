@@ -1,5 +1,5 @@
-export type OrderType = 'Dine-In' | 'Takeaway';
-export type PaymentMode = 'Cash' | 'UPI' | 'Card';
+export type OrderType = 'Dine-In' | 'Takeaway' | 'Delivery';
+export type PaymentMode = 'Cash' | 'UPI' | 'Card' | 'DEO';
 export type PortionVariant = 'Quarter' | 'Half' | 'Full';
 export type UnitType = 'Pcs' | 'Kg' | 'Litre' | 'Box' | 'Plate' | 'Glass' | 'Bottle';
 
@@ -54,6 +54,9 @@ export interface Order {
   orderDate?: string;
   dueDate?: string;
   tableNumber?: string;
+  cashAmount?: number;
+  upiAmount?: number;
+  deliveryAddress?: string;
 }
 
 export interface OrderPayload {
@@ -63,6 +66,9 @@ export interface OrderPayload {
   discount_amount: number;
   grand_total: number;
   payment_mode: PaymentMode;
+  cash_amount?: number;
+  upi_amount?: number;
+  delivery_address?: string;
   items: CartItem[];
   customer_name?: string;
   customer_phone?: string;
