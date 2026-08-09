@@ -593,25 +593,10 @@ ipcMain.handle('reports:getFoodSales', async (evt, filter = {}) => {
       LEFT JOIN orders o ON (oi.order_id = o.id OR oi.order_id = o.order_number)
       ${whereSql}
       GROUP BY name, variant
-      ORDER BY total_sales DESC
+      ORDER BY quantity DESC, total_sales DESC
     `;
 
-    let res = await query(sql, params);
-    if (!res.success || !Array.isArray(res.data) || res.data.length === 0) {
-      const fallbackSql = `
-        SELECT 
-          COALESCE(NULLIF(dish_name, ''), NULLIF(item_name, ''), 'Mandhi Special') AS name,
-          COALESCE(NULLIF(variant, ''), 'Full') AS variant,
-          SUM(quantity) AS quantity,
-          SUM(total_price) AS total_sales,
-          AVG(unit_price) AS avg_unit_price
-        FROM order_items
-        GROUP BY name, variant
-        ORDER BY total_sales DESC
-      `;
-      res = await query(fallbackSql);
-    }
-
+    const res = await query(sql, params);
     if (!res.success || !Array.isArray(res.data)) return { success: false, message: res.error || 'No records', data: [] };
 
     const items = res.data.map(r => ({

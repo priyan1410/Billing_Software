@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, BarChart2, Maximize2, Download, Search, X, Calendar, Utensils } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
@@ -644,16 +644,23 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   };
 
   useEffect(() => {
-    fetchFoodSales();
+    const timer = setTimeout(() => {
+      fetchFoodSales();
+    }, 120);
+    return () => clearTimeout(timer);
   }, [period, startDate, endDate]);
 
-  const grandTotalSales = reportData.reduce((sum, item) => sum + Number(item.totalSales || 0), 0);
-  const grandTotalQty = reportData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-
-  const filteredItems = reportData.filter(item =>
-    String(item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    String(item.variant || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { grandTotalSales, grandTotalQty, filteredItems } = useMemo(() => {
+    const totalSales = reportData.reduce((sum, item) => sum + Number(item.totalSales || 0), 0);
+    const totalQty = reportData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const query = searchQuery.toLowerCase().trim();
+    const items = query ? reportData.filter(item =>
+      String(item.name || '').toLowerCase().includes(query) ||
+      String(item.variant || '').toLowerCase().includes(query)
+    ) : reportData;
+    const sorted = [...items].sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0));
+    return { grandTotalSales: totalSales, grandTotalQty: totalQty, filteredItems: sorted };
+  }, [reportData, searchQuery]);
 
   const handleExportCSV = () => {
     if (filteredItems.length === 0) {
@@ -677,8 +684,8 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4 select-none">
-      <div className="bg-olive-950 border border-gold-500/30 rounded-3xl w-full max-w-4xl shadow-2xl shadow-black max-h-[90vh] flex flex-col overflow-hidden text-white">
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 select-none">
+      <div className="bg-olive-950 border border-gold-500/30 rounded-3xl w-[80vw] h-[80vh] shadow-2xl shadow-black flex flex-col overflow-hidden text-white">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gold-500/20 bg-olive-900 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -790,12 +797,12 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
           </div>
 
           {/* Detailed Food Sales Table */}
-          <div className="bg-olive-900 border border-gold-500/20 rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 bg-olive-950/80 border-b border-gold-500/20 flex justify-between items-center text-xs font-bold text-gold-400 uppercase tracking-wider">
+          <div className="bg-olive-900 border border-gold-500/20 rounded-2xl overflow-hidden flex-1 flex flex-col min-h-[260px]">
+            <div className="px-4 py-3 bg-olive-950/80 border-b border-gold-500/20 flex justify-between items-center text-xs font-bold text-gold-400 uppercase tracking-wider shrink-0">
               <span>Itemized Food Sales Ledger</span>
               <span>{filteredItems.length} Records</span>
             </div>
-            <div className="max-h-72 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto will-change-scroll" style={{ transform: 'translateZ(0)', scrollbarWidth: 'thin' }}>
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-gold-500/10 bg-olive-950/40 text-olive-300 text-[11px]">
@@ -803,22 +810,21 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                     <th className="py-2.5 px-3">Portion / Variant</th>
                     <th className="py-2.5 px-3 text-right">Qty Sold</th>
                     <th className="py-2.5 px-3 text-right">Avg Unit Price</th>
-                    <th className="py-2.5 px-3 text-right">Total Revenue</th>
-                    <th className="py-2.5 px-4 text-right">% Share of Total</th>
+                    <th className="py-2.5 px-4 text-right">% Share of Qty Sold</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gold-500/10">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-olive-400">Loading food sales report...</td>
+                      <td colSpan={5} className="py-8 text-center text-olive-400">Loading food sales report...</td>
                     </tr>
                   ) : filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-olive-400">No food sales recorded for this date filter.</td>
+                      <td colSpan={5} className="py-8 text-center text-olive-400">No food sales recorded for this date filter.</td>
                     </tr>
                   ) : (
                     filteredItems.map((item, idx) => {
-                      const share = grandTotalSales > 0 ? (item.totalSales / grandTotalSales) * 100 : 0;
+                      const share = grandTotalQty > 0 ? (item.quantity / grandTotalQty) * 100 : 0;
                       return (
                         <tr key={idx} className="hover:bg-olive-800/40 transition-colors">
                           <td className="py-2.5 px-4 font-bold text-white flex items-center gap-2">
@@ -832,7 +838,6 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono text-amber-300 font-bold">{item.quantity}</td>
                           <td className="py-2.5 px-3 text-right font-mono text-olive-200">₹{Number(item.avgPrice || 0).toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-bold">₹{Number(item.totalSales || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                           <td className="py-2.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <div className="w-16 bg-olive-950 h-2 rounded-full overflow-hidden border border-gold-500/20">
