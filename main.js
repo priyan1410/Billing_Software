@@ -538,6 +538,97 @@ ipcMain.handle('dashboard:getStats', async () => {
 });
 
 // Helper for formatting date strings safely as YYYY-MM-DD
+ipcMain.handle('reports:getFoodSales', async (evt, filter = {}) => {
+  try {
+    let whereClauses = [];
+    let params = [];
+
+    const { startDate, endDate, period } = filter;
+
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const curDay = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${curYear}-${curMonth}-${curDay}`;
+
+    if (period === 'today') {
+      whereClauses.push('(DATE(o.created_at) = ? OR DATE(o.created_at) = CURDATE() OR o.created_at IS NULL)');
+      params.push(todayStr);
+    } else if (period === 'week') {
+      const sevenDaysAgoObj = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      const sY = sevenDaysAgoObj.getFullYear();
+      const sM = String(sevenDaysAgoObj.getMonth() + 1).padStart(2, '0');
+      const sD = String(sevenDaysAgoObj.getDate()).padStart(2, '0');
+      whereClauses.push('(DATE(o.created_at) >= ? OR o.created_at IS NULL)');
+      params.push(`${sY}-${sM}-${sD}`);
+    } else if (period === 'month') {
+      const monthStartStr = `${curYear}-${curMonth}-01`;
+      whereClauses.push('(DATE(o.created_at) >= ? OR o.created_at IS NULL)');
+      params.push(monthStartStr);
+    } else if (period === 'year') {
+      const yearStartStr = `${curYear}-01-01`;
+      whereClauses.push('(DATE(o.created_at) >= ? OR o.created_at IS NULL)');
+      params.push(yearStartStr);
+    } else if (startDate || endDate) {
+      if (startDate) {
+        whereClauses.push('DATE(o.created_at) >= ?');
+        params.push(startDate);
+      }
+      if (endDate) {
+        whereClauses.push('DATE(o.created_at) <= ?');
+        params.push(endDate);
+      }
+    }
+
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const sql = `
+      SELECT 
+        COALESCE(NULLIF(oi.dish_name, ''), NULLIF(oi.item_name, ''), 'Mandhi Special') AS name,
+        COALESCE(NULLIF(oi.variant, ''), 'Full') AS variant,
+        SUM(oi.quantity) AS quantity,
+        SUM(oi.total_price) AS total_sales,
+        AVG(oi.unit_price) AS avg_unit_price
+      FROM order_items oi
+      LEFT JOIN orders o ON (oi.order_id = o.id OR oi.order_id = o.order_number)
+      ${whereSql}
+      GROUP BY name, variant
+      ORDER BY total_sales DESC
+    `;
+
+    let res = await query(sql, params);
+    if (!res.success || !Array.isArray(res.data) || res.data.length === 0) {
+      const fallbackSql = `
+        SELECT 
+          COALESCE(NULLIF(dish_name, ''), NULLIF(item_name, ''), 'Mandhi Special') AS name,
+          COALESCE(NULLIF(variant, ''), 'Full') AS variant,
+          SUM(quantity) AS quantity,
+          SUM(total_price) AS total_sales,
+          AVG(unit_price) AS avg_unit_price
+        FROM order_items
+        GROUP BY name, variant
+        ORDER BY total_sales DESC
+      `;
+      res = await query(fallbackSql);
+    }
+
+    if (!res.success || !Array.isArray(res.data)) return { success: false, message: res.error || 'No records', data: [] };
+
+    const items = res.data.map(r => ({
+      name: r.name,
+      variant: r.variant,
+      quantity: Number(r.quantity || 0),
+      totalSales: Number(r.total_sales || 0),
+      avgPrice: Number(r.avg_unit_price || 0)
+    }));
+
+    return { success: true, data: items };
+  } catch (err) {
+    console.error('reports:getFoodSales error:', err);
+    return { success: false, message: err.message, data: [] };
+  }
+});
+
 function formatDateOnly(d) {
   if (!d) return '';
   if (d instanceof Date) {
@@ -1480,7 +1571,7 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
       printer1Name: data.printer1Name || '',
       printer1Target: data.printer1Target || 'both',
       printer2Name: data.printer2Name || '',
-      printer2Target: data.printer2Target || 'none'
+      printer2Target: data.printer2Target || (data.printer2Name ? 'token' : 'none')
     };
 
     if (data.softwareIconUrl && mainWindow) {
@@ -1575,7 +1666,7 @@ ipcMain.handle('restaurant:saveDetails', async (evt, data) => {
 // ─────────────────────────────────────────────────────────────
 // PRINT RECEIPT & DUAL PRINTER ROUTING
 // ─────────────────────────────────────────────────────────────
-ipcMain.handle('system:getPrinters', async () => {
+const fetchSystemPrintersHandler = async () => {
   try {
     if (mainWindow && mainWindow.webContents) {
       const printers = await mainWindow.webContents.getPrintersAsync();
@@ -1594,7 +1685,10 @@ ipcMain.handle('system:getPrinters', async () => {
     console.error('getPrinters error:', err);
     return { success: false, message: err.message, printers: [] };
   }
-});
+};
+
+ipcMain.handle('system:getPrinters', fetchSystemPrintersHandler);
+ipcMain.handle('printer:getPrinters', fetchSystemPrintersHandler);
 
 // Sequenced Print Queue to prevent race conditions and Windows spooler collisions when printing to dual printers
 let printQueue = Promise.resolve();

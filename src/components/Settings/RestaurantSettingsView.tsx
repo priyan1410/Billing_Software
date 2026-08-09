@@ -102,8 +102,10 @@ export const RestaurantSettingsView: React.FC = () => {
   const fetchPrinters = async () => {
     setLoadingPrinters(true);
     try {
-      if ((window as any).electronAPI?.getSystemPrinters) {
-        const res = await (window as any).electronAPI.getSystemPrinters();
+      const api = (window as any).electronAPI;
+      const getPrintersFn = api?.getSystemPrinters || api?.getPrinters;
+      if (getPrintersFn) {
+        const res = await getPrintersFn();
         if (res && res.success && Array.isArray(res.printers)) {
           setSystemPrinters(res.printers);
         }
@@ -760,7 +762,15 @@ export const RestaurantSettingsView: React.FC = () => {
                         {systemPrinters.length > 0 ? (
                           <select
                             value={form.printer2Name || ''}
-                            onChange={(e) => update('printer2Name' as any, e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setForm((prev) => ({
+                                ...prev,
+                                printer2Name: val,
+                                printer2Target: val && (!prev.printer2Target || prev.printer2Target === 'none') ? 'token' : (prev.printer2Target || 'token')
+                              }));
+                              setIsDirty(true);
+                            }}
                             className="w-full bg-black/40 border border-white/15 text-white rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-emerald-500/50 outline-none"
                           >
                             <option value="">-- Select Kitchen LAN Printer --</option>
@@ -774,7 +784,15 @@ export const RestaurantSettingsView: React.FC = () => {
                           <input
                             type="text"
                             value={form.printer2Name || ''}
-                            onChange={(e) => update('printer2Name' as any, e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setForm((prev) => ({
+                                ...prev,
+                                printer2Name: val,
+                                printer2Target: val && (!prev.printer2Target || prev.printer2Target === 'none') ? 'token' : (prev.printer2Target || 'token')
+                              }));
+                              setIsDirty(true);
+                            }}
                             placeholder="e.g. Kitchen-LAN-Printer or 192.168.1.100"
                             className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-3 py-2 text-xs"
                           />

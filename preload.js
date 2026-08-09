@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getOrderItems: (orderId) => ipcRenderer.invoke('orders:getItems', orderId),
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),
   getPnLSummary: (dateRange) => ipcRenderer.invoke('dashboard:getPnLSummary', dateRange),
+  getFoodSalesReport: (filter) => ipcRenderer.invoke('reports:getFoodSales', filter),
 
   // Tokens (KOT)
   getNextTokenSeq: () => ipcRenderer.invoke('tokens:getNextSeq'),
@@ -54,6 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Thermal Receipt & Dual Printing
   printReceipt: (receiptHtml, options) => ipcRenderer.invoke('receipt:print', receiptHtml, options),
   getSystemPrinters: () => ipcRenderer.invoke('system:getPrinters'),
+  getPrinters: () => ipcRenderer.invoke('system:getPrinters'),
 
   // Auth & Restaurant Details
   register: (userData, restaurantData) => ipcRenderer.invoke('auth:register', { userData, restaurantData }),

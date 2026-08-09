@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getNextOrderNumber: () => ipcRenderer.invoke('orders:getNextNumber'),
   getOrders: () => ipcRenderer.invoke('orders:getAll'),
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),
+  getFoodSalesReport: (filter?: any) => ipcRenderer.invoke('reports:getFoodSales', filter),
 
   // Tokens (KOT)
   getNextTokenSeq: () => ipcRenderer.invoke('tokens:getNextSeq'),
@@ -29,8 +30,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addExpense: (expenseData: any) => ipcRenderer.invoke('expenses:add', expenseData),
   deleteExpense: (id: number) => ipcRenderer.invoke('expenses:delete', id),
 
-  // Thermal Receipt Printing
-  printReceipt: (receiptHtml: string) => ipcRenderer.invoke('receipt:print', receiptHtml),
 
   // Database Management
   getDbConfig: () => ipcRenderer.invoke('db:getConfig'),
@@ -43,10 +42,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   resetDefaults: () => ipcRenderer.invoke('db:resetDefaults'),
   importBackup: (backupData: any) => ipcRenderer.invoke('db:importBackup', backupData),
 
-  // Restaurant Settings
+  // Restaurant Settings & Printing
   getRestaurantDetails: () => ipcRenderer.invoke('restaurant:getDetails'),
   saveRestaurantDetails: (data: any) => ipcRenderer.invoke('restaurant:saveDetails', data),
   updateWindowIcon: (dataUrl: string) => ipcRenderer.invoke('app:updateWindowIcon', dataUrl),
+  printReceipt: (receiptHtml: string, options?: any) => ipcRenderer.invoke('receipt:print', receiptHtml, options),
+  getSystemPrinters: () => ipcRenderer.invoke('system:getPrinters'),
+  getPrinters: () => ipcRenderer.invoke('system:getPrinters'),
 
   // Auth
   register: (userData: any, restaurantData: any) => ipcRenderer.invoke('auth:register', { userData, restaurantData }),

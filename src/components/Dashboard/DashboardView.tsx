@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, BarChart2 } from 'lucide-react';
+import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, BarChart2, Maximize2, Download, Search, X, Calendar, Utensils } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
 
 export const DashboardView: React.FC = () => {
   const { setActiveSection } = useAppStore();
   const [chartPeriod, setChartPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('today');
+  const [showFoodSalesReportModal, setShowFoodSalesReportModal] = useState<boolean>(false);
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalOrdersCount: 0,
@@ -495,9 +496,19 @@ export const DashboardView: React.FC = () => {
         <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-5 flex flex-col justify-between">
           <div className="flex justify-between items-center mb-1">
             <h4 className="text-sm font-bold text-gold-500">Top Selling Mandhi Dishes</h4>
-            <span className="text-[11px] font-semibold text-olive-300 bg-olive-950/60 px-2.5 py-0.5 rounded-full border border-gold-500/10">
-              Live Sales
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-olive-300 bg-olive-950/60 px-2.5 py-0.5 rounded-full border border-gold-500/10 hidden sm:inline-block">
+                Live Sales
+              </span>
+              <button
+                onClick={() => setShowFoodSalesReportModal(true)}
+                className="flex items-center gap-1 text-[11px] font-bold text-amber-300 hover:text-white bg-amber-500/20 hover:bg-amber-500/30 px-2.5 py-1 rounded-xl border border-amber-500/40 transition-all shadow-sm"
+                title="Expand and view full itemized Food Sales Report"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Food Sales Report</span>
+              </button>
+            </div>
           </div>
 
           <div className="h-56 relative flex items-center justify-center">
@@ -598,6 +609,246 @@ export const DashboardView: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {showFoodSalesReportModal && (
+        <FoodSalesReportModal onClose={() => setShowFoodSalesReportModal(false)} />
+      )}
+    </div>
+  );
+};
+
+const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'custom' | 'all'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchFoodSales = async () => {
+    setLoading(true);
+    try {
+      if ((window as any).electronAPI?.getFoodSalesReport) {
+        const res = await (window as any).electronAPI.getFoodSalesReport({ period, startDate, endDate });
+        if (res && res.success && Array.isArray(res.data)) {
+          setReportData(res.data);
+        }
+      }
+    } catch (err) {
+      console.error('fetchFoodSales error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFoodSales();
+  }, [period, startDate, endDate]);
+
+  const grandTotalSales = reportData.reduce((sum, item) => sum + Number(item.totalSales || 0), 0);
+  const grandTotalQty = reportData.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  const filteredItems = reportData.filter(item =>
+    String(item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    String(item.variant || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleExportCSV = () => {
+    if (filteredItems.length === 0) {
+      alert('No food sales data available to export.');
+      return;
+    }
+    let csv = 'Dish Name,Variant,Quantity Sold,Avg Unit Price (INR),Total Sales (INR),Share of Total (%)\n';
+    filteredItems.forEach(item => {
+      const share = grandTotalSales > 0 ? ((item.totalSales / grandTotalSales) * 100).toFixed(1) : '0';
+      csv += `"${item.name}","${item.variant}",${item.quantity},${Number(item.avgPrice || 0).toFixed(2)},${Number(item.totalSales || 0).toFixed(2)},${share}%\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Food_Sales_Report_${period}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4 select-none">
+      <div className="bg-olive-950 border border-gold-500/30 rounded-3xl w-full max-w-4xl shadow-2xl shadow-black max-h-[90vh] flex flex-col overflow-hidden text-white">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gold-500/20 bg-olive-900 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-gold-400">
+              <BarChart2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-base tracking-wide flex items-center gap-2">
+                Food Sales Report & Itemized Analytics
+              </h3>
+              <p className="text-xs text-olive-300">Complete food sales performance and dish breakdown with date filtering</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-olive-400 hover:text-white rounded-xl hover:bg-olive-800 transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5 min-h-0">
+          {/* Controls Bar: Period Filter + Search + Export */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
+            {/* Period Pills */}
+            <div className="flex bg-olive-900 p-1 rounded-xl border border-gold-500/15 gap-1">
+              {[
+                { id: 'all', label: 'All Time' },
+                { id: 'today', label: 'Today' },
+                { id: 'week', label: '7 Days' },
+                { id: 'month', label: 'This Month' },
+                { id: 'year', label: 'This Year' },
+                { id: 'custom', label: 'Custom Range' }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setPeriod(t.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    period === t.id ? 'bg-gold-500 text-olive-950 shadow-md' : 'text-olive-300 hover:text-white'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Box */}
+            <div className="flex items-center gap-2 flex-1 max-w-xs">
+              <div className="relative w-full">
+                <Search className="w-3.5 h-3.5 text-olive-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search dish or variant..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-olive-900 border border-gold-500/20 rounded-xl text-xs text-white placeholder-olive-400 outline-none focus:border-gold-500"
+                />
+              </div>
+              <button
+                onClick={handleExportCSV}
+                className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <Download className="w-3.5 h-3.5" /> Export CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Custom Date Range Controls */}
+          {period === 'custom' && (
+            <div className="flex flex-wrap items-center gap-3 p-3 bg-olive-900 border border-gold-500/20 rounded-2xl text-xs">
+              <Calendar className="w-4 h-4 text-gold-400" />
+              <div className="flex items-center gap-2">
+                <span className="text-olive-300">From Date:</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-olive-950 border border-gold-500/30 text-white rounded-lg px-2.5 py-1 outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-olive-300">To Date:</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-olive-950 border border-gold-500/30 text-white rounded-lg px-2.5 py-1 outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Summary Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-olive-900/80 border border-gold-500/20 p-4 rounded-2xl">
+              <span className="text-[11px] text-olive-300 font-semibold block">Total Food Revenue</span>
+              <span className="text-xl font-bold text-emerald-400 mt-1 block">₹{grandTotalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="bg-olive-900/80 border border-gold-500/20 p-4 rounded-2xl">
+              <span className="text-[11px] text-olive-300 font-semibold block">Total Dishes Sold</span>
+              <span className="text-xl font-bold text-amber-300 mt-1 block">{grandTotalQty} Items</span>
+            </div>
+            <div className="bg-olive-900/80 border border-gold-500/20 p-4 rounded-2xl">
+              <span className="text-[11px] text-olive-300 font-semibold block">Unique Items Sold</span>
+              <span className="text-xl font-bold text-cyan-300 mt-1 block">{filteredItems.length} Dishes</span>
+            </div>
+            <div className="bg-olive-900/80 border border-gold-500/20 p-4 rounded-2xl">
+              <span className="text-[11px] text-olive-300 font-semibold block">Top Performing Dish</span>
+              <span className="text-sm font-bold text-gold-400 truncate mt-1 block">{filteredItems[0]?.name || 'N/A'}</span>
+            </div>
+          </div>
+
+          {/* Detailed Food Sales Table */}
+          <div className="bg-olive-900 border border-gold-500/20 rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 bg-olive-950/80 border-b border-gold-500/20 flex justify-between items-center text-xs font-bold text-gold-400 uppercase tracking-wider">
+              <span>Itemized Food Sales Ledger</span>
+              <span>{filteredItems.length} Records</span>
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-gold-500/10 bg-olive-950/40 text-olive-300 text-[11px]">
+                    <th className="py-2.5 px-4">Dish Name</th>
+                    <th className="py-2.5 px-3">Portion / Variant</th>
+                    <th className="py-2.5 px-3 text-right">Qty Sold</th>
+                    <th className="py-2.5 px-3 text-right">Avg Unit Price</th>
+                    <th className="py-2.5 px-3 text-right">Total Revenue</th>
+                    <th className="py-2.5 px-4 text-right">% Share of Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gold-500/10">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-olive-400">Loading food sales report...</td>
+                    </tr>
+                  ) : filteredItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-olive-400">No food sales recorded for this date filter.</td>
+                    </tr>
+                  ) : (
+                    filteredItems.map((item, idx) => {
+                      const share = grandTotalSales > 0 ? (item.totalSales / grandTotalSales) * 100 : 0;
+                      return (
+                        <tr key={idx} className="hover:bg-olive-800/40 transition-colors">
+                          <td className="py-2.5 px-4 font-bold text-white flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-gold-400 shrink-0" />
+                            <span>{item.name}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-olive-300">
+                            <span className="px-2 py-0.5 rounded bg-olive-950 text-[10px] font-mono border border-gold-500/10">
+                              {item.variant}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-amber-300 font-bold">{item.quantity}</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-olive-200">₹{Number(item.avgPrice || 0).toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-bold">₹{Number(item.totalSales || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td className="py-2.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-16 bg-olive-950 h-2 rounded-full overflow-hidden border border-gold-500/20">
+                                <div className="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full" style={{ width: `${Math.min(100, share)}%` }} />
+                              </div>
+                              <span className="font-bold text-gold-400 text-[11px] font-mono min-w-[36px]">{share.toFixed(1)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>

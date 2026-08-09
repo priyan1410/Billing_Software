@@ -331,6 +331,30 @@ ipcMain.handle('expenses:delete', async (_evt: any, id: any) => {
   return { success: true };
 });
 
+const getSystemPrintersHandler = async () => {
+  try {
+    if (mainWindow && mainWindow.webContents) {
+      const printers = await mainWindow.webContents.getPrintersAsync();
+      return {
+        success: true,
+        printers: printers.map((p: any) => ({
+          name: p.name,
+          displayName: p.displayName || p.name,
+          isDefault: p.isDefault,
+          status: p.status
+        }))
+      };
+    }
+    return { success: true, printers: [] };
+  } catch (err: any) {
+    console.error('getPrinters error:', err);
+    return { success: false, message: err.message, printers: [] };
+  }
+};
+
+ipcMain.handle('system:getPrinters', getSystemPrintersHandler);
+ipcMain.handle('printer:getPrinters', getSystemPrintersHandler);
+
 let printQueueTS: Promise<any> = Promise.resolve();
 
 ipcMain.handle('receipt:print', (_evt: any, receiptHtml: string, options: any = {}) => {
