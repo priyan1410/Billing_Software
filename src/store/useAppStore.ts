@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { TokenItem } from '../types';
 
-export type AppSection = 'dashboard' | 'billing' | 'tokens' | 'expenses' | 'restaurant' | 'db-settings' | 'settings';
+export type AppSection = 'dashboard' | 'billing' | 'preorders' | 'tokens' | 'expenses' | 'restaurant' | 'db-settings' | 'settings';
 
 interface AppState {
   activeSection: AppSection;

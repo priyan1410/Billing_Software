@@ -614,6 +614,91 @@ ipcMain.handle('reports:getFoodSales', async (evt, filter = {}) => {
   }
 });
 
+// Pre-Orders Handlers
+ipcMain.handle('preorders:getAll', async () => {
+  try {
+    const res = await query('SELECT * FROM preorders ORDER BY pickup_date ASC, created_at DESC');
+    if (!res.success) return { success: false, message: res.error, data: [] };
+    const items = res.data.map(r => {
+      let parsedItems = [];
+      try { parsedItems = typeof r.items_json === 'string' ? JSON.parse(r.items_json) : r.items_json; } catch(e) {}
+      return {
+        id: r.id,
+        preorderNumber: r.preorder_number,
+        customerName: r.customer_name,
+        customerPhone: r.customer_phone,
+        pickupDate: r.pickup_date,
+        orderType: r.order_type,
+        items: Array.isArray(parsedItems) ? parsedItems : [],
+        totalAmount: Number(r.total_amount || 0),
+        advancePaid: Number(r.advance_paid || 0),
+        notes: r.notes || '',
+        status: r.status,
+        createdAt: r.created_at
+      };
+    });
+    return { success: true, data: items };
+  } catch (err) {
+    console.error('preorders:getAll error:', err);
+    return { success: false, message: err.message, data: [] };
+  }
+});
+
+ipcMain.handle('preorders:create', async (evt, payload = {}) => {
+  try {
+    const { customerName, customerPhone, pickupDate, orderType, items, totalAmount, advancePaid, notes } = payload;
+    const dateTag = new Date().toISOString().replace(/[-:T.]/g, '').slice(2, 8);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const preorderNumber = `PO-${dateTag}-${randomSuffix}`;
+    const itemsJson = JSON.stringify(items || []);
+
+    const res = await query(
+      `INSERT INTO preorders (preorder_number, customer_name, customer_phone, pickup_date, order_type, items_json, total_amount, advance_paid, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+      [preorderNumber, customerName || 'Valued Customer', customerPhone || '', pickupDate || new Date().toISOString(), orderType || 'Takeaway', itemsJson, totalAmount || 0, advancePaid || 0, notes || '']
+    );
+
+    if (!res.success) return { success: false, message: res.error };
+    return { success: true, data: { id: res.data.insertId, preorderNumber } };
+  } catch (err) {
+    console.error('preorders:create error:', err);
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('preorders:updateStatus', async (evt, { id, status }) => {
+  try {
+    const res = await query('UPDATE preorders SET status = ? WHERE id = ?', [status, id]);
+    if (!res.success) return { success: false, message: res.error };
+    return { success: true };
+  } catch (err) {
+    console.error('preorders:updateStatus error:', err);
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('preorders:delete', async (evt, id) => {
+  try {
+    const res = await query('DELETE FROM preorders WHERE id = ?', [id]);
+    if (!res.success) return { success: false, message: res.error };
+    return { success: true };
+  } catch (err) {
+    console.error('preorders:delete error:', err);
+    return { success: false, message: err.message };
+  }
+});
+
+ipcMain.handle('preorders:clearPastDates', async () => {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const res = await query('DELETE FROM preorders WHERE DATE(pickup_date) < ?', [todayStr]);
+    if (!res.success) return { success: false, message: res.error };
+    return { success: true, affectedRows: res.data ? res.data.affectedRows : 0 };
+  } catch (err) {
+    console.error('preorders:clearPastDates error:', err);
+    return { success: false, message: err.message };
+  }
+});
+
 function formatDateOnly(d) {
   if (!d) return '';
   if (d instanceof Date) {

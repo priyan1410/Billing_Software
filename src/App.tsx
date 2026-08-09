@@ -4,6 +4,7 @@ import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
 import { DashboardView } from './components/Dashboard/DashboardView';
 import { BillingView } from './components/Billing/BillingView';
+import { PreOrdersView } from './components/PreOrders/PreOrdersView';
 import { TokensView } from './components/Tokens/TokensView';
 import { ExpensesView } from './components/Expenses/ExpensesView';
 import { RestaurantView } from './components/Restaurant/RestaurantView';
@@ -66,6 +67,7 @@ export const App: React.FC = () => {
         <main className="flex-1 p-6 overflow-y-auto">
           {activeSection === 'dashboard' && <DashboardView />}
           {activeSection === 'billing' && <BillingView />}
+          {activeSection === 'preorders' && <PreOrdersView />}
           {activeSection === 'tokens' && <TokensView />}
           {activeSection === 'expenses' && <ExpensesView />}
           {activeSection === 'restaurant' && <RestaurantView />}

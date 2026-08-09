@@ -22,6 +22,7 @@ interface PosState {
   updateQty: (cartKey: string, delta: number) => void;
   clearCart: () => void;
   loadTokenToCart: (token: TokenItem, dishes: Dish[]) => void;
+  loadPreorderToCart: (preorder: any, dishes: Dish[]) => void;
   startEditingBill: (order: any, dishes: Dish[]) => void;
   cancelEditBill: () => void;
 }
@@ -169,6 +170,41 @@ export const usePosStore = create<PosState>((set: any) => ({
         orderType: token.orderType,
         tableNumber: token.tableNo || 'N/A',
         paymentMode: (token.paymentMode as any) || 'Cash',
+        cart: newCart,
+      };
+    }),
+
+  loadPreorderToCart: (preorder: any, dishes: Dish[]) =>
+    set(() => {
+      const itemsList = Array.isArray(preorder.items) ? preorder.items : [];
+      const newCart: CartItem[] = itemsList.map((item: any) => {
+        const dish = dishes.find((d: Dish) => d.id === item.itemId || d.name === item.name);
+        const variant = item.variant || 'Full';
+        let price = Number(item.unitPrice || 0);
+        if (!price && dish) {
+          if (variant === 'Quarter') price = dish.priceQuarter;
+          else if (variant === 'Half') price = dish.priceHalf;
+          else price = dish.priceFull;
+        }
+
+        const qty = Number(item.quantity || 1);
+        return {
+          cartKey: `${item.itemId || (dish ? dish.id : item.name)}_${variant}`,
+          itemId: item.itemId || (dish ? dish.id : 0),
+          name: item.name || (dish ? dish.name : 'Item'),
+          variant,
+          unitPrice: price,
+          quantity: qty,
+          totalPrice: price * qty,
+          unit: item.unit || (dish?.unit || 'Plate'),
+          hsnSac: item.hsnSac || dish?.hsnSac || undefined,
+        };
+      });
+
+      return {
+        orderType: preorder.orderType || 'Takeaway',
+        tableNumber: preorder.orderType === 'Delivery' ? 'DEL' : preorder.orderType === 'Takeaway' ? 'TA' : 'Table 1',
+        paymentMode: 'Cash',
         cart: newCart,
       };
     }),

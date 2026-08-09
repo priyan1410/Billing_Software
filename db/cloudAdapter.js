@@ -287,6 +287,25 @@ async function initializeCloudSchema() {
       ) ENGINE=InnoDB
     `);
 
+    // Preorders
+    await cloudQuery(`
+      CREATE TABLE IF NOT EXISTS preorders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        preorder_number VARCHAR(50) NOT NULL UNIQUE,
+        customer_name VARCHAR(100) NOT NULL,
+        customer_phone VARCHAR(30) NOT NULL,
+        pickup_date DATETIME NOT NULL,
+        order_type VARCHAR(30) DEFAULT 'Takeaway',
+        items_json TEXT NOT NULL,
+        total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+        advance_paid DECIMAL(10,2) DEFAULT 0,
+        notes TEXT DEFAULT NULL,
+        status VARCHAR(30) DEFAULT 'Pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        synced_from_local TINYINT(1) DEFAULT 1
+      ) ENGINE=InnoDB
+    `);
+
     // Ensure legacy cloud tables get newly added columns
     await cloudQuery(`ALTER TABLE categories ADD COLUMN synced_from_local TINYINT(1) DEFAULT 1`).catch(() => {});
     await cloudQuery(`ALTER TABLE menu_items ADD COLUMN combo_items TEXT DEFAULT NULL`).catch(() => {});

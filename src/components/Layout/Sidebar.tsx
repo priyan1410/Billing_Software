@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Crown, PieChart, Receipt, Ticket, Wallet, Store, Database } from 'lucide-react';
+import { Crown, PieChart, Receipt, Ticket, Wallet, Store, Database, CalendarClock } from 'lucide-react';
 import { useAppStore, AppSection } from '../../store/useAppStore';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -30,6 +30,7 @@ export const Sidebar: React.FC = () => {
   const navItems: { id: AppSection; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <PieChart className="w-5 h-5" /> },
     { id: 'billing', label: 'Billing POS', icon: <Receipt className="w-5 h-5" /> },
+    { id: 'preorders', label: 'Pre-Orders', icon: <CalendarClock className="w-5 h-5" /> },
     { id: 'tokens', label: 'Tokens', icon: <Ticket className="w-5 h-5" /> },
     { id: 'expenses', label: 'Expenses', icon: <Wallet className="w-5 h-5" /> },
     { id: 'restaurant', label: 'Restaurant', icon: <Store className="w-5 h-5" /> },

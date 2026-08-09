@@ -59,6 +59,30 @@ export interface Order {
   deliveryAddress?: string;
 }
 
+export interface PreOrderItem {
+  itemId: number;
+  name: string;
+  variant: PortionVariant;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+}
+
+export interface PreOrder {
+  id?: number;
+  preorderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  pickupDate: string;
+  orderType: OrderType;
+  items: PreOrderItem[];
+  totalAmount: number;
+  advancePaid: number;
+  notes?: string;
+  status: 'Pending' | 'Billed' | 'Cancelled';
+  createdAt?: string;
+}
+
 export interface OrderPayload {
   order_type: OrderType;
   subtotal: number;

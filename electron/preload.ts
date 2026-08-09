@@ -19,6 +19,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDashboardStats: () => ipcRenderer.invoke('dashboard:getStats'),
   getFoodSalesReport: (filter?: any) => ipcRenderer.invoke('reports:getFoodSales', filter),
 
+  // Pre-Orders
+  getPreorders: () => ipcRenderer.invoke('preorders:getAll'),
+  createPreorder: (payload: any) => ipcRenderer.invoke('preorders:create', payload),
+  updatePreorderStatus: (payload: any) => ipcRenderer.invoke('preorders:updateStatus', payload),
+  deletePreorder: (id: number) => ipcRenderer.invoke('preorders:delete', id),
+  clearPastPreorders: () => ipcRenderer.invoke('preorders:clearPastDates'),
+
   // Tokens (KOT)
   getNextTokenSeq: () => ipcRenderer.invoke('tokens:getNextSeq'),
   saveToken: (tokenData: any) => ipcRenderer.invoke('tokens:save', tokenData),
