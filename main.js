@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, nativeImage } = require('electron');
 app.commandLine.appendSwitch('lang', 'en-GB');
 const fs = require('fs');
 const path = require('path');
-const { query, testConnection, saveConfig, loadConfig, dbConfig, getStorageSize } = require('./db/connection');
+const { query, transaction, testConnection, saveConfig, loadConfig, dbConfig, getStorageSize } = require('./db/connection');
 const { initializeDatabase } = require('./db/schema');
 const { normalizeTokenNumber, parseTokenSequence, getNextTokenNumber, formatTokenNumber } = require('./electron/tokenUtils');
 const { loadBackupConfig, saveBackupConfig, performBackup, listBackups, startBackupScheduler, shouldRunBackup } = require('./electron/backupManager');
@@ -52,7 +52,8 @@ function createWindow() {
     height: 880,
     minWidth: 1024,
     minHeight: 720,
-    title: 'Kish Mandhi - Desktop Billing Software',
+    title: 'Kish Billing',
+    icon: path.join(__dirname, 'build', 'icon.ico'),
     backgroundColor: '#090a0f',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -455,6 +456,48 @@ ipcMain.handle('orders:getAll', async () => {
       createdAt: r.created_at
     }))
   };
+});
+
+ipcMain.handle('orders:delete', async (evt, payload = {}) => {
+  const selectedBillNumber = String(payload.orderNumber || payload.selectedBillNumber || '').trim();
+  const typedBillNumber = String(payload.typedBillNumber || '').trim();
+
+  if (!selectedBillNumber) {
+    return { success: false, message: 'Selected bill number is missing.' };
+  }
+
+  if (!typedBillNumber || typedBillNumber !== selectedBillNumber) {
+    return { success: false, message: 'Bill number does not match. Deletion cancelled.' };
+  }
+
+  const result = await transaction(async (conn) => {
+    const [orders] = await conn.execute(
+      'SELECT id, order_number FROM orders WHERE order_number = ? LIMIT 1',
+      [selectedBillNumber]
+    );
+
+    if (!orders || orders.length === 0) {
+      throw new Error(`Bill ${selectedBillNumber} was not found.`);
+    }
+
+    const order = orders[0];
+    const [itemsRes] = await conn.execute('DELETE FROM order_items WHERE order_id = ?', [order.id]);
+    const [orderRes] = await conn.execute('DELETE FROM orders WHERE id = ? AND order_number = ?', [order.id, selectedBillNumber]);
+
+    if (!orderRes || Number(orderRes.affectedRows || 0) !== 1) {
+      throw new Error(`Bill ${selectedBillNumber} could not be deleted.`);
+    }
+
+    return {
+      id: order.id,
+      orderNumber: order.order_number,
+      deletedItems: Number(itemsRes?.affectedRows || 0)
+    };
+  });
+
+  if (!result.success) return { success: false, message: result.error };
+  refreshPendingCount().catch(() => {});
+  return { success: true, data: result.data };
 });
 
 ipcMain.handle('orders:getItems', async (evt, orderIdOrNumber) => {

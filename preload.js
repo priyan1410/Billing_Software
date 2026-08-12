@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Orders & POS Billing
   createOrder: (orderData) => ipcRenderer.invoke('orders:create', orderData),
   updateOrder: (orderData) => ipcRenderer.invoke('orders:update', orderData),
+  deleteOrder: (payload) => ipcRenderer.invoke('orders:delete', payload),
   getNextOrderNumber: () => ipcRenderer.invoke('orders:getNextNumber'),
   getOrders: (filter) => ipcRenderer.invoke('orders:getAll', filter),
   getOrdersByDateRange: (dateRange) => ipcRenderer.invoke('orders:getByDateRange', dateRange),
@@ -83,4 +84,3 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cloudGetOrders: (options) => ipcRenderer.invoke('cloud:getOrders', options),
   cloudGetExpenses: (options) => ipcRenderer.invoke('cloud:getExpenses', options)
 });
-

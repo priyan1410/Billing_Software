@@ -26,6 +26,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Custom Print Settings State
   const [headerTag, setHeaderTag] = useState<string>('*** REPRINT TAX INVOICE ***');
@@ -45,6 +46,16 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
   useEffect(() => {
     setShowTokenTicket(restaurantDetails?.printWithToken ?? true);
   }, [restaurantDetails?.printWithToken]);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 5;
@@ -136,7 +147,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
 
   const handleExportBillsBackup = () => {
     if (orders.length === 0) {
-      alert('No previous bills available to export.');
+      showToast('No previous bills available to export.', 'error');
       return;
     }
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(orders, null, 2));
@@ -294,7 +305,7 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
         formattedTime: printTimeStr
       });
     } catch (err: any) {
-      alert('Error printing bill: ' + err.message);
+      showToast('Error printing bill: ' + err.message, 'error');
     } finally {
       setIsPrinting(false);
     }
@@ -314,8 +325,8 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
       };
       addToCart(mockDish, item.variant || 'Full');
     });
-    alert(`Added ${orderItems.length} items from Bill #${selectedOrder?.orderNumber} into active POS cart!`);
-    onClose();
+    showToast(`Added ${orderItems.length} items from Bill #${selectedOrder?.orderNumber} into active POS cart!`);
+    window.setTimeout(onClose, 600);
   };
 
   return (
@@ -701,6 +712,27 @@ export const PreviousBillsModal: React.FC<PreviousBillsModalProps> = ({ onClose 
           </div>
         </div>
       </div>
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="p-1 hover:bg-black/10 rounded-lg transition-colors ml-2"
+            aria-label="Dismiss notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

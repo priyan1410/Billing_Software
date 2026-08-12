@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd \"c:\\\\Projects\\\\VsCode\\\\kish mandhi\"; python -c \"import sys, importlib\\.util; print\\(sys\\.version\\); print\\(importlib\\.util\\.find_spec\\('PIL'\\) is not None\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

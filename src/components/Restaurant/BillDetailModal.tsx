@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Receipt, CheckCircle2 } from 'lucide-react';
+import { X, Printer, Receipt, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatDateDDMMYYYY } from '../../utils/dateUtils';
 import { formatPosInvoiceHtml, formatPosTokenHtml, getPosInvoiceTextBody, getPosTokenTextBody, combinePosSlips } from '../../utils/posFormatter';
@@ -15,6 +15,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
   const [items, setItems] = useState<any[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 5;
@@ -35,6 +36,16 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
   useEffect(() => {
     fetchItems();
   }, [order]);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const fetchItems = async () => {
     setLoadingItems(true);
@@ -75,7 +86,7 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
         formattedTime
       });
     } catch (err: any) {
-      alert('Error printing bill: ' + err.message);
+      showToast('Error printing bill: ' + err.message, 'error');
     } finally {
       setIsPrinting(false);
     }
@@ -225,6 +236,27 @@ export const BillDetailModal: React.FC<BillDetailModalProps> = ({ order, onClose
           </button>
         </div>
       </div>
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="p-1 hover:bg-black/10 rounded-lg transition-colors ml-2"
+            aria-label="Dismiss notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

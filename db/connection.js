@@ -90,6 +90,31 @@ async function query(sql, params = []) {
   }
 }
 
+async function transaction(work) {
+  const p = getPool();
+  if (!p) {
+    return { success: false, error: 'MySQL driver unavailable or database not configured.' };
+  }
+
+  const conn = await p.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await work(conn);
+    await conn.commit();
+    return { success: true, data: result };
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch (rollbackErr) {
+      console.error('[MySQL Rollback Error]:', rollbackErr.message);
+    }
+    console.error('[MySQL Transaction Error]:', err.message);
+    return { success: false, error: `MySQL Error: ${err.message}` };
+  } finally {
+    conn.release();
+  }
+}
+
 // ─── Test Connection ──────────────────────────────────────────
 async function testConnection(customConfig = null) {
   const startTime = Date.now();
@@ -293,6 +318,7 @@ module.exports = {
   saveConfig,
   testConnection,
   query,
+  transaction,
   getPool,
   getStorageSize
 };

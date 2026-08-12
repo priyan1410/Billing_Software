@@ -202,6 +202,28 @@ ipcMain.handle('orders:getAll', async () => {
   return { success: true, data: db.orders };
 });
 
+ipcMain.handle('orders:delete', async (_evt: any, payload: any = {}) => {
+  const selectedBillNumber = String(payload.orderNumber || payload.selectedBillNumber || '').trim();
+  const typedBillNumber = String(payload.typedBillNumber || '').trim();
+
+  if (!selectedBillNumber) {
+    return { success: false, message: 'Selected bill number is missing.' };
+  }
+
+  if (!typedBillNumber || typedBillNumber !== selectedBillNumber) {
+    return { success: false, message: 'Bill number does not match. Deletion cancelled.' };
+  }
+
+  const beforeCount = db.orders.length;
+  db.orders = db.orders.filter((o: any) => String(o.orderNumber || o.order_number || '').trim() !== selectedBillNumber);
+
+  if (db.orders.length === beforeCount) {
+    return { success: false, message: `Bill ${selectedBillNumber} was not found.` };
+  }
+
+  return { success: true, data: { orderNumber: selectedBillNumber } };
+});
+
 ipcMain.handle('orders:getByDateRange', async (_evt: any, { startDate, endDate }: any) => {
   let filtered = db.orders;
   // Compare using local YYYY-MM-DD strings to avoid timezone shifts

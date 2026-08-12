@@ -1,5 +1,5 @@
 {
-  "name": "kish-mandhi-billing",
+  "name": "kish-billing",
   "private": true,
   "version": "2.0.0",
   "main": "main.js",
@@ -11,8 +11,8 @@
     "dist": "npx vite build && npx electron-builder --win"
   },
   "build": {
-    "appId": "com.kishmandhi.billing",
-    "productName": "Kish Mandhi Billing",
+    "appId": "com.kishbilling",
+    "productName": "Kish Billing",
     "files": [
       "dist/**/*",
       "main.js",
@@ -22,13 +22,16 @@
       "package.json"
     ],
     "directories": {
-      "output": "dist-electron"
+      "output": "dist-electron",
+      "buildResources": "build"
     },
+    "icon": "build/icon.ico",
     "win": {
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,

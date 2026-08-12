@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmDialogProps {
@@ -32,17 +32,23 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
-  // Focus cleanup helper to prevent Chromium orphan-focus caret bug on unmount/removal
-  const restoreFocus = () => {
-    if (previousActiveElementRef.current && document.body.contains(previousActiveElementRef.current)) {
-      previousActiveElementRef.current.focus();
-    } else {
+  // Restore after React removes the dialog so Chromium does not keep a ghost caret target.
+  const restoreFocus = useCallback(() => {
+    const previousActiveElement = previousActiveElementRef.current;
+    previousActiveElementRef.current = null;
+
+    window.setTimeout(() => {
+      if (previousActiveElement && document.body.contains(previousActiveElement)) {
+        previousActiveElement.focus({ preventScroll: true });
+        return;
+      }
+
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
       window.focus();
-    }
-  };
+    }, 0);
+  }, []);
 
   // Auto-focus the Cancel button when opening, and restore focus when closing
   useEffect(() => {
@@ -50,25 +56,25 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       previousActiveElementRef.current = document.activeElement as HTMLElement;
       const timer = setTimeout(() => cancelBtnRef.current?.focus(), 50);
       return () => clearTimeout(timer);
-    } else {
+    } else if (previousActiveElementRef.current) {
       restoreFocus();
     }
-  }, [open]);
+  }, [open, restoreFocus]);
 
   // Clean focus on unmount
   useEffect(() => {
     return () => {
-      restoreFocus();
+      if (previousActiveElementRef.current) {
+        restoreFocus();
+      }
     };
-  }, []);
+  }, [restoreFocus]);
 
   const handleConfirm = () => {
-    restoreFocus();
     onConfirm();
   };
 
   const handleCancel = () => {
-    restoreFocus();
     onCancel();
   };
 
@@ -102,6 +108,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         {/* Close × */}
         <button
           onClick={handleCancel}
+          aria-label="Close confirmation dialog"
           className="absolute top-3 right-3 p-1.5 text-olive-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
         >
           <X className="w-4 h-4" />

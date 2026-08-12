@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, BarChart2, Maximize2, Download, Search, X, Calendar, Utensils } from 'lucide-react';
+import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, BarChart2, Maximize2, Download, Search, X, Calendar, Utensils, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
 import { DatePicker } from '../UI/DatePicker';
@@ -627,6 +627,17 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   const [searchQuery, setSearchQuery] = useState('');
   const [reportData, setReportData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{ message: string; type: 'error' } | null>(null);
+
+  const showToast = (message: string) => {
+    setToast({ message, type: 'error' });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const fetchFoodSales = async () => {
     setLoading(true);
@@ -665,7 +676,7 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
 
   const handleExportCSV = () => {
     if (filteredItems.length === 0) {
-      alert('No food sales data available to export.');
+      showToast('No food sales data available to export.');
       return;
     }
     let csv = 'Dish Name,Variant,Quantity Sold,Avg Unit Price (INR),Total Sales (INR),Share of Total (%)\n';
@@ -855,6 +866,19 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
           </div>
         </div>
       </div>
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs bg-rose-500 text-white border-rose-400">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="p-1 hover:bg-black/10 rounded-lg transition-colors ml-2"
+            aria-label="Dismiss notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
