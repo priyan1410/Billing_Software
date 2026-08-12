@@ -518,6 +518,7 @@ export const BillingView: React.FC = () => {
 
     const computedCash = paymentMode === 'DEO' ? (deoCashAmount || 0) : (paymentMode === 'Cash' ? grandTotal : 0);
     const computedUpi = paymentMode === 'DEO' ? (deoUpiAmount || Math.max(0, grandTotal - computedCash)) : (paymentMode === 'UPI' ? grandTotal : 0);
+    const formattedPaymentMode = paymentMode === 'DEO' ? `DEO (Cash: ${computedCash} + UPI: ${computedUpi})` : paymentMode;
 
     const payload = {
       id: editingOrderId || undefined,
@@ -528,7 +529,7 @@ export const BillingView: React.FC = () => {
       tax_amount: taxAmt,
       discount_amount: discount,
       grand_total: grandTotal,
-      payment_mode: paymentMode,
+      payment_mode: formattedPaymentMode,
       cash_amount: computedCash,
       upi_amount: computedUpi,
       delivery_address: orderType === 'Delivery' ? deliveryAddress : '',
@@ -552,7 +553,7 @@ export const BillingView: React.FC = () => {
       grandTotal,
       roundOff,
       orderType,
-      paymentMode,
+      paymentMode: formattedPaymentMode,
       cashAmount: computedCash,
       upiAmount: computedUpi,
       deliveryAddress: orderType === 'Delivery' ? deliveryAddress : '',

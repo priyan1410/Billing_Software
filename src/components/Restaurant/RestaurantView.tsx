@@ -617,20 +617,25 @@ export const RestaurantView: React.FC = () => {
       const mode = String(o.paymentMode || o.payment_mode || '').toUpperCase();
       let displayedAmt = Number(o.grandTotal || o.grand_total || o.total || 0);
       let modeLabel = o.paymentMode || o.payment_mode || 'Cash';
-      if (mode === 'DEO') {
+      if (mode.startsWith('DEO')) {
         const c = Number(o.cashAmount || o.cash_amount || 0);
         const u = Number(o.upiAmount || o.upi_amount || 0);
+        const rawDbMode = o.paymentMode || o.payment_mode || '';
         if (filterDeo || (filterCash && filterUpi)) {
           displayedAmt = Number(o.grandTotal || o.grand_total || (c + u) || 0);
-          modeLabel = `DEO (Cash: ₹${c} + UPI: ₹${u})`;
+          modeLabel = c === 0 && u === 0 
+            ? (rawDbMode.includes('Cash:') || rawDbMode.includes('UPI:') ? rawDbMode.replace(/Cash:\s*([\d\.]+)/g, 'Cash: ₹$1').replace(/UPI:\s*([\d\.]+)/g, 'UPI: ₹$1') : 'DEO (Dual)') 
+            : `DEO (Cash: ₹${c} + UPI: ₹${u})`;
         } else if (filterCash && !filterUpi) {
-          displayedAmt = c;
+          displayedAmt = c === 0 && u === 0 ? Math.round(displayedAmt / 2) : c;
           modeLabel = `DEO (Cash Portion)`;
         } else if (filterUpi && !filterCash) {
-          displayedAmt = u;
+          displayedAmt = c === 0 && u === 0 ? displayedAmt - Math.round(displayedAmt / 2) : u;
           modeLabel = `DEO (UPI Portion)`;
         } else {
-          modeLabel = `DEO (Cash: ₹${c} + UPI: ₹${u})`;
+          modeLabel = c === 0 && u === 0 
+            ? (rawDbMode.includes('Cash:') || rawDbMode.includes('UPI:') ? rawDbMode.replace(/Cash:\s*([\d\.]+)/g, 'Cash: ₹$1').replace(/UPI:\s*([\d\.]+)/g, 'UPI: ₹$1') : 'DEO (Dual)') 
+            : `DEO (Cash: ₹${c} + UPI: ₹${u})`;
         }
       }
       return {
@@ -668,8 +673,13 @@ export const RestaurantView: React.FC = () => {
   const pnlRevenue = filteredOrders.reduce((sum, o) => {
     const mode = String(o.paymentMode || o.payment_mode || '').toUpperCase();
     if (mode === 'DEO') {
-      const c = Number(o.cashAmount || o.cash_amount || 0);
-      const u = Number(o.upiAmount || o.upi_amount || 0);
+      let c = Number(o.cashAmount || o.cash_amount || 0);
+      let u = Number(o.upiAmount || o.upi_amount || 0);
+      if (c === 0 && u === 0) {
+        const total = Number(o.grandTotal || o.grand_total || o.total || 0);
+        c = Math.round(total / 2);
+        u = total - c;
+      }
       if (filterDeo || (filterCash && filterUpi)) {
         return sum + Number(o.grandTotal || o.grand_total || (c + u) || 0);
       }

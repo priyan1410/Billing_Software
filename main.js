@@ -277,6 +277,20 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
   const upiAmt = Number(orderData.upi_amount || orderData.upiAmount || 0);
   const delAddress = orderData.delivery_address || orderData.deliveryAddress || null;
 
+  let payMode = String(orderData.payment_mode || orderData.paymentMode || 'Cash').trim();
+  if (payMode === 'DEO' || payMode.startsWith('DEO')) {
+    if (!payMode.includes('Cash:') && !payMode.includes('UPI:')) {
+      let c = Number(orderData.cash_amount || orderData.cashAmount || 0);
+      let u = Number(orderData.upi_amount || orderData.upiAmount || 0);
+      if (c === 0 && u === 0) {
+        const grand = Number(orderData.grand_total || orderData.grandTotal || 0);
+        c = Math.round(grand / 2);
+        u = grand - c;
+      }
+      payMode = `DEO (Cash: ${c} + UPI: ${u})`;
+    }
+  }
+
   let insertOrder = await query(
     `INSERT INTO orders (order_number, order_type, table_number, subtotal, tax_amount, discount_amount, grand_total, payment_mode, cash_amount, upi_amount, delivery_address, token_number, status)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Completed')`,
@@ -288,7 +302,7 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
       Number(orderData.tax_amount || orderData.taxAmount || 0),
       Number(orderData.discount_amount || orderData.discountAmount || 0),
       Number(orderData.grand_total || orderData.grandTotal || 0),
-      orderData.payment_mode || orderData.paymentMode || 'Cash',
+      payMode,
       cashAmt,
       upiAmt,
       delAddress,
@@ -313,7 +327,7 @@ ipcMain.handle('orders:create', async (evt, orderData) => {
         Number(orderData.tax_amount || orderData.taxAmount || 0),
         Number(orderData.discount_amount || orderData.discountAmount || 0),
         Number(orderData.grand_total || orderData.grandTotal || 0),
-        orderData.payment_mode || orderData.paymentMode || 'Cash',
+        payMode,
         cashAmt,
         upiAmt,
         delAddress,
@@ -379,6 +393,20 @@ ipcMain.handle('orders:update', async (evt, orderData) => {
   const upiAmt = Number(orderData.upi_amount || orderData.upiAmount || 0);
   const delAddress = orderData.delivery_address || orderData.deliveryAddress || null;
 
+  let payMode = String(orderData.payment_mode || orderData.paymentMode || 'Cash').trim();
+  if (payMode === 'DEO' || payMode.startsWith('DEO')) {
+    if (!payMode.includes('Cash:') && !payMode.includes('UPI:')) {
+      let c = Number(orderData.cash_amount || orderData.cashAmount || 0);
+      let u = Number(orderData.upi_amount || orderData.upiAmount || 0);
+      if (c === 0 && u === 0) {
+        const grand = Number(orderData.grand_total || orderData.grandTotal || 0);
+        c = Math.round(grand / 2);
+        u = grand - c;
+      }
+      payMode = `DEO (Cash: ${c} + UPI: ${u})`;
+    }
+  }
+
   const updateRes = await query(
     `UPDATE orders SET 
       order_type = ?, 
@@ -400,7 +428,7 @@ ipcMain.handle('orders:update', async (evt, orderData) => {
       Number(orderData.tax_amount || orderData.taxAmount || 0),
       Number(orderData.discount_amount || orderData.discountAmount || 0),
       Number(orderData.grand_total || orderData.grandTotal || 0),
-      orderData.payment_mode || orderData.paymentMode || 'Cash',
+      payMode,
       cashAmt,
       upiAmt,
       delAddress,

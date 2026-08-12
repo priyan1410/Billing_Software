@@ -430,14 +430,30 @@ export const RestaurantSettingsView: React.FC = () => {
       doc.addPage();
       drawHeader('III. COMPLETED TRANSACTION & BILLING LOGS');
 
-      const ordersBody = orders.map((o: any) => [
-        o.billNo || o.bill_no || '-',
-        o.customerName || o.customer_name || 'Walk-in',
-        o.customerPhone || o.customer_phone || '-',
-        o.paymentMethod || o.payment_mode || o.payment_method || '-',
-        o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '-',
-        `Rs. ${Number(o.grandTotal || o.grand_total || 0).toFixed(2)}`
-      ]);
+      const ordersBody = orders.map((o: any) => {
+        let paymentModeText = o.paymentMethod || o.payment_mode || o.payment_method || '-';
+        if (String(paymentModeText).toUpperCase().startsWith('DEO')) {
+          const c = Number(o.cashAmount || o.cash_amount || 0);
+          const u = Number(o.upiAmount || o.upi_amount || 0);
+          if (c === 0 && u === 0) {
+            if (paymentModeText.includes('Cash:') || paymentModeText.includes('UPI:')) {
+              paymentModeText = paymentModeText.replace(/₹/g, 'Rs. ').replace(/Cash:\s*([\d\.]+)/g, 'Cash: Rs. $1').replace(/UPI:\s*([\d\.]+)/g, 'UPI: Rs. $1');
+            } else {
+              paymentModeText = 'DEO (Dual)';
+            }
+          } else {
+            paymentModeText = `DEO (Cash: Rs. ${c} + UPI: Rs. ${u})`;
+          }
+        }
+        return [
+          o.billNo || o.bill_no || '-',
+          o.customerName || o.customer_name || 'Walk-in',
+          o.customerPhone || o.customer_phone || '-',
+          paymentModeText,
+          o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '-',
+          `Rs. ${Number(o.grandTotal || o.grand_total || 0).toFixed(2)}`
+        ];
+      });
 
       autoTable(doc, {
         startY: 38,

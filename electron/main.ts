@@ -143,6 +143,8 @@ ipcMain.handle('menu:deleteItem', async (_evt: any, id: any) => {
   return { success: true };
 });
 
+
+
 ipcMain.handle('orders:getNextNumber', async () => {
   const nextSeq = db.orders.length + 1;
   const seqStr = String(nextSeq).padStart(3, '0');
@@ -154,6 +156,20 @@ ipcMain.handle('orders:create', async (_evt: any, orderData: any) => {
   const seqStr = String(nextSeq).padStart(3, '0');
 
   const orderNumber = orderData.order_number || orderData.orderNumber || `KMIV-${seqStr}`;
+  let payMode = String(orderData.payment_mode || orderData.paymentMode || 'Cash').trim();
+  let cashAmt = Number(orderData.cash_amount || orderData.cashAmount || 0);
+  let upiAmt = Number(orderData.upi_amount || orderData.upiAmount || 0);
+
+  if (payMode === 'DEO' || payMode.startsWith('DEO')) {
+    if (!payMode.includes('Cash:') && !payMode.includes('UPI:')) {
+      if (cashAmt === 0 && upiAmt === 0) {
+        const grand = Number(orderData.grand_total || orderData.grandTotal || 0);
+        cashAmt = Math.round(grand / 2);
+        upiAmt = grand - cashAmt;
+      }
+      payMode = `DEO (Cash: ${cashAmt} + UPI: ${upiAmt})`;
+    }
+  }
 
   const newOrder = {
     id: db.orders.length + 101,
@@ -163,7 +179,9 @@ ipcMain.handle('orders:create', async (_evt: any, orderData: any) => {
     taxAmount: orderData.tax_amount || orderData.taxAmount,
     discountAmount: orderData.discount_amount || orderData.discountAmount,
     grandTotal: orderData.grand_total || orderData.grandTotal,
-    paymentMode: orderData.payment_mode || orderData.paymentMode || 'Cash',
+    paymentMode: payMode,
+    cashAmount: cashAmt,
+    upiAmount: upiAmt,
     items: orderData.items || [],
     shippingCharges: orderData.shipping_charges || orderData.shippingCharges || 0,
     roundOff: orderData.round_off || orderData.roundOff || 0,
@@ -182,6 +200,19 @@ ipcMain.handle('orders:update', async (_evt: any, orderData: any) => {
   const orderNum = orderData.order_number || orderData.orderNumber;
   const idx = db.orders.findIndex((o: any) => o.orderNumber === orderNum || o.id === orderData.id);
   if (idx !== -1) {
+    let cashAmt = Number(orderData.cash_amount || orderData.cashAmount || db.orders[idx].cashAmount || 0);
+    let upiAmt = Number(orderData.upi_amount || orderData.upiAmount || db.orders[idx].upiAmount || 0);
+    let payMode = String(orderData.payment_mode || orderData.paymentMode || db.orders[idx].paymentMode || 'Cash').trim();
+    if (payMode === 'DEO' || payMode.startsWith('DEO')) {
+      if (!payMode.includes('Cash:') && !payMode.includes('UPI:')) {
+        if (cashAmt === 0 && upiAmt === 0) {
+          const grand = Number(orderData.grand_total || orderData.grandTotal || db.orders[idx].grandTotal || 0);
+          cashAmt = Math.round(grand / 2);
+          upiAmt = grand - cashAmt;
+        }
+        payMode = `DEO (Cash: ${cashAmt} + UPI: ${upiAmt})`;
+      }
+    }
     db.orders[idx] = {
       ...db.orders[idx],
       orderType: orderData.order_type || orderData.orderType || db.orders[idx].orderType,
@@ -189,7 +220,9 @@ ipcMain.handle('orders:update', async (_evt: any, orderData: any) => {
       taxAmount: orderData.tax_amount || orderData.taxAmount || db.orders[idx].taxAmount,
       discountAmount: orderData.discount_amount || orderData.discountAmount || db.orders[idx].discountAmount,
       grandTotal: orderData.grand_total || orderData.grandTotal || db.orders[idx].grandTotal,
-      paymentMode: orderData.payment_mode || orderData.paymentMode || db.orders[idx].paymentMode,
+      paymentMode: payMode,
+      cashAmount: cashAmt,
+      upiAmount: upiAmt,
       items: orderData.items || db.orders[idx].items,
       roundOff: orderData.round_off ?? db.orders[idx].roundOff,
     };
