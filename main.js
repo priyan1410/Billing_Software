@@ -990,10 +990,11 @@ ipcMain.handle('db:importBackup', async (evt, backupData) => {
               const qty = Number(item.quantity || item.qty || 1);
               const uPrice = Number(item.unitPrice || item.price || item.unit_price || 0);
               const tPrice = Number(item.totalPrice || item.total_price || (qty * uPrice));
+              const variant = item.variant || item.portion || 'Full';
               await query(
-                `INSERT INTO order_items (order_id, dish_name, item_name, quantity, unit_price, total_price)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [orderId, name, name, qty, uPrice, tPrice]
+                `INSERT INTO order_items (order_id, dish_name, item_name, variant, quantity, unit_price, total_price)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [orderId, name, name, variant, qty, uPrice, tPrice]
               );
             }
           }
@@ -1259,10 +1260,11 @@ ipcMain.handle('db:importFullSystem', async (evt, fullBackup) => {
               const qty = Number(item.quantity || item.qty || 1);
               const uPrice = Number(item.unitPrice || item.price || item.unit_price || 0);
               const tPrice = Number(item.totalPrice || item.total_price || (qty * uPrice));
+              const variant = item.variant || item.portion || 'Full';
               await query(
-                `INSERT INTO order_items (order_id, dish_name, item_name, quantity, unit_price, total_price)
-                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [orderId, name, name, qty, uPrice, tPrice]
+                `INSERT INTO order_items (order_id, dish_name, item_name, variant, quantity, unit_price, total_price)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [orderId, name, name, variant, qty, uPrice, tPrice]
               );
             }
           }
@@ -1280,10 +1282,11 @@ ipcMain.handle('db:importFullSystem', async (evt, fullBackup) => {
         const uPrice = Number(item.unit_price || item.unitPrice || 0);
         const tPrice = Number(item.total_price || item.totalPrice || (qty * uPrice));
         if (oId) {
+          const variant = item.variant || item.portion || 'Full';
           await query(
-            `INSERT INTO order_items (order_id, dish_name, item_name, quantity, unit_price, total_price)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [oId, name, name, qty, uPrice, tPrice]
+            `INSERT INTO order_items (order_id, dish_name, item_name, variant, quantity, unit_price, total_price)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [oId, name, name, variant, qty, uPrice, tPrice]
           );
         }
       }
