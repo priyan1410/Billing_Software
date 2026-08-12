@@ -496,7 +496,7 @@ ipcMain.handle('orders:delete', async (evt, payload = {}) => {
   });
 
   if (!result.success) return { success: false, message: result.error };
-  refreshPendingCount().catch(() => {});
+  refreshPendingCount().catch(() => { });
   return { success: true, data: result.data };
 });
 
@@ -665,7 +665,7 @@ ipcMain.handle('preorders:getAll', async () => {
     if (!res.success) return { success: false, message: res.error, data: [] };
     const items = res.data.map(r => {
       let parsedItems = [];
-      try { parsedItems = typeof r.items_json === 'string' ? JSON.parse(r.items_json) : r.items_json; } catch(e) {}
+      try { parsedItems = typeof r.items_json === 'string' ? JSON.parse(r.items_json) : r.items_json; } catch (e) { }
       return {
         id: r.id,
         preorderNumber: r.preorder_number,
@@ -1166,7 +1166,7 @@ ipcMain.handle('db:importFullSystem', async (evt, fullBackup) => {
         try {
           const img = nativeImage.createFromDataURL(softwareIconUrl);
           if (!img.isEmpty()) mainWindow.setIcon(img);
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const colsRes = await query('SHOW COLUMNS FROM restaurant_details');
@@ -1828,7 +1828,7 @@ ipcMain.handle('receipt:print', (evt, receiptHtml, options = {}) => {
             if (printWin && !printWin.isDestroyed()) {
               try {
                 printWin.close();
-              } catch (e) {}
+              } catch (e) { }
             }
             jobResolve(result);
             resolve(result);

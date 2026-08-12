@@ -5,13 +5,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
-  background-color: #0b1320;
-  color: #FBE99B;
+  background-color: #EEE9DF;
+  color: #1B2632;
   font-family: 'Outfit', sans-serif;
   overflow: hidden;
   height: 100vh;
@@ -24,16 +24,126 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b1320;
+  background: #EEE9DF;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(147, 187, 216, 0.35);
+  background: rgba(44, 59, 77, 0.2);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(251, 233, 155, 0.65);
+  background: rgba(255, 177, 98, 0.6);
+}
+
+/* Maintain proper colors for thermal print preview blocks */
+.bg-white {
+  background-color: #FFFFFF !important;
+}
+
+.text-black {
+  color: #000000 !important;
+}
+
+/* Override text-white globally to be dark blue-grey for light theme readability */
+.text-white {
+  color: #1B2632;
+}
+
+/* Keep text-white white ONLY inside badges or warnings with dark colored backgrounds */
+.bg-rose-500 .text-white,
+.bg-rose-500.text-white,
+.bg-rose-600 .text-white,
+.bg-rose-900 .text-white,
+.bg-rose-900\/90.text-white,
+.bg-red-500.text-white,
+.bg-red-600.text-white,
+.bg-red-950\/90.text-white,
+.bg-emerald-500.text-white,
+.bg-emerald-600.text-white,
+.bg-amber-500.text-white,
+.bg-amber-600.text-white,
+.bg-orange-600.text-white {
+  color: #FFFFFF !important;
+}
+
+/* Ensure button/accent labels stay dark navy instead of light cream */
+.text-olive-950,
+.text-slate-950,
+.text-slate-900,
+.text-gray-950,
+.text-gray-900 {
+  color: #1B2632 !important;
+}
+
+/* Override white opacity utilities to use dark navy color for light theme backgrounds/borders */
+.bg-white\/5 {
+  background-color: rgba(27, 38, 50, 0.05) !important;
+}
+.bg-white\/10 {
+  background-color: rgba(27, 38, 50, 0.1) !important;
+}
+.border-white\/10 {
+  border-color: rgba(27, 38, 50, 0.1) !important;
+}
+.border-white\/15 {
+  border-color: rgba(27, 38, 50, 0.15) !important;
+}
+.border-white\/20 {
+  border-color: rgba(27, 38, 50, 0.2) !important;
+}
+.placeholder-white\/20::placeholder {
+  color: rgba(27, 38, 50, 0.35) !important;
+}
+.placeholder-white\/30::placeholder {
+  color: rgba(27, 38, 50, 0.45) !important;
+}
+
+/* Intercept gradient active states and force them flat */
+.bg-gradient-to-r.from-gold-500.to-gold-400 {
+  background-image: none !important;
+  background-color: #FFB162 !important;
+}
+.bg-gradient-to-br.from-gold-500.to-gold-dark {
+  background-image: none !important;
+  background-color: #FFB162 !important;
+}
+.bg-gradient-to-r.from-gold-500.to-gold-dark {
+  background-image: none !important;
+  background-color: #FFB162 !important;
+}
+
+/* Intercept Tailwind hover:text-white class and override to dark navy except on dark colored backgrounds */
+.hover\:text-white:hover {
+  color: #1B2632 !important;
+}
+
+.bg-rose-500.hover\:text-white:hover,
+.bg-rose-600.hover\:text-white:hover,
+.bg-red-500.hover\:text-white:hover,
+.bg-red-600.hover\:text-white:hover,
+.bg-emerald-500.hover\:text-white:hover,
+.bg-emerald-600.hover\:text-white:hover,
+.bg-teal-600.hover\:text-white:hover,
+.bg-teal-700.hover\:text-white:hover,
+.bg-amber-500.hover\:text-white:hover,
+.bg-amber-600.hover\:text-white:hover,
+.bg-orange-600.hover\:text-white:hover,
+.bg-rose-500 .hover\:text-white:hover,
+.bg-rose-600 .hover\:text-white:hover,
+.bg-emerald-500 .hover\:text-white:hover,
+.bg-amber-500 .hover\:text-white:hover {
+  color: #FFFFFF !important;
+}
+
+.hover\:bg-olive-800:hover {
+  background-color: #E3DBD0 !important;
+  color: #1B2632 !important;
+}
+
+.hover\:bg-slate-800:hover {
+  background-color: #C9C1B1 !important;
+  color: #1B2632 !important;
 }
 
 /* Ensure text inputs are always selectable and editable even inside select-none containers */

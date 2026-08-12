@@ -533,6 +533,8 @@ export const DashboardView: React.FC = () => {
                 </Pie>
                 <Tooltip
                   contentStyle={{ backgroundColor: '#131e15', borderColor: '#d4af37', borderRadius: '10px', color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
+                  labelStyle={{ color: '#fff' }}
                   formatter={(val: any, name: any, item: any) => [
                     `${val}% (${item.payload?.qty || 0} sold • ₹${Number(item.payload?.sales || 0).toLocaleString('en-IN')})`,
                     'Share'

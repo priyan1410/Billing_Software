@@ -26,7 +26,7 @@ export const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-screen bg-[#060810] items-center justify-center flex-col gap-4">
+      <div className="flex h-screen w-screen bg-olive-950 items-center justify-center flex-col gap-4">
         <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
         <p className="text-amber-400/60 text-sm font-medium tracking-widest uppercase">Loading Kish Mandhi...</p>
       </div>

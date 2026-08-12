@@ -292,7 +292,7 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#060810] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-olive-950 overflow-y-auto">
       {/* Animated background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-amber-600/5 blur-3xl animate-pulse" />
@@ -302,7 +302,7 @@ export const AuthModal: React.FC = () => {
 
       <div className="relative w-full max-w-xl mx-4 my-8">
         {/* Card */}
-        <div className="bg-[#0e1019]/95 backdrop-blur-2xl border border-amber-500/20 rounded-3xl shadow-2xl shadow-black/60 overflow-hidden">
+        <div className="bg-olive-900 border border-gold-500/20 rounded-3xl shadow-xl overflow-hidden">
           {/* Top Glow Bar */}
           <div className="h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
 

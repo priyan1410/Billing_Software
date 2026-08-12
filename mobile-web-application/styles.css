@@ -5,69 +5,69 @@
 
 :root {
   /* User 4-Color Palette System */
-  --user-color-1: #FBE99B; /* Pastel Cream Gold */
-  --user-color-2: #BCE4F0; /* Soft Ice Sky Blue */
-  --user-color-3: #93BBD8; /* Medium Slate Blue */
-  --user-color-4: #71A3CC; /* Deep Steel Blue */
+  --user-color-1: #FFB162; /* Burning Flame */
+  --user-color-2: #EEE9DF; /* Palladian */
+  --user-color-3: #C9C1B1; /* Oatmeal */
+  --user-color-4: #A35139; /* Truffle Trouble */
 
   /* Base Palette */
-  --bg-root: #0b1320;
-  --bg-elevated: #142034;
-  --bg-card: rgba(20, 32, 52, 0.85);
-  --bg-card-hover: rgba(30, 44, 66, 0.9);
-  --bg-input: rgba(11, 19, 32, 0.95);
+  --bg-root: #EEE9DF;
+  --bg-elevated: #FFFFFF;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-hover: rgba(243, 237, 228, 0.9);
+  --bg-input: rgba(255, 255, 255, 0.95);
 
   /* Slate Scale */
   --olive-50: #ffffff;
   --olive-100: #f8fafc;
-  --olive-200: #BCE4F0;
-  --olive-300: #93BBD8;
-  --olive-400: #71A3CC;
-  --olive-500: #FBE99B;
-  --olive-600: #93BBD8;
-  --olive-700: #71A3CC;
-  --olive-800: #1e2c42;
-  --olive-900: #142034;
-  --olive-950: #0b1320;
+  --olive-200: #1B2632;
+  --olive-300: #2C3B4D;
+  --olive-400: #A35139;
+  --olive-500: #FFB162;
+  --olive-600: #2C3B4D;
+  --olive-700: #A35139;
+  --olive-800: #E3DBD0;
+  --olive-900: #FFFFFF;
+  --olive-950: #EEE9DF;
 
   /* Accent Scale */
   --gold-50: #ffffff;
-  --gold-100: #FBE99B;
-  --gold-200: #BCE4F0;
-  --gold-300: #93BBD8;
-  --gold-400: #BCE4F0;
-  --gold-500: #FBE99B;
-  --gold-600: #93BBD8;
-  --gold-700: #71A3CC;
-  --gold-800: #1e2c42;
-  --gold-900: #142034;
+  --gold-100: #FFB162;
+  --gold-200: #1B2632;
+  --gold-300: #2C3B4D;
+  --gold-400: #A35139;
+  --gold-500: #FFB162;
+  --gold-600: #2C3B4D;
+  --gold-700: #A35139;
+  --gold-800: #E3DBD0;
+  --gold-900: #FFFFFF;
 
   /* Semantic Colors */
-  --emerald: #34d399;
-  --emerald-dim: rgba(52, 211, 153, 0.12);
-  --rose: #f87171;
-  --rose-dim: rgba(248, 113, 113, 0.12);
-  --amber: #fbbf24;
-  --amber-dim: rgba(251, 191, 36, 0.12);
-  --blue: #60a5fa;
-  --blue-dim: rgba(96, 165, 250, 0.12);
-  --purple: #c084fc;
-  --purple-dim: rgba(192, 132, 252, 0.12);
+  --emerald: #27ae60;
+  --emerald-dim: rgba(39, 174, 96, 0.12);
+  --rose: #c0392b;
+  --rose-dim: rgba(192, 57, 43, 0.12);
+  --amber: #f39c12;
+  --amber-dim: rgba(243, 156, 18, 0.12);
+  --blue: #2980b9;
+  --blue-dim: rgba(41, 128, 185, 0.12);
+  --purple: #8e44ad;
+  --purple-dim: rgba(142, 68, 173, 0.12);
 
   /* Text */
-  --text-primary: #f0f4ec;
-  --text-secondary: #a8b89a;
-  --text-tertiary: #6b7d5c;
-  --text-muted: #4a5a3e;
-  --text-inverse: #0d1209;
+  --text-primary: #1B2632;
+  --text-secondary: #2C3B4D;
+  --text-tertiary: #A35139;
+  --text-muted: #5C6E84;
+  --text-inverse: #FFFFFF;
 
   /* Borders & Effects */
-  --border-subtle: rgba(212, 175, 55, 0.08);
-  --border-medium: rgba(212, 175, 55, 0.15);
-  --border-strong: rgba(212, 175, 55, 0.28);
-  --glow-gold: rgba(212, 175, 55, 0.15);
-  --glow-emerald: rgba(52, 211, 153, 0.12);
-  --glow-rose: rgba(248, 113, 113, 0.12);
+  --border-subtle: rgba(27, 38, 50, 0.08);
+  --border-medium: rgba(27, 38, 50, 0.15);
+  --border-strong: rgba(27, 38, 50, 0.28);
+  --glow-gold: rgba(255, 177, 98, 0.15);
+  --glow-emerald: rgba(39, 174, 96, 0.12);
+  --glow-rose: rgba(192, 57, 43, 0.12);
 
   /* Typography */
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -164,7 +164,7 @@ body.mobile-body {
    ========================================================================== */
 .app-header {
   height: var(--header-h);
-  background: linear-gradient(180deg, rgba(13, 18, 9, 0.95) 0%, rgba(13, 18, 9, 0.85) 100%);
+  background: rgba(27, 38, 50, 0.95);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   border-bottom: 1px solid var(--border-subtle);
@@ -186,7 +186,7 @@ body.mobile-body {
 .brand-avatar {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
+  background: var(--gold-500);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -202,7 +202,7 @@ body.mobile-body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .brand-text {
@@ -281,7 +281,7 @@ body.mobile-body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
+  background: var(--gold-500);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -402,13 +402,13 @@ body.mobile-body {
   width: 72px;
   height: 72px;
   border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, var(--gold-400), var(--gold-700));
+  background: var(--gold-500);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-inverse);
   font-size: 28px;
-  box-shadow: 0 8px 32px rgba(212, 175, 55, 0.25), var(--shadow-inset);
+  box-shadow: 0 8px 32px rgba(255, 177, 98, 0.25), var(--shadow-inset);
   position: relative;
   overflow: hidden;
 }
@@ -418,7 +418,7 @@ body.mobile-body {
   position: absolute;
   inset: 2px;
   border-radius: 22px;
-  background: linear-gradient(135deg, var(--gold-300), var(--gold-500));
+  background: var(--gold-500);
 }
 
 .auth-icon-ring i {
@@ -486,9 +486,9 @@ body.mobile-body {
 }
 
 .auth-tab.active {
-  background: linear-gradient(135deg, var(--gold-500), var(--gold-700));
+  background: var(--gold-500);
   color: var(--text-inverse);
-  box-shadow: 0 2px 12px rgba(212, 175, 55, 0.25);
+  box-shadow: 0 2px 12px rgba(255, 177, 98, 0.25);
 }
 
 .auth-tab:not(.active):hover {
@@ -688,7 +688,7 @@ body.mobile-body {
 }
 
 .checkbox-label input:checked+.checkmark {
-  background: linear-gradient(135deg, var(--gold-500), var(--gold-700));
+  background: var(--gold-500);
   border-color: var(--gold-500);
 }
 
@@ -724,16 +724,16 @@ body.mobile-body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--gold-500), var(--gold-700));
+  background: var(--gold-500);
   color: var(--text-inverse);
-  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.25), var(--shadow-inset);
+  box-shadow: 0 4px 16px rgba(255, 177, 98, 0.25), var(--shadow-inset);
 }
 
 .btn-primary::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent);
+  background: rgba(255, 255, 255, 0.08);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -828,7 +828,7 @@ body.mobile-body {
    CONNECTION STATUS
    ========================================================================== */
 .conn-status-bar {
-  background: linear-gradient(135deg, rgba(16, 22, 12, 0.9), rgba(22, 31, 15, 0.9));
+  background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 10px 14px;
@@ -976,7 +976,7 @@ body.mobile-body {
 }
 
 .kpi-revenue::before {
-  background: linear-gradient(90deg, var(--emerald), transparent);
+  background: var(--emerald);
 }
 
 .kpi-expense .kpi-icon-wrap {
@@ -986,17 +986,17 @@ body.mobile-body {
 }
 
 .kpi-expense::before {
-  background: linear-gradient(90deg, var(--rose), transparent);
+  background: var(--rose);
 }
 
 .kpi-profit .kpi-icon-wrap {
-  background: rgba(212, 175, 55, 0.1);
-  color: var(--gold-400);
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: rgba(255, 177, 98, 0.1);
+  color: var(--gold-500);
+  border: 1px solid rgba(255, 177, 98, 0.2);
 }
 
 .kpi-profit::before {
-  background: linear-gradient(90deg, var(--gold-500), transparent);
+  background: var(--gold-500);
 }
 
 .kpi-orders .kpi-icon-wrap {
@@ -1006,7 +1006,7 @@ body.mobile-body {
 }
 
 .kpi-orders::before {
-  background: linear-gradient(90deg, var(--blue), transparent);
+  background: var(--blue);
 }
 
 .kpi-data {
@@ -1047,19 +1047,19 @@ body.mobile-body {
 }
 
 .kpi-revenue .kpi-bar-fill {
-  background: linear-gradient(90deg, var(--emerald), rgba(52, 211, 153, 0.3));
+  background: var(--emerald);
 }
 
 .kpi-expense .kpi-bar-fill {
-  background: linear-gradient(90deg, var(--rose), rgba(248, 113, 113, 0.3));
+  background: var(--rose);
 }
 
 .kpi-profit .kpi-bar-fill {
-  background: linear-gradient(90deg, var(--gold-500), rgba(212, 175, 55, 0.3));
+  background: var(--gold-500);
 }
 
 .kpi-orders .kpi-bar-fill {
-  background: linear-gradient(90deg, var(--blue), rgba(96, 165, 250, 0.3));
+  background: var(--blue);
 }
 
 .kpi-card.compact {
@@ -1205,9 +1205,9 @@ body.mobile-body {
 }
 
 .sub-tab-btn.active {
-  background: linear-gradient(135deg, var(--gold-500), var(--gold-700));
+  background: var(--gold-500);
   color: var(--text-inverse);
-  box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 2px 10px rgba(255, 177, 98, 0.2);
 }
 
 .sub-tab-btn:not(.active):hover {
@@ -1246,10 +1246,10 @@ body.mobile-body {
 }
 
 .period-chip.active {
-  background: linear-gradient(135deg, var(--gold-500), var(--gold-700));
+  background: var(--gold-500);
   color: var(--text-inverse);
   border-color: transparent;
-  box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 2px 10px rgba(255, 177, 98, 0.2);
 }
 
 .period-chip:not(.active):hover {
@@ -1696,7 +1696,7 @@ body.mobile-body {
    ========================================================================== */
 .bottom-nav {
   height: var(--nav-h);
-  background: linear-gradient(0deg, rgba(8, 12, 6, 0.98) 0%, rgba(13, 18, 9, 0.95) 100%);
+  background: rgba(27, 38, 50, 0.95);
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border-top: 1px solid var(--border-subtle);
@@ -1755,8 +1755,8 @@ body.mobile-body {
 }
 
 .nav-item.active .nav-icon {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
-  box-shadow: 0 0 16px rgba(212, 175, 55, 0.1);
+  background: rgba(255, 177, 98, 0.12);
+  box-shadow: 0 0 16px rgba(255, 177, 98, 0.1);
 }
 
 .nav-item.active .nav-icon i {
@@ -1811,7 +1811,7 @@ body.mobile-body {
 }
 
 .modal-card {
-  background: linear-gradient(180deg, var(--olive-900), var(--olive-950));
+  background: var(--olive-900);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   padding: var(--space-5) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
@@ -1922,7 +1922,7 @@ body.mobile-body {
 
 .modal-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-medium), transparent);
+  background: var(--border-medium);
   margin: var(--space-3) 0;
 }
 
@@ -1969,9 +1969,8 @@ body.mobile-body {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.03) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s infinite;
+  background: rgba(255, 255, 255, 0.05);
+  animation: skeleton-pulse 1.5s infinite ease-in-out;
   flex-shrink: 0;
 }
 
@@ -1989,9 +1988,8 @@ body.mobile-body {
 .skeleton-line {
   height: 10px;
   border-radius: var(--radius-full);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.03) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s infinite;
+  background: rgba(255, 255, 255, 0.05);
+  animation: skeleton-pulse 1.5s infinite ease-in-out;
 }
 
 .skeleton-line.short {
@@ -2003,19 +2001,22 @@ body.mobile-body {
   width: 50px;
   height: 14px;
   border-radius: var(--radius-full);
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.03) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s infinite;
+  background: rgba(255, 255, 255, 0.05);
+  animation: skeleton-pulse 1.5s infinite ease-in-out;
   flex-shrink: 0;
 }
 
-@keyframes skeleton-shimmer {
+@keyframes skeleton-pulse {
   0% {
-    background-position: 200% 0;
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
   }
 
   100% {
-    background-position: -200% 0;
+    opacity: 0.6;
   }
 }
 

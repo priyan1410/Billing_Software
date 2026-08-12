@@ -5,19 +5,19 @@
 
 :root {
   /* Classic Royal Olive Green & Metallic Gold Palette */
-  --bg-dark: #0d130e;
-  --bg-panel: #141f16;
-  --bg-card: #1b291d;
-  --bg-card-hover: #243627;
-  --bg-input: #0f1810;
+  --bg-dark: #EEE9DF;
+  --bg-panel: #FFFFFF;
+  --bg-card: #FFF9EE;
+  --bg-card-hover: #EFE7DC;
+  --bg-input: #FFFFFF;
 
   /* Metallic Gold & Olive Accents */
-  --primary-gold: #d4af37;
-  --primary-amber: #e5b842;
-  --primary-gradient: linear-gradient(135deg, #d4af37 0%, #aa7c11 100%);
-  --gold-glow: rgba(212, 175, 55, 0.28);
-  --primary-olive: #556b2f;
-  --olive-gradient: linear-gradient(135deg, #2b3d2d 0%, #152217 100%);
+  --primary-gold: #FFB162;
+  --primary-amber: #FFC58D;
+  --primary-gradient: #FFB162;
+  --gold-glow: rgba(255, 177, 98, 0.28);
+  --primary-olive: #A35139;
+  --olive-gradient: #EEE9DF;
 
   /* Status & Action Colors */
   --accent-green: #38b000;
@@ -27,13 +27,13 @@
   --accent-orange: #f77f00;
 
   /* Typography Colors */
-  --text-main: #f4f6f3;
-  --text-muted: #9aab9c;
-  --text-dark: #0a110b;
+  --text-main: #1B2632;
+  --text-muted: #4A5E75;
+  --text-dark: #FFFFFF;
 
   /* Borders & Shadows */
-  --border-color: rgba(212, 175, 55, 0.15);
-  --border-gold: rgba(212, 175, 55, 0.4);
+  --border-color: rgba(255, 177, 98, 0.15);
+  --border-gold: rgba(255, 177, 98, 0.4);
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
 

@@ -47,7 +47,7 @@ const compressImage = (file: File, maxDim: number = 512, format: 'image/png' | '
 };
 
 const SectionCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; subtitle?: string }> = ({ title, icon, children, subtitle }) => (
-  <div className="bg-[#0e1019]/95 border border-amber-500/20 rounded-2xl p-6 space-y-5 shadow-xl">
+  <div className="bg-olive-900 border border-gold-500/20 rounded-2xl p-6 space-y-5 shadow-xl">
     <div className="flex items-center gap-3 pb-4 border-b border-white/10">
       <div className="w-9 h-9 bg-amber-500/15 rounded-xl flex items-center justify-center text-amber-400">
         {icon}
