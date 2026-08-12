@@ -143,8 +143,14 @@ export const dispatchOrderPrintJobs = async (
   let totalDispatched = 0;
   const errorMessages: string[] = [];
 
+  const orderType = data.orderType || data.order_type || 'Dine-In';
   const shouldPrintBill = mode === 'both' || mode === 'bill';
-  const shouldPrintToken = mode === 'both' || mode === 'token';
+  let shouldPrintToken = mode === 'both' || mode === 'token';
+
+  // Only print KOT for Takeaway and Delivery orders, bypass for Dine-In
+  if (orderType === 'Dine-In') {
+    shouldPrintToken = false;
+  }
 
   // 1. Print Bill Receipt
   if (shouldPrintBill) {
