@@ -84,7 +84,6 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   try {
-    app.setLocale('en-GB');
     const dbInit = await initializeDatabase();
     if (dbInit && dbInit.success) {
       console.log('✓ MySQL Live Database connected & initialized: kish_mandhi');

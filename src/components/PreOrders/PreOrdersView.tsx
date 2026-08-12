@@ -63,12 +63,12 @@ export const PreOrdersView: React.FC = () => {
         if (res && res.success && Array.isArray(res.data)) {
           setDishes(res.data.map((d: any) => ({
             id: d.id,
-            categoryId: d.category_id,
+            categoryId: d.categoryId || d.category_id,
             name: d.name,
-            priceQuarter: Number(d.price_quarter || 0),
-            priceHalf: Number(d.price_half || 0),
-            priceFull: Number(d.price_full || 0),
-            isAvailable: d.is_available === 1
+            priceQuarter: Number(d.priceQuarter || d.price_quarter || 0),
+            priceHalf: Number(d.priceHalf || d.price_half || 0),
+            priceFull: Number(d.priceFull || d.price_full || 0),
+            isAvailable: d.isAvailable !== undefined ? d.isAvailable : d.is_available === 1
           })));
         }
       }
@@ -580,8 +580,10 @@ const CreatePreorderModal: React.FC<{
   const [notes, setNotes] = useState('');
   const [selectedItems, setSelectedItems] = useState<Array<{ itemId: number; name: string; variant: PortionVariant; unitPrice: number; quantity: number; totalPrice: number }>>([]);
   const [searchItem, setSearchItem] = useState('');
+  const [categories, setCategories] = useState<Array<{ id: string; label: string }>>([{ id: 'all', label: 'All Items' }]);
+  const [activeCategory, setActiveCategory] = useState('all');
 
-  // Default pickup date to today same time
+  // Default pickup date to today same time & Load categories
   useEffect(() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -592,6 +594,21 @@ const CreatePreorderModal: React.FC<{
     
     setPickupDateStr(dateStr);
     setPickupTimeStr(timeStr);
+
+    const loadCategories = async () => {
+      try {
+        if ((window as any).electronAPI?.getCategories) {
+          const res = await (window as any).electronAPI.getCategories();
+          if (res && res.success && Array.isArray(res.data)) {
+            const dynamicCats = res.data.map((c: any) => ({ id: String(c.id), label: c.name }));
+            setCategories([{ id: 'all', label: 'All Items' }, ...dynamicCats]);
+          }
+        }
+      } catch (err) {
+        console.error('loadCategories error:', err);
+      }
+    };
+    loadCategories();
   }, []);
 
   const handleAddItem = (dish: Dish, variant: PortionVariant) => {
@@ -668,11 +685,17 @@ const CreatePreorderModal: React.FC<{
     }
   };
 
-  const filteredDishes = dishes.filter(d => d.name.toLowerCase().includes(searchItem.toLowerCase()));
+  const filteredDishes = useMemo(() => {
+    return dishes.filter(d => {
+      const matchSearch = d.name.toLowerCase().includes(searchItem.toLowerCase());
+      const matchCategory = activeCategory === 'all' || String(d.categoryId) === String(activeCategory);
+      return matchSearch && matchCategory;
+    });
+  }, [dishes, searchItem, activeCategory]);
 
   return (
-    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 select-none">
-      <div className="bg-olive-950 border border-gold-500/30 rounded-3xl w-full max-w-4xl shadow-2xl shadow-black h-[85vh] flex flex-col overflow-hidden text-white">
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4 select-none animate-fadeIn">
+      <div className="bg-olive-950 border border-gold-500/30 rounded-3xl w-full max-w-6xl max-w-[96vw] shadow-2xl shadow-black h-[88vh] flex flex-col overflow-hidden text-white">
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 bg-olive-900 border-b border-gold-500/20 shrink-0">
           <div className="flex items-center gap-3">
@@ -684,7 +707,7 @@ const CreatePreorderModal: React.FC<{
               <p className="text-xs text-olive-300">Book advance meal orders for customer pickup or delivery</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-olive-400 hover:text-white rounded-xl hover:bg-olive-800">
+          <button onClick={onClose} className="p-2 text-olive-400 hover:text-white rounded-xl hover:bg-olive-800 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -692,8 +715,8 @@ const CreatePreorderModal: React.FC<{
         {/* Content Body */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
           {/* Left Column: Customer & Booking Info */}
-          <div className="w-full md:w-1/2 p-5 border-r border-gold-500/15 overflow-y-auto space-y-4">
-            <h3 className="text-xs font-bold text-gold-400 uppercase tracking-wider">1. Customer & Pickup Details</h3>
+          <div className="w-full md:w-[30%] p-5 border-r border-gold-500/15 overflow-y-auto space-y-4 shrink-0">
+            <h3 className="text-xs font-bold text-gold-400 uppercase tracking-wider">1. Customer Details</h3>
 
             <div>
               <label className="text-xs text-olive-300 font-semibold block mb-1">Customer Name *</label>
@@ -703,7 +726,7 @@ const CreatePreorderModal: React.FC<{
                 placeholder="e.g. Rahul Kumar"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500"
+                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500 transition-colors"
               />
             </div>
 
@@ -715,7 +738,7 @@ const CreatePreorderModal: React.FC<{
                 placeholder="e.g. 9876543210"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500"
+                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500 transition-colors"
               />
             </div>
 
@@ -736,7 +759,7 @@ const CreatePreorderModal: React.FC<{
                   required
                   value={pickupTimeStr}
                   onChange={(e) => setPickupTimeStr(e.target.value)}
-                  className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500"
+                  className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500 transition-colors"
                 />
               </div>
             </div>
@@ -746,7 +769,7 @@ const CreatePreorderModal: React.FC<{
               <select
                 value={orderType}
                 onChange={(e) => setOrderType(e.target.value as any)}
-                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-gold-500"
+                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-gold-500 transition-colors"
               >
                 <option value="Takeaway">Takeaway</option>
                 <option value="Dine-In">Dine-In</option>
@@ -754,111 +777,131 @@ const CreatePreorderModal: React.FC<{
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-olive-300 font-semibold block mb-1">Advance Deposit (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0.00"
-                  value={advancePaid || ''}
-                  onChange={(e) => setAdvancePaid(Number(e.target.value || 0))}
-                  className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-olive-300 font-semibold block mb-1">Order Total</label>
-                <div className="bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs font-bold text-amber-400">
-                  ₹{totalAmount.toFixed(2)}
-                </div>
-              </div>
+            <div>
+              <label className="text-xs text-olive-300 font-semibold block mb-1">Advance Deposit (₹)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="0.00"
+                value={advancePaid || ''}
+                onChange={(e) => setAdvancePaid(Number(e.target.value || 0))}
+                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500 transition-colors"
+              />
             </div>
 
             <div>
               <label className="text-xs text-olive-300 font-semibold block mb-1">Special Notes / Address</label>
               <textarea
-                rows={2}
+                rows={3}
                 placeholder="e.g. Extra spicy, packaging preferences..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500 resize-none"
+                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500 resize-none transition-colors"
               />
             </div>
           </div>
 
-          {/* Right Column: Dish Selection Grid & Selected Cart */}
-          <div className="w-full md:w-1/2 p-5 flex flex-col min-h-0 bg-olive-950/40">
-            <h3 className="text-xs font-bold text-gold-400 uppercase tracking-wider mb-2">2. Select Food Items</h3>
+          {/* Center Column: Dish Selection Grid (Menu) */}
+          <div className="w-full md:w-[40%] p-5 border-r border-gold-500/15 flex flex-col min-h-0 bg-olive-950/20">
+            <h3 className="text-xs font-bold text-gold-400 uppercase tracking-wider mb-2">2. Menu Selection</h3>
 
             {/* Menu Item Search */}
-            <div className="relative mb-3">
+            <div className="relative mb-3 shrink-0">
               <Search className="w-3.5 h-3.5 text-olive-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search dish to add..."
                 value={searchItem}
                 onChange={(e) => setSearchItem(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-olive-900 border border-gold-500/20 rounded-xl text-xs text-white placeholder-olive-400 outline-none"
+                className="w-full pl-8 pr-3 py-1.5 bg-olive-900 border border-gold-500/20 rounded-xl text-xs text-white placeholder-olive-400 outline-none focus:border-gold-500 transition-colors"
               />
             </div>
 
-            {/* Menu Dish Selection Grid */}
-            <div className="h-44 overflow-y-auto mb-3 border border-gold-500/15 rounded-2xl bg-olive-900 p-2 space-y-1.5 shrink-0">
-              {filteredDishes.map(d => (
-                <div key={d.id} className="flex items-center justify-between p-2 bg-olive-950 rounded-xl border border-gold-500/10 text-xs">
-                  <span className="font-bold text-white truncate max-w-[160px]">{d.name}</span>
-                  <div className="flex gap-1">
-                    {d.priceQuarter > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => handleAddItem(d, 'Quarter')}
-                        className="px-2 py-1 bg-olive-800 hover:bg-gold-500 hover:text-olive-950 text-olive-200 rounded text-[10px] font-bold transition-all"
-                      >
-                        Qtr ₹{d.priceQuarter}
-                      </button>
-                    )}
-                    {d.priceHalf > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => handleAddItem(d, 'Half')}
-                        className="px-2 py-1 bg-olive-800 hover:bg-gold-500 hover:text-olive-950 text-olive-200 rounded text-[10px] font-bold transition-all"
-                      >
-                        Half ₹{d.priceHalf}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleAddItem(d, 'Full')}
-                      className="px-2 py-1 bg-gold-500/20 hover:bg-gold-500 text-gold-300 hover:text-olive-950 border border-gold-500/40 rounded text-[10px] font-bold transition-all"
-                    >
-                      Full ₹{d.priceFull}
-                    </button>
-                  </div>
-                </div>
+            {/* Category Filter Horizontal Scrollbar */}
+            <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 shrink-0 scrollbar-thin">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all ${
+                    activeCategory === cat.id
+                      ? 'bg-gradient-to-r from-gold-500 to-gold-400 text-olive-950 shadow-md shadow-gold-500/20'
+                      : 'bg-olive-900 border border-gold-500/20 text-olive-300 hover:text-white'
+                  }`}
+                >
+                  {cat.label}
+                </button>
               ))}
             </div>
 
-            {/* Selected Items List */}
-            <span className="text-[10px] text-olive-400 uppercase font-bold block mb-1">Selected Cart ({selectedItems.length})</span>
-            <div className="flex-1 overflow-y-auto bg-olive-900 border border-gold-500/20 rounded-2xl p-2 space-y-1.5 min-h-[120px]">
-              {selectedItems.length === 0 ? (
+            {/* Menu Dish Selection Grid */}
+            <div className="flex-1 overflow-y-auto border border-gold-500/15 rounded-2xl bg-olive-900 p-2.5 space-y-2">
+              {filteredDishes.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-olive-500 text-xs font-semibold">
-                  Click a dish variant above to add to pre-order
+                  No matching dishes found
+                </div>
+              ) : (
+                filteredDishes.map(d => (
+                  <div key={d.id} className="flex flex-col p-2.5 bg-olive-950 rounded-xl border border-gold-500/10 gap-2 hover:border-gold-500/30 transition-colors">
+                    <span className="font-bold text-white text-xs truncate">{d.name}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {d.priceQuarter > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddItem(d, 'Quarter')}
+                          className="px-2 py-1 bg-olive-800 hover:bg-gold-500 hover:text-olive-950 text-olive-200 rounded text-[10px] font-bold transition-all flex-1 min-w-[70px]"
+                        >
+                          Qtr ₹{d.priceQuarter}
+                        </button>
+                      )}
+                      {d.priceHalf > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddItem(d, 'Half')}
+                          className="px-2 py-1 bg-olive-800 hover:bg-gold-500 hover:text-olive-950 text-olive-200 rounded text-[10px] font-bold transition-all flex-1 min-w-[70px]"
+                        >
+                          Half ₹{d.priceHalf}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleAddItem(d, 'Full')}
+                        className="px-2 py-1 bg-gold-500/20 hover:bg-gold-500 text-gold-300 hover:text-olive-950 border border-gold-500/40 rounded text-[10px] font-bold transition-all flex-1 min-w-[70px]"
+                      >
+                        Full ₹{d.priceFull}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Selected Cart & Summary */}
+          <div className="w-full md:w-[30%] p-5 flex flex-col min-h-0 bg-olive-950/40">
+            <h3 className="text-xs font-bold text-gold-400 uppercase tracking-wider mb-2">3. Selected Cart</h3>
+
+            {/* Selected Items List */}
+            <div className="flex-1 overflow-y-auto bg-olive-900 border border-gold-500/20 rounded-2xl p-2 space-y-1.5 min-h-[150px] mb-3">
+              {selectedItems.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-olive-500 text-xs font-semibold text-center p-4">
+                  Select variants from the menu in the center to build pre-order
                 </div>
               ) : (
                 selectedItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-2 bg-olive-950 rounded-xl text-xs">
+                  <div key={idx} className="flex justify-between items-center p-2 bg-olive-950 rounded-xl text-xs border border-gold-500/5">
                     <div>
-                      <span className="font-bold text-white block">{item.name} ({item.variant})</span>
-                      <span className="text-[10px] text-olive-300">₹{item.unitPrice} x {item.quantity}</span>
+                      <span className="font-bold text-white block truncate max-w-[130px]">{item.name}</span>
+                      <span className="text-[10px] text-gold-400 font-medium">{item.variant}</span>
+                      <span className="text-[10px] text-olive-300 block mt-0.5">₹{item.unitPrice} x {item.quantity}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-emerald-400 font-mono">₹{item.totalPrice}</span>
-                      <div className="flex items-center bg-olive-800 rounded-lg p-0.5">
-                        <button type="button" onClick={() => handleQtyChange(idx, -1)} className="px-2 text-olive-300 font-bold">-</button>
-                        <span className="px-1 text-white font-mono">{item.quantity}</span>
-                        <button type="button" onClick={() => handleQtyChange(idx, 1)} className="px-2 text-olive-300 font-bold">+</button>
+                      <div className="flex items-center bg-olive-800 rounded-lg p-0.5 select-none">
+                        <button type="button" onClick={() => handleQtyChange(idx, -1)} className="px-1.5 text-olive-300 font-bold hover:text-white">-</button>
+                        <span className="px-1 text-white font-mono text-[10px]">{item.quantity}</span>
+                        <button type="button" onClick={() => handleQtyChange(idx, 1)} className="px-1.5 text-olive-300 font-bold hover:text-white">+</button>
                       </div>
                     </div>
                   </div>
@@ -866,18 +909,34 @@ const CreatePreorderModal: React.FC<{
               )}
             </div>
 
+            {/* Totals Summary */}
+            <div className="bg-olive-900/60 p-3.5 rounded-2xl border border-gold-500/15 space-y-2 text-xs mb-4 shrink-0">
+              <div className="flex justify-between items-center text-olive-300">
+                <span>Subtotal:</span>
+                <span className="font-bold text-white font-mono">₹{totalAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-emerald-400">
+                <span>Advance Paid:</span>
+                <span className="font-bold font-mono">₹{Number(advancePaid || 0).toFixed(2)}</span>
+              </div>
+              <div className="border-t border-gold-500/10 pt-2 flex justify-between items-center font-black text-amber-400">
+                <span>Balance Due:</span>
+                <span className="text-sm font-mono">₹{Math.max(0, totalAmount - Number(advancePaid || 0)).toFixed(2)}</span>
+              </div>
+            </div>
+
             {/* Form Actions */}
-            <div className="pt-3 flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end shrink-0">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-olive-900 hover:bg-olive-800 text-olive-300 text-xs font-bold rounded-xl"
+                className="px-4 py-2.5 bg-olive-900 hover:bg-olive-800 text-olive-300 text-xs font-bold rounded-xl flex-1 border border-gold-500/10 hover:border-gold-500/20 transition-all"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-gold-500 hover:bg-gold-400 text-olive-950 text-xs font-bold rounded-xl shadow-lg transition-all"
+                className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-olive-950 text-xs font-black rounded-xl shadow-lg transition-all flex-1 text-center"
               >
                 Save Pre-Order
               </button>

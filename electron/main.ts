@@ -57,7 +57,6 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  app.setLocale('en-GB');
   createWindow();
   // Phase 3: Start hybrid sync engine (runs silently if cloud not configured)
   startSyncEngine();
