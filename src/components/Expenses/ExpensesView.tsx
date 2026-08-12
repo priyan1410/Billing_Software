@@ -96,11 +96,19 @@ export const ExpensesView: React.FC = () => {
   };
 
   const handleDeleteExpense = (id: number) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setPendingDeleteId(id);
     setConfirmOpen(true);
   };
 
   const executeDeleteExpense = async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setConfirmOpen(false);
     if (pendingDeleteId == null) return;
     const id = pendingDeleteId;

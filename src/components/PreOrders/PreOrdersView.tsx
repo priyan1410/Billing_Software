@@ -3,6 +3,7 @@ import { CalendarClock, Plus, Search, Phone, User, Clock, Utensils, CheckCircle2
 import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
 import { Dish, PreOrder, PortionVariant, OrderType } from '../../types';
+import { ConfirmDialog } from '../UI/ConfirmDialog';
 
 export const PreOrdersView: React.FC = () => {
   const { setActiveSection } = useAppStore();
@@ -17,6 +18,25 @@ export const PreOrdersView: React.FC = () => {
   // Modal States
   const [selectedPreorder, setSelectedPreorder] = useState<PreOrder | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Confirm Dialog & Toast States
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [preorderToCancel, setPreorderToCancel] = useState<PreOrder | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [preorderToDelete, setPreorderToDelete] = useState<PreOrder | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Fetch preorders & dishes
   const fetchPreorders = async () => {
@@ -61,7 +81,13 @@ export const PreOrdersView: React.FC = () => {
     fetchDishes();
   }, []);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = useMemo(() => {
+    const localDate = new Date();
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
 
   const filteredPreorders = useMemo(() => {
     return preorders.filter(po => {
@@ -94,29 +120,81 @@ export const PreOrdersView: React.FC = () => {
     setActiveSection('billing');
   };
 
-  const handleCancelPreorder = async (po: PreOrder) => {
-    if (confirm(`Are you sure you want to cancel pre-order ${po.preorderNumber}?`)) {
+  const handleCancelPreorderClick = (po: PreOrder) => {
+    setPreorderToCancel(po);
+    setShowCancelConfirm(true);
+  };
+
+  const executeCancelPreorder = async () => {
+    setShowCancelConfirm(false);
+    if (!preorderToCancel) return;
+    const po = preorderToCancel;
+    setPreorderToCancel(null);
+
+    try {
       if ((window as any).electronAPI?.updatePreorderStatus) {
-        await (window as any).electronAPI.updatePreorderStatus({ id: po.id, status: 'Cancelled' });
-        fetchPreorders();
-        setSelectedPreorder(null);
+        const res = await (window as any).electronAPI.updatePreorderStatus({ id: po.id, status: 'Cancelled' });
+        if (res && res.success) {
+          showToast(`Pre-order ${po.preorderNumber} cancelled successfully.`, 'success');
+          fetchPreorders();
+          setSelectedPreorder(null);
+        } else {
+          showToast(res?.message || 'Failed to cancel pre-order.', 'error');
+        }
       }
+    } catch (err) {
+      console.error('cancelPreorder error:', err);
+      showToast('Error cancelling pre-order.', 'error');
     }
   };
 
-  const handleClearPastPreorders = async () => {
-    if (confirm('Are you sure you want to remove all pre-orders from previous dates? This action cannot be undone.')) {
-      try {
-        if ((window as any).electronAPI?.clearPastPreorders) {
-          const res = await (window as any).electronAPI.clearPastPreorders();
-          if (res && res.success) {
-            alert(`Removed ${res.affectedRows || 0} past date pre-orders.`);
-            fetchPreorders();
-          }
+  const handleDeletePreorderClick = (po: PreOrder) => {
+    setPreorderToDelete(po);
+    setShowDeleteConfirm(true);
+  };
+
+  const executeDeletePreorder = async () => {
+    setShowDeleteConfirm(false);
+    if (!preorderToDelete) return;
+    const po = preorderToDelete;
+    setPreorderToDelete(null);
+
+    try {
+      if ((window as any).electronAPI?.deletePreorder) {
+        const res = await (window as any).electronAPI.deletePreorder(po.id);
+        if (res && res.success) {
+          showToast(`Pre-order ${po.preorderNumber} deleted permanently.`, 'success');
+          fetchPreorders();
+          setSelectedPreorder(null);
+        } else {
+          showToast(res?.message || 'Failed to delete pre-order.', 'error');
         }
-      } catch (err) {
-        console.error('clearPastPreorders error:', err);
       }
+    } catch (err) {
+      console.error('deletePreorder error:', err);
+      showToast('Error deleting pre-order.', 'error');
+    }
+  };
+
+  const handleClearPastPreordersClick = () => {
+    setShowClearConfirm(true);
+  };
+
+  const executeClearPastPreorders = async () => {
+    setShowClearConfirm(false);
+    try {
+      if ((window as any).electronAPI?.clearPastPreorders) {
+        const res = await (window as any).electronAPI.clearPastPreorders();
+        if (res && res.success) {
+          showToast(`Removed ${res.affectedRows || 0} past date pre-orders.`, 'success');
+          fetchPreorders();
+        } else {
+          showToast(res?.message || 'Failed to clear past pre-orders.', 'error');
+        }
+      }
+    } catch (err: any) {
+      console.error('clearPastPreorders error:', err);
+      showToast('Error clearing past pre-orders.', 'error');
     }
   };
 
@@ -150,7 +228,7 @@ export const PreOrdersView: React.FC = () => {
           </div>
 
           <button
-            onClick={handleClearPastPreorders}
+            onClick={handleClearPastPreordersClick}
             className="px-3.5 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 whitespace-nowrap"
             title="Remove pre-orders from previous dates"
           >
@@ -372,13 +450,24 @@ export const PreOrdersView: React.FC = () => {
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="p-4 bg-olive-900 border-t border-gold-500/20 flex flex-wrap gap-3 justify-between items-center">
-              <button
-                onClick={() => handleCancelPreorder(selectedPreorder)}
-                className="px-3.5 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Cancel Pre-Order
-              </button>
+            <div className="p-4 bg-olive-900 border-t border-gold-500/20 flex flex-wrap gap-3 justify-between items-center w-full">
+              <div className="flex gap-2">
+                {selectedPreorder.status === 'Pending' && (
+                  <button
+                    onClick={() => handleCancelPreorderClick(selectedPreorder)}
+                    className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                  >
+                    Cancel Pre-Order
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDeletePreorderClick(selectedPreorder)}
+                  className="px-3.5 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                  title="Permanently delete from database"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Permanently
+                </button>
+              </div>
 
               <div className="flex gap-2">
                 <button
@@ -408,14 +497,79 @@ export const PreOrdersView: React.FC = () => {
             setShowCreateModal(false);
             fetchPreorders();
           }}
+          showToast={showToast}
         />
+      )}
+
+      {/* Confirm Dialogs */}
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Cancel Pre-Order"
+        message={`Are you sure you want to cancel pre-order ${preorderToCancel?.preorderNumber}?`}
+        confirmLabel="Cancel Pre-Order"
+        cancelLabel="Keep Order"
+        onConfirm={executeCancelPreorder}
+        onCancel={() => {
+          setShowCancelConfirm(false);
+          setPreorderToCancel(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete Pre-Order"
+        message={`Are you sure you want to permanently delete pre-order ${preorderToDelete?.preorderNumber}? This action cannot be undone.`}
+        confirmLabel="Delete Permanently"
+        cancelLabel="Cancel"
+        onConfirm={executeDeletePreorder}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+          setPreorderToDelete(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={showClearConfirm}
+        title="Clear Past Pre-Orders"
+        message="Are you sure you want to remove all pre-orders from previous dates? This action cannot be undone."
+        confirmLabel="Clear Orders"
+        cancelLabel="Cancel"
+        onConfirm={executeClearPastPreorders}
+        onCancel={() => setShowClearConfirm(false)}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <XCircle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="p-1 hover:bg-black/10 rounded-lg transition-colors ml-2"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );
 };
 
 // Create Pre-Order Modal Component
-const CreatePreorderModal: React.FC<{ dishes: Dish[]; onClose: () => void; onSuccess: () => void }> = ({ dishes, onClose, onSuccess }) => {
+const CreatePreorderModal: React.FC<{
+  dishes: Dish[];
+  onClose: () => void;
+  onSuccess: () => void;
+  showToast: (message: string, type?: 'success' | 'error') => void;
+}> = ({ dishes, onClose, onSuccess, showToast }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [pickupDate, setPickupDate] = useState('');
@@ -472,11 +626,11 @@ const CreatePreorderModal: React.FC<{ dishes: Dish[]; onClose: () => void; onSuc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim()) {
-      alert('Please enter customer name.');
+      showToast('Please enter customer name.', 'error');
       return;
     }
     if (selectedItems.length === 0) {
-      alert('Please select at least one food item for the pre-order.');
+      showToast('Please select at least one food item for the pre-order.', 'error');
       return;
     }
 
@@ -493,13 +647,15 @@ const CreatePreorderModal: React.FC<{ dishes: Dish[]; onClose: () => void; onSuc
           notes
         });
         if (res && res.success) {
+          showToast('Pre-order created successfully.', 'success');
           onSuccess();
         } else {
-          alert('Failed to save pre-order: ' + (res?.message || 'Error'));
+          showToast('Failed to save pre-order: ' + (res?.message || 'Error'), 'error');
         }
       }
     } catch (err) {
       console.error('createPreorder error:', err);
+      showToast('Error saving pre-order.', 'error');
     }
   };
 

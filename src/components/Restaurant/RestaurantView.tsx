@@ -275,10 +275,12 @@ export const RestaurantView: React.FC = () => {
   };
 
   const handleDeleteCategory = (id: number, name: string) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     const dishCount = dishes.filter(d => Number(d.categoryId) === Number(id)).length;
     if (dishCount > 0) {
-      // Use alert replacement — a temporary info dialog; since no text input follows, alert is fine here
-      // but we still use in-app pattern for future consistency
       alert(`Cannot delete category "${name}" because it contains ${dishCount} menu dish(es). Please delete or reassign those dishes first.`);
       return;
     }
@@ -287,6 +289,10 @@ export const RestaurantView: React.FC = () => {
   };
 
   const executeDeleteCategory = async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setConfirmCatOpen(false);
     if (!pendingDeleteCat) return;
     const { id } = pendingDeleteCat;
@@ -439,11 +445,19 @@ export const RestaurantView: React.FC = () => {
 
   // Delete Dish — queues confirmation in-app (avoids Electron focus-loss cursor bug)
   const handleDeleteDish = (id: number) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setPendingDeleteDishId(id);
     setConfirmDishOpen(true);
   };
 
   const executeDeleteDish = async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setConfirmDishOpen(false);
     if (pendingDeleteDishId == null) return;
     const id = pendingDeleteDishId;

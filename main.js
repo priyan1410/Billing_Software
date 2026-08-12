@@ -689,7 +689,11 @@ ipcMain.handle('preorders:delete', async (evt, id) => {
 
 ipcMain.handle('preorders:clearPastDates', async () => {
   try {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const localDate = new Date();
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
     const res = await query('DELETE FROM preorders WHERE DATE(pickup_date) < ?', [todayStr]);
     if (!res.success) return { success: false, message: res.error };
     return { success: true, affectedRows: res.data ? res.data.affectedRows : 0 };

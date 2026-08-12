@@ -186,6 +186,10 @@ export const RestaurantSettingsView: React.FC = () => {
   };
 
   const handleLogout = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     if (window.confirm('Are you sure you want to log out?')) {
       logout();
     }

@@ -452,6 +452,10 @@ export const DbSettingsView: React.FC = () => {
   };
 
   const handleDeleteDish = (id: number) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     if (editingId === id) {
       setEditingId(null);
       setEditForm({});
@@ -461,6 +465,10 @@ export const DbSettingsView: React.FC = () => {
   };
 
   const executeDeleteDish = async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setConfirmDishOpen(false);
     if (pendingDeleteDishId == null) return;
     const id = pendingDeleteDishId;
@@ -472,11 +480,19 @@ export const DbSettingsView: React.FC = () => {
   };
 
   const handleDeleteExpense = (id: number) => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setPendingDeleteExpId(id);
     setConfirmExpOpen(true);
   };
 
   const executeDeleteExpense = async () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     setConfirmExpOpen(false);
     if (pendingDeleteExpId == null) return;
     const id = pendingDeleteExpId;
@@ -518,6 +534,10 @@ export const DbSettingsView: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
     if (!confirm('This will import 100% of all software data, restaurant branding, custom icons, dishes, orders, and expenses into your database. Proceed with full PC migration import?')) {
       return;
     }

@@ -31,22 +31,50 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Auto-focus the Cancel button so pressing Enter doesn't accidentally confirm
+  // Focus cleanup helper to prevent Chromium orphan-focus caret bug on element removal
+  const resetFocus = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.focus();
+  };
+
+  // Auto-focus the Cancel button when opening, and clean focus when closing
   useEffect(() => {
     if (open) {
-      setTimeout(() => cancelBtnRef.current?.focus(), 50);
+      const timer = setTimeout(() => cancelBtnRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    } else {
+      resetFocus();
     }
   }, [open]);
+
+  // Clean focus on unmount
+  useEffect(() => {
+    return () => {
+      resetFocus();
+    };
+  }, []);
+
+  const handleConfirm = () => {
+    resetFocus();
+    onConfirm();
+  };
+
+  const handleCancel = () => {
+    resetFocus();
+    onCancel();
+  };
 
   // Dismiss on Escape key
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
+      if (e.key === 'Escape') handleCancel();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onCancel]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -56,7 +84,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
     >
       <div
         className="relative bg-olive-900 border border-gold-500/30 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4"
@@ -67,7 +95,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       >
         {/* Close × */}
         <button
-          onClick={onCancel}
+          onClick={handleCancel}
           className="absolute top-3 right-3 p-1.5 text-olive-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
         >
           <X className="w-4 h-4" />
@@ -92,13 +120,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <div className="flex gap-2 justify-end">
           <button
             ref={cancelBtnRef}
-            onClick={onCancel}
+            onClick={handleCancel}
             className="px-4 py-2 rounded-xl text-xs font-bold bg-olive-800 border border-gold-500/20 text-olive-300 hover:text-white hover:border-gold-500/40 transition-colors"
           >
             {cancelLabel}
           </button>
           <button
-            onClick={onConfirm}
+            onClick={handleConfirm}
             className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-colors ${
               isRed
                 ? 'bg-rose-600 hover:bg-rose-500 text-white border border-rose-500/60'

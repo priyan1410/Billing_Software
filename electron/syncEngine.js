@@ -270,11 +270,18 @@ async function runLocalCleanup() {
       [cutoff]
     );
 
-    const deletedOrders   = delOrders.success   ? (delOrders.data?.affectedRows   || 0) : 0;
-    const deletedExpenses = delExpenses.success ? (delExpenses.data?.affectedRows || 0) : 0;
+    // Delete old preorders (older than cutoff)
+    const delPreorders = await query(
+      `DELETE FROM preorders WHERE pickup_date < ? LIMIT 1000`,
+      [cutoff]
+    );
 
-    if (deletedOrders + deletedExpenses > 0) {
-      console.log(`[SyncEngine] Midnight cleanup: removed ${deletedOrders} old orders, ${deletedExpenses} old expenses from local DB.`);
+    const deletedOrders    = delOrders.success    ? (delOrders.data?.affectedRows    || 0) : 0;
+    const deletedExpenses  = delExpenses.success  ? (delExpenses.data?.affectedRows  || 0) : 0;
+    const deletedPreorders = delPreorders.success ? (delPreorders.data?.affectedRows || 0) : 0;
+
+    if (deletedOrders + deletedExpenses + deletedPreorders > 0) {
+      console.log(`[SyncEngine] Midnight cleanup: removed ${deletedOrders} old orders, ${deletedExpenses} old expenses, ${deletedPreorders} old preorders from local DB.`);
     }
   } catch (err) {
     console.error('[SyncEngine] Cleanup error:', err.message);
