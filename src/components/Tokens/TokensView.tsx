@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, Truck, X, CheckCircle2, Receipt, Edit3, History } from 'lucide-react';
+import { Search, Ticket, Trash2, Printer, ArrowRight, Utensils, ShoppingBag, Truck, X, CheckCircle2, Receipt, Edit3, History, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -34,6 +34,19 @@ export const TokensView: React.FC = () => {
   const [editingTokenNumber, setEditingTokenNumber] = useState<string | number | null>(null);
   const [showRecentTokensDropdown, setShowRecentTokensDropdown] = useState<boolean>(false);
   const [previewToken, setPreviewToken] = useState<{ tokenNumber: string | number; orderType: OrderType; tableNo?: string; paymentMode: string; items: any[]; timestamp: string; date: string } | null>(null);
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     loadCategories();
@@ -114,7 +127,7 @@ export const TokensView: React.FC = () => {
 
   const handleOpenPreview = async () => {
     if (tokenCart.length === 0) {
-      alert('Token cart is empty! Select dishes first.');
+      showToast('Token cart is empty! Select dishes first.', 'error');
       return;
     }
 
@@ -602,6 +615,21 @@ export const TokensView: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
     </div>

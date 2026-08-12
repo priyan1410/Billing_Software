@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus, Download, FileSpreadsheet, FileJson, X, Wallet, Search, Layers, Sparkles, Filter } from 'lucide-react';
+import { Utensils, TrendingUp, Store, Plus, Edit2, Edit3, Trash2, Calendar, Receipt, Printer, Tags, FolderPlus, Download, FileSpreadsheet, FileJson, X, Wallet, Search, Layers, Sparkles, Filter, AlertCircle } from 'lucide-react';
 import { Dish, PnLPeriod } from '../../types';
 import { BillDetailModal } from './BillDetailModal';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -18,6 +18,18 @@ export const RestaurantView: React.FC = () => {
     { id: 5, name: 'Desserts' }
   ]);
   const [dishSearchQuery, setDishSearchQuery] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
   const [dishSelectedCategory, setDishSelectedCategory] = useState<string>('all');
 
   // Memoized Category Dishes Grouping for 60 FPS performance without render lag
@@ -237,7 +249,7 @@ export const RestaurantView: React.FC = () => {
     if ((window as any).electronAPI?.saveCategory) {
       const res = await (window as any).electronAPI.saveCategory({ name: newCatName.trim() });
       if (res && res.success === false) {
-        alert(res.message || 'Failed to save food category.');
+        showToast(res.message || 'Failed to save food category.', 'error');
         return;
       }
       await loadCategories();
@@ -263,7 +275,7 @@ export const RestaurantView: React.FC = () => {
     if ((window as any).electronAPI?.updateCategory) {
       const res = await (window as any).electronAPI.updateCategory({ id: editCatId, name: editCategoryName.trim() });
       if (res && res.success === false) {
-        alert(res.message || 'Failed to update food category.');
+        showToast(res.message || 'Failed to update food category.', 'error');
         return;
       }
       await loadCategories();
@@ -281,7 +293,7 @@ export const RestaurantView: React.FC = () => {
     window.focus();
     const dishCount = dishes.filter(d => Number(d.categoryId) === Number(id)).length;
     if (dishCount > 0) {
-      alert(`Cannot delete category "${name}" because it contains ${dishCount} menu dish(es). Please delete or reassign those dishes first.`);
+      showToast(`Cannot delete category "${name}" because it contains ${dishCount} menu dish(es). Please delete or reassign those dishes first.`, 'error');
       return;
     }
     setPendingDeleteCat({ id, name });
@@ -306,7 +318,7 @@ export const RestaurantView: React.FC = () => {
     if ((window as any).electronAPI?.deleteCategory) {
       const res = await (window as any).electronAPI.deleteCategory(id);
       if (res && res.success === false) {
-        alert(res.message || 'Failed to delete category.');
+        showToast(res.message || 'Failed to delete category.', 'error');
         return;
       }
       await loadCategories();
@@ -323,7 +335,7 @@ export const RestaurantView: React.FC = () => {
     let targetCatId = Number(addCat);
     if (addCat === 'custom') {
       if (!addCustomCat.trim()) {
-        alert('Please enter a custom category name');
+        showToast('Please enter a custom category name', 'error');
         return;
       }
       if ((window as any).electronAPI?.saveCategory) {
@@ -331,7 +343,7 @@ export const RestaurantView: React.FC = () => {
         if (catRes && catRes.success && catRes.data?.id) {
           targetCatId = Number(catRes.data.id);
         } else if (catRes && catRes.success === false) {
-          alert(catRes.message || 'Failed to save custom category to database');
+          showToast(catRes.message || 'Failed to save custom category to database', 'error');
           return;
         }
         await loadCategories();
@@ -358,7 +370,7 @@ export const RestaurantView: React.FC = () => {
     if ((window as any).electronAPI) {
       const res = await (window as any).electronAPI.saveMenuItem(payload);
       if (res && res.success === false) {
-        alert(res.message || '❌ Failed to save dish to MySQL database. Please check MySQL connection.');
+        showToast(res.message || '❌ Failed to save dish to MySQL database. Please check MySQL connection.', 'error');
         return;
       }
       loadDishes();
@@ -418,7 +430,7 @@ export const RestaurantView: React.FC = () => {
     if ((window as any).electronAPI) {
       const res = await (window as any).electronAPI.updateMenuItem(payload);
       if (res && res.success === false) {
-        alert(res.message || '❌ Failed to update dish in MySQL database.');
+        showToast(res.message || '❌ Failed to update dish in MySQL database.', 'error');
         return;
       }
       loadDishes();
@@ -2009,6 +2021,21 @@ export const RestaurantView: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
     </div>

@@ -40,6 +40,20 @@ export const DbSettingsView: React.FC = () => {
   // Full PC Migration & Backup State
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'working' | 'success' | 'error'>('idle');
   const [migrationMsg, setMigrationMsg] = useState('');
+  const [confirmImportOpen, setConfirmImportOpen] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // MySQL Connection Settings State
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -250,7 +264,7 @@ export const DbSettingsView: React.FC = () => {
           setBackupMsg('❌ Backup failed: ' + (res?.message || 'Unknown error'));
         }
       } else {
-        alert('Instant backup is available in Desktop App mode.');
+        showToast('Instant backup is available in Desktop App mode.', 'error');
       }
     } catch (err: any) {
       setBackupMsg('❌ Backup Error: ' + err.message);
@@ -282,13 +296,13 @@ export const DbSettingsView: React.FC = () => {
         const res = await (window as any).electronAPI.testDbConnection();
         await checkDbStatus();
         if (res && res.message) {
-          alert(res.message);
+          showToast(res.message);
         } else {
-          alert('✓ Database status check completed.');
+          showToast('✓ Database status check completed.');
         }
       }
     } catch (e: any) {
-      alert('Database Ping Error: ' + e.message);
+      showToast('Database Ping Error: ' + e.message, 'error');
     } finally {
       setTesting(false);
     }
@@ -323,7 +337,7 @@ export const DbSettingsView: React.FC = () => {
         const res = await (window as any).electronAPI.saveDbConfig(dbConfig);
         await checkDbStatus();
         if (res && res.success) {
-          alert(res.message || '✓ MySQL Connected & Saved Successfully!');
+          showToast(res.message || '✓ MySQL Connected & Saved Successfully!');
           setShowConfigModal(false);
           await loadAllData();
         } else {
@@ -357,7 +371,7 @@ export const DbSettingsView: React.FC = () => {
       csv += `${item.id},${item.categoryId},${cleanName},${item.priceQuarter},${item.priceHalf},${item.priceFull},${item.isAvailable ? 'Yes' : 'No'}\n`;
     });
     downloadCsvForExcel(`Kish_Mandhi_Menu_Dishes_${Date.now()}.csv`, csv);
-    alert('✓ Menu Dishes exported as Excel Spreadsheet (.CSV)!');
+    showToast('✓ Menu Dishes exported as Excel Spreadsheet (.CSV)!');
   };
 
   const handleExportOrdersExcel = () => {
@@ -366,7 +380,7 @@ export const DbSettingsView: React.FC = () => {
       csv += `"${o.orderNumber}","${o.orderType}",${o.subtotal},${o.taxAmount},${o.discountAmount},${o.grandTotal},"${o.paymentMode}","${o.createdAt || ''}"\n`;
     });
     downloadCsvForExcel(`Kish_Mandhi_Completed_Orders_${Date.now()}.csv`, csv);
-    alert('✓ Completed Orders exported as Excel Spreadsheet (.CSV)!');
+    showToast('✓ Completed Orders exported as Excel Spreadsheet (.CSV)!');
   };
 
   const handleExportExpensesExcel = () => {
@@ -376,7 +390,7 @@ export const DbSettingsView: React.FC = () => {
       csv += `${e.id},"${e.category}",${cleanDesc},${e.amount},"${e.expenseDate}","${e.paymentMode || 'Cash'}"\n`;
     });
     downloadCsvForExcel(`Kish_Mandhi_Expenses_Ledger_${Date.now()}.csv`, csv);
-    alert('✓ Expenses Ledger exported as Excel Spreadsheet (.CSV)!');
+    showToast('✓ Expenses Ledger exported as Excel Spreadsheet (.CSV)!');
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -390,7 +404,7 @@ export const DbSettingsView: React.FC = () => {
         const text = event.target?.result as string;
         const lines = text.split(/\r\n|\n/);
         if (lines.length <= 1) {
-          alert('Excel CSV file is empty or missing headers!');
+          showToast('Excel CSV file is empty or missing headers!', 'error');
           return;
         }
 
@@ -426,12 +440,12 @@ export const DbSettingsView: React.FC = () => {
         if (newDishes.length > 0 && (window as any).electronAPI) {
           await (window as any).electronAPI.importBackup({ menuItems: newDishes });
           await loadAllData();
-          alert(`✓ Successfully imported ${newDishes.length} menu dishes from Excel Spreadsheet!`);
+          showToast(`✓ Successfully imported ${newDishes.length} menu dishes from Excel Spreadsheet!`);
         } else {
-          alert('No valid dish rows found in Excel CSV file.');
+          showToast('No valid dish rows found in Excel CSV file.', 'error');
         }
       } catch (err) {
-        alert('Failed to parse Excel CSV file. Ensure columns match: ID, Category ID, Dish Name, Quarter, Half, Full.');
+        showToast('Failed to parse Excel CSV file. Ensure columns match: ID, Category ID, Dish Name, Quarter, Half, Full.', 'error');
       }
     };
   };
@@ -447,7 +461,7 @@ export const DbSettingsView: React.FC = () => {
       await (window as any).electronAPI.updateMenuItem({ id: editingId, ...editForm });
       setEditingId(null);
       await loadAllData();
-      alert('✓ Dish record updated in database!');
+      showToast('✓ Dish record updated in database!');
     }
   };
 
@@ -518,29 +532,30 @@ export const DbSettingsView: React.FC = () => {
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          alert('✓ Full System Backup exported successfully! You can copy this file to another PC and import it.');
+          showToast('✓ Full System Backup exported successfully! You can copy this file to another PC and import it.');
         } else {
-          alert(res?.message || 'Full system export failed.');
+          showToast(res?.message || 'Full system export failed.', 'error');
         }
       } else {
-        alert('Full system export API unavailable in browser mode.');
+        showToast('Full system export API unavailable in browser mode.', 'error');
       }
     } catch (err: any) {
-      alert('Error exporting full system: ' + err.message);
+      showToast('Error exporting full system: ' + err.message, 'error');
     }
   };
 
-  const handleImportFullSystemFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFullSystemFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPendingImportFile(file);
+    setConfirmImportOpen(true);
+  };
 
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    window.focus();
-    if (!confirm('This will import 100% of all software data, restaurant branding, custom icons, dishes, orders, and expenses into your database. Proceed with full PC migration import?')) {
-      return;
-    }
+  const executeImportFullSystem = async () => {
+    setConfirmImportOpen(false);
+    if (!pendingImportFile) return;
+    const file = pendingImportFile;
+    setPendingImportFile(null);
 
     setMigrationStatus('working');
     setMigrationMsg(`Reading full system backup ${file.name}...`);
@@ -883,14 +898,14 @@ export const DbSettingsView: React.FC = () => {
                       if (list.length > 0 && (window as any).electronAPI?.importBackup) {
                         const res = await (window as any).electronAPI.importBackup({ orders: list });
                         if (res && res.success) {
-                          alert(`Imported ${list.length} bills successfully!`);
+                          showToast(`Imported ${list.length} bills successfully!`);
                           window.location.reload();
                         } else {
-                          alert(res?.message || 'Import failed.');
+                          showToast(res?.message || 'Import failed.', 'error');
                         }
                       }
                     } catch (err: any) {
-                      alert('Error reading bill file: ' + err.message);
+                      showToast('Error reading bill file: ' + err.message, 'error');
                     }
                   }}
                   className="hidden"
@@ -1349,6 +1364,36 @@ export const DbSettingsView: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+
+      {/* Confirm Dialog for Full System Import */}
+      <ConfirmDialog
+        open={confirmImportOpen}
+        title="Confirm Full System Import"
+        message="This will import 100% of all software data, restaurant branding, custom icons, dishes, orders, and expenses into your database. Proceed with full PC migration import?"
+        confirmLabel="Import Data"
+        cancelLabel="Cancel"
+        onConfirm={executeImportFullSystem}
+        onCancel={() => {
+          setConfirmImportOpen(false);
+          setPendingImportFile(null);
+        }}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+        </div>
+      )}
+     </div>
   );
 };

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { RestaurantDetails } from '../../types';
+import { ConfirmDialog } from '../UI/ConfirmDialog';
 
 const compressImage = (file: File, maxDim: number = 512, format: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -95,6 +96,19 @@ export const RestaurantSettingsView: React.FC = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveMsg, setSaveMsg] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const [systemPrinters, setSystemPrinters] = useState<{ name: string; displayName?: string; isDefault?: boolean }[]>([]);
   const [loadingPrinters, setLoadingPrinters] = useState(false);
@@ -186,13 +200,7 @@ export const RestaurantSettingsView: React.FC = () => {
   };
 
   const handleLogout = () => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    window.focus();
-    if (window.confirm('Are you sure you want to log out?')) {
-      logout();
-    }
+    setShowLogoutConfirm(true);
   };
 
   const sectionHeadings = [
@@ -452,9 +460,9 @@ export const RestaurantSettingsView: React.FC = () => {
                               try {
                                 const compressed = await compressImage(file, 600, 'image/png');
                                 update('logoUrl', compressed);
-                              } catch (err) {
-                                alert('Error reading logo file');
-                              }
+                               } catch (err) {
+                                 showToast('Error reading logo file', 'error');
+                               }
                             }
                           }}
                         />
@@ -525,9 +533,9 @@ export const RestaurantSettingsView: React.FC = () => {
                               try {
                                 const compressed = await compressImage(file, 256, 'image/png');
                                 update('softwareIconUrl', compressed);
-                              } catch (err) {
-                                alert('Error reading software icon file');
-                              }
+                               } catch (err) {
+                                 showToast('Error reading software icon file', 'error');
+                               }
                             }
                           }}
                         />
@@ -866,6 +874,36 @@ export const RestaurantSettingsView: React.FC = () => {
             {saveStatus === 'saving' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {saveStatus === 'saving' ? 'Saving...' : 'Save All Changes'}
           </button>
+        </div>
+      )}
+
+      {/* Confirm Dialogs */}
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Confirm Logout"
+        message="Are you sure you want to sign out of your account? Any unsaved settings changes will be lost."
+        confirmLabel="Logout"
+        cancelLabel="Stay Logged In"
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          logout();
+        }}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
     </div>

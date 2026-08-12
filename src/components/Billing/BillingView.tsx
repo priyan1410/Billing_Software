@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Search, ShoppingCart, Trash2, Printer, Utensils, ShoppingBag, Truck, Wallet,
-  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone,
+  CreditCard, QrCode, Banknote, X, CheckCircle2, AlertTriangle, Receipt, User, Phone, AlertCircle,
   Edit3, History, MapPin
 } from 'lucide-react';
 import { usePosStore } from '../../store/usePosStore';
@@ -348,8 +348,19 @@ export const BillingView: React.FC = () => {
   const [customTable, setCustomTable] = useState<string>('');
   const [isCustomTableMode, setIsCustomTableMode] = useState<boolean>(false);
 
-  // In-app cart clear confirm dialog (replaces window.confirm for Electron focus-loss cursor bug fix)
   const [confirmClearCart, setConfirmClearCart] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const curr = restaurantDetails?.currency || '₹';
   const taxRate = restaurantDetails?.taxRate ?? 0;
@@ -478,7 +489,7 @@ export const BillingView: React.FC = () => {
   };
 
   const handleCheckoutClick = async () => {
-    if (cart.length === 0) { alert('Cart is empty! Add items first.'); return; }
+    if (cart.length === 0) { showToast('Cart is empty! Add items first.', 'error'); return; }
     if (!editingBillNumber) {
       await fetchNextBillNumber();
     }
@@ -559,7 +570,7 @@ export const BillingView: React.FC = () => {
       if (res.success) {
         createdData = { ...base, ...res.data };
       } else {
-        alert(res.message || 'Order operation failed. Try again.');
+        showToast(res.message || 'Order operation failed. Try again.', 'error');
         setIsCheckingOut(false);
         return;
       }
@@ -1101,6 +1112,21 @@ export const BillingView: React.FC = () => {
           onCancel={() => setShowConfirmModal(false)}
           isLoading={isCheckingOut}
         />
+      )}
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-[250] flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl transition-all duration-300 font-bold text-xs ${
+          toast.type === 'success'
+            ? 'bg-emerald-500 text-olive-950 border-emerald-400'
+            : 'bg-rose-500 text-white border-rose-400'
+        }`}>
+          {toast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 shrink-0" />
+          )}
+          <span>{toast.message}</span>
+        </div>
       )}
     </div>
   );

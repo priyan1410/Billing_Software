@@ -30,39 +30,45 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
 }) => {
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
-  // Focus cleanup helper to prevent Chromium orphan-focus caret bug on element removal
-  const resetFocus = () => {
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
+  // Focus cleanup helper to prevent Chromium orphan-focus caret bug on unmount/removal
+  const restoreFocus = () => {
+    if (previousActiveElementRef.current && document.body.contains(previousActiveElementRef.current)) {
+      previousActiveElementRef.current.focus();
+    } else {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      window.focus();
     }
-    window.focus();
   };
 
-  // Auto-focus the Cancel button when opening, and clean focus when closing
+  // Auto-focus the Cancel button when opening, and restore focus when closing
   useEffect(() => {
     if (open) {
+      previousActiveElementRef.current = document.activeElement as HTMLElement;
       const timer = setTimeout(() => cancelBtnRef.current?.focus(), 50);
       return () => clearTimeout(timer);
     } else {
-      resetFocus();
+      restoreFocus();
     }
   }, [open]);
 
   // Clean focus on unmount
   useEffect(() => {
     return () => {
-      resetFocus();
+      restoreFocus();
     };
   }, []);
 
   const handleConfirm = () => {
-    resetFocus();
+    restoreFocus();
     onConfirm();
   };
 
   const handleCancel = () => {
-    resetFocus();
+    restoreFocus();
     onCancel();
   };
 
