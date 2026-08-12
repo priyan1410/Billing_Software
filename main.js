@@ -577,9 +577,95 @@ ipcMain.handle('dashboard:getStats', async () => {
     quantity: Number(r.quantity || 0),
     totalSales: Number(r.total_sales || 0)
   })) : [];
-
   return { success: true, data: { totalRevenue, totalOrdersCount, totalExpenseSum, netProfit, recentOrders, allOrders, allExpenses, topDishes } };
 });
+
+
+// ─────────────────────────────────────────────────────────────
+// DASHBOARD P&L SUMMARY & TRANSACTION LOGGER (custom range)
+// ─────────────────────────────────────────────────────────────
+ipcMain.handle('dashboard:getPnLSummary', async (evt, payload = {}) => {
+  try {
+    const { startDate, endDate } = payload;
+    let orderWhere = '1=1';
+    let expenseWhere = '1=1';
+    let orderParams = [];
+    let expenseParams = [];
+
+    if (startDate) {
+      orderWhere += ' AND DATE(created_at) >= ?';
+      expenseWhere += ' AND expense_date >= ?';
+      orderParams.push(startDate);
+      expenseParams.push(startDate);
+    }
+    if (endDate) {
+      orderWhere += ' AND DATE(created_at) <= ?';
+      expenseWhere += ' AND expense_date <= ?';
+      orderParams.push(endDate);
+      expenseParams.push(endDate);
+    }
+
+    const revResult = await query(`SELECT COALESCE(SUM(grand_total), 0) AS total FROM orders WHERE ${orderWhere}`, orderParams);
+    const expResult = await query(`SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE ${expenseWhere}`, expenseParams);
+    const ordersResult = await query(`SELECT id, order_number, payment_mode, grand_total, created_at FROM orders WHERE ${orderWhere} ORDER BY created_at DESC`, orderParams);
+    const expensesResult = await query(`SELECT id, expense_date, category, description, paid_to, payment_mode, amount, created_at FROM expenses WHERE ${expenseWhere} ORDER BY expense_date DESC`, expenseParams);
+
+    if (!revResult.success || !expResult.success || !ordersResult.success || !expensesResult.success) {
+      return { success: false, message: 'Database query error' };
+    }
+
+    const totalRevenue = Number(revResult.data[0].total || 0);
+    const totalExpenses = Number(expResult.data[0].total || 0);
+
+    const orders = ordersResult.data.map(r => ({
+      id: r.id,
+      billNo: r.order_number,
+      bill_no: r.order_number,
+      customerName: 'Walk-in',
+      customer_name: 'Walk-in',
+      customerPhone: '-',
+      customer_phone: '-',
+      paymentMethod: r.payment_mode,
+      payment_mode: r.payment_mode,
+      grandTotal: Number(r.grand_total || 0),
+      grand_total: Number(r.grand_total || 0),
+      createdAt: r.created_at
+    }));
+
+    const expenses = expensesResult.data.map(r => {
+      const formattedDate = formatDateOnly(r.expense_date);
+      return {
+        id: r.id,
+        category: r.category,
+        description: r.description,
+        amount: Number(r.amount || 0),
+        expenseDate: formattedDate,
+        expense_date: formattedDate,
+        paidTo: r.paid_to,
+        paid_to: r.paid_to,
+        paymentMode: r.payment_mode,
+        payment_mode: r.payment_mode,
+        createdAt: r.created_at
+      };
+    });
+
+    return {
+      success: true,
+      data: {
+        totalRevenue,
+        totalExpenses,
+        netProfit: totalRevenue - totalExpenses,
+        orderCount: orders.length,
+        expenseCount: expenses.length,
+        orders,
+        expenses
+      }
+    };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+});
+
 
 // Helper for formatting date strings safely as YYYY-MM-DD
 ipcMain.handle('reports:getFoodSales', async (evt, filter = {}) => {

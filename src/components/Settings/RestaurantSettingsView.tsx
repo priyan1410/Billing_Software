@@ -4,11 +4,16 @@ import {
   FileText, Save, CheckCircle2, AlertCircle, User,
   LogOut, Shield, Store, Edit3, RefreshCw, Printer,
   Upload, Image as ImageIcon, Trash2, Crown, ChevronRight,
-  ArrowLeft, Search
+  ArrowLeft, Search, BarChart2, Download, Calendar
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { RestaurantDetails } from '../../types';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
+import { DatePicker } from '../UI/DatePicker';
+// @ts-ignore
+import { jsPDF } from 'jspdf';
+// @ts-ignore
+import autoTable from 'jspdf-autotable';
 
 const compressImage = (file: File, maxDim: number = 512, format: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -98,6 +103,13 @@ export const RestaurantSettingsView: React.FC = () => {
   const [isDirty, setIsDirty] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [repStartDate, setRepStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30); // Last 30 days default
+    return d.toISOString().split('T')[0];
+  });
+  const [repEndDate, setRepEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [repIsGenerating, setRepIsGenerating] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -199,6 +211,263 @@ export const RestaurantSettingsView: React.FC = () => {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (repIsGenerating) return;
+    setRepIsGenerating(true);
+    try {
+      const startStr = repStartDate;
+      const endStr = repEndDate;
+
+      if (!(window as any).electronAPI) {
+        showToast('System backend is not connected.', 'error');
+        setRepIsGenerating(false);
+        return;
+      }
+
+      const formatDateStr = (dateStr: string) => {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateStr;
+      };
+
+      // 1. Fetch data
+      const pnlRes = await (window as any).electronAPI.getPnLSummary({ startDate: startStr, endDate: endStr });
+      const foodRes = await (window as any).electronAPI.getFoodSalesReport({
+        period: 'custom',
+        startDate: startStr,
+        endDate: endStr
+      });
+
+      if (!pnlRes.success || !foodRes.success) {
+        showToast('Failed to retrieve business metrics data.', 'error');
+        setRepIsGenerating(false);
+        return;
+      }
+
+      const { totalRevenue, totalExpenses, netProfit, orders, expenses } = pnlRes.data;
+      const foodSales = foodRes.data || [];
+
+      // 2. Initialize jsPDF
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+
+      // Color scheme tokens (matching our Palladian, Oatmeal, Truffle, Abyssal Anchorfish scheme)
+      const primaryColor: [number, number, number] = [27, 38, 50]; // Abyssal Anchorfish Blue (#1B2632)
+      const accentColor: [number, number, number] = [163, 81, 57]; // Truffle Trouble (#A35139)
+      const goldColor: [number, number, number] = [255, 177, 98]; // Burning Flame (#FFB162)
+      const lightBgColor: [number, number, number] = [238, 233, 223]; // Palladian (#EEE9DF)
+
+      // Utility to draw header banner
+      const drawHeader = (titleText: string) => {
+        // Draw primary header border line
+        doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+        doc.setLineWidth(1);
+        doc.line(14, 25, pageWidth - 14, 25);
+
+        // Restaurant Brand Header
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text(restaurantDetails?.companyName || 'KISH MANDHI', 14, 15);
+
+        doc.setFont('Helvetica', 'oblique');
+        doc.setFontSize(9);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text(restaurantDetails?.tagline || 'Arabic Grill & Fine Dining', 14, 20);
+
+        // Right side metadata
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text(`Report Period: ${formatDateStr(startStr)} to ${formatDateStr(endStr)}`, pageWidth - 14, 14, { align: 'right' });
+        doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, pageWidth - 14, 19, { align: 'right' });
+
+        // Section Title banner
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+        doc.text(titleText, 14, 32);
+      };
+
+      // Utility to draw footer on each page
+      const drawFooter = (pageNum: number, totalPages: number) => {
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Kish Mandhi Billing Software System Summary', 14, pageHeight - 10);
+        doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
+      };
+
+      // ─────────────────────────────────────────────────────────────
+      // PAGE 1: EXECUTIVE FINANCIAL SUMMARY & EXPENSE LOGS
+      // ─────────────────────────────────────────────────────────────
+      drawHeader('I. EXECUTIVE FINANCIAL STATEMENT');
+
+      // Draw KPI rectangles
+      const kpiWidth = (pageWidth - 28 - 8) / 3; // split width for 3 cards
+      const kpiHeight = 22;
+      const kpiY = 38;
+
+      // 1. Total Revenue Card
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.roundedRect(14, kpiY, kpiWidth, kpiHeight, 3, 3, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text('TOTAL REVENUE', 18, kpiY + 6);
+      doc.setFontSize(12);
+      doc.text(`Rs. ${Number(totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18, kpiY + 14);
+
+      // 2. Total Expenses Card
+      doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.roundedRect(14 + kpiWidth + 4, kpiY, kpiWidth, kpiHeight, 3, 3, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text('TOTAL EXPENSES', 18 + kpiWidth + 4, kpiY + 6);
+      doc.setFontSize(12);
+      doc.text(`Rs. ${Number(totalExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + kpiWidth + 4, kpiY + 14);
+
+      // 3. Net Profit Card
+      const profitColor = netProfit >= 0 ? [39, 174, 96] : [192, 57, 43]; // green if profit, red if loss
+      doc.setFillColor(profitColor[0], profitColor[1], profitColor[2]);
+      doc.roundedRect(14 + (kpiWidth + 4) * 2, kpiY, kpiWidth, kpiHeight, 3, 3, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(255, 255, 255);
+      doc.text(netProfit >= 0 ? 'NET PROFIT' : 'NET LOSS', 18 + (kpiWidth + 4) * 2, kpiY + 6);
+      doc.setFontSize(12);
+      doc.text(`Rs. ${Number(netProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + (kpiWidth + 4) * 2, kpiY + 14);
+
+      // Itemized Expenses Title
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('ITEMIZED EXPENSES RECORD', 14, kpiY + kpiHeight + 10);
+
+      // Draw Expenses Table
+      const expensesBody = expenses.map((e: any) => [
+        e.expenseDate || e.expense_date || '-',
+        e.category || '-',
+        e.description || '-',
+        e.paidTo || e.paid_to || '-',
+        e.paymentMode || e.payment_mode || '-',
+        `Rs. ${Number(e.amount || 0).toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: kpiY + kpiHeight + 14,
+        head: [['Date', 'Category', 'Description', 'Paid To', 'Mode', 'Amount']],
+        body: expensesBody.length > 0 ? expensesBody : [['No expenses recorded for this period', '', '', '', '', '']],
+        headStyles: { fillColor: accentColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+        alternateRowStyles: { fillColor: [248, 246, 242] },
+        margin: { left: 14, right: 14 },
+        styles: { font: 'Helvetica' }
+      });
+
+      // ─────────────────────────────────────────────────────────────
+      // PAGE 2: FOOD SALES & ITEMISED DISH SHARE
+      // ─────────────────────────────────────────────────────────────
+      doc.addPage();
+      drawHeader('II. ITEMISED FOOD SALES & DISH SHARE');
+
+      // Grand total of item sales quantity and value
+      const grandTotalSalesVal = foodSales.reduce((sum: number, item: any) => sum + Number(item.totalSales || 0), 0);
+      const grandTotalQtySold = foodSales.reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0);
+
+      const foodSalesBody = foodSales.map((item: any) => {
+        const share = grandTotalSalesVal > 0 ? ((item.totalSales / grandTotalSalesVal) * 100).toFixed(1) : '0';
+        return [
+          item.name || '-',
+          item.variant || 'Standard',
+          item.quantity || '0',
+          `Rs. ${Number(item.avgPrice || 0).toFixed(2)}`,
+          `Rs. ${Number(item.totalSales || 0).toFixed(2)}`,
+          `${share}%`
+        ];
+      });
+
+      if (foodSales.length > 0) {
+        foodSalesBody.push([
+          'TOTAL FOOD SALES SUMMARY',
+          '',
+          String(grandTotalQtySold),
+          '',
+          `Rs. ${grandTotalSalesVal.toFixed(2)}`,
+          '100%'
+        ]);
+      }
+
+      autoTable(doc, {
+        startY: 38,
+        head: [['Dish Name', 'Variant', 'Qty Sold', 'Avg Price', 'Total Sales', 'Share %']],
+        body: foodSalesBody.length > 0 ? foodSalesBody : [['No food sales transactions in this period', '', '', '', '', '']],
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+        alternateRowStyles: { fillColor: [248, 246, 242] },
+        margin: { left: 14, right: 14 },
+        styles: { font: 'Helvetica' },
+        didParseCell: (data: any) => {
+          if (foodSales.length > 0 && data.row.index === foodSalesBody.length - 1) {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [238, 233, 223];
+          }
+        }
+      });
+
+      // ─────────────────────────────────────────────────────────────
+      // PAGE 3: ORDER TRANSACTION LOGS (COMPLETED BILLS)
+      // ─────────────────────────────────────────────────────────────
+      doc.addPage();
+      drawHeader('III. COMPLETED TRANSACTION & BILLING LOGS');
+
+      const ordersBody = orders.map((o: any) => [
+        o.billNo || o.bill_no || '-',
+        o.customerName || o.customer_name || 'Walk-in',
+        o.customerPhone || o.customer_phone || '-',
+        o.paymentMethod || o.payment_mode || o.payment_method || '-',
+        o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '-',
+        `Rs. ${Number(o.grandTotal || o.grand_total || 0).toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: 38,
+        head: [['Bill Number', 'Customer Name', 'Phone', 'Payment Mode', 'Date', 'Amount']],
+        body: ordersBody.length > 0 ? ordersBody : [['No orders found in this period', '', '', '', '', '']],
+        headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8, textColor: [40, 40, 40] },
+        alternateRowStyles: { fillColor: [248, 246, 242] },
+        margin: { left: 14, right: 14 },
+        styles: { font: 'Helvetica' }
+      });
+
+      // Apply page footers
+      const totalPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        drawFooter(i, totalPages);
+      }
+
+      // Save PDF
+      doc.save(`Kish_Mandhi_Business_Report_${startStr}_to_${endStr}.pdf`);
+      showToast('Business report downloaded successfully.');
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      showToast('Error generating PDF. Check console logs.', 'error');
+    } finally {
+      setRepIsGenerating(false);
+    }
+  };
+
   const handleLogout = () => {
     setShowLogoutConfirm(true);
   };
@@ -251,6 +520,14 @@ export const RestaurantSettingsView: React.FC = () => {
       icon: <Shield className="w-5 h-5 text-amber-400" />,
       badge: user?.role || 'Admin',
       keywords: 'account admin user role session logout security'
+    },
+    {
+      id: 'reports',
+      title: 'Business Reports',
+      subtitle: 'Generate and download financial summaries, expenses, and food sales as PDF',
+      icon: <BarChart2 className="w-5 h-5 text-amber-400" />,
+      badge: 'Download PDF',
+      keywords: 'report reports pdf export download stats sales revenue expense profit'
     }
   ];
 
@@ -853,6 +1130,48 @@ export const RestaurantSettingsView: React.FC = () => {
                     className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 font-semibold text-sm rounded-xl hover:bg-red-500/20 hover:border-red-500/40 transition-all"
                   >
                     <LogOut className="w-4 h-4" /> Logout
+                  </button>
+                </div>
+              </SectionCard>
+            )}
+
+            {/* 7. BUSINESS REPORTS CONTENT */}
+            {activeSectionId === 'reports' && (
+              <SectionCard title="Business Reports & Analytics" icon={<BarChart2 className="w-5 h-5 text-amber-400" />} subtitle="Select custom date range and download full business report as PDF">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/5 border border-white/10 p-5 rounded-2xl">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-300/70 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-amber-400" /> Start Date / From
+                      </label>
+                      <DatePicker
+                        value={repStartDate}
+                        onChange={(val) => setRepStartDate(val)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-300/70 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-amber-400" /> End Date / To
+                      </label>
+                      <DatePicker
+                        value={repEndDate}
+                        onChange={(val) => setRepEndDate(val)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleDownloadPDF}
+                    disabled={repIsGenerating}
+                    className="px-5 py-3 bg-gold-500 hover:bg-gold-400 text-olive-950 font-bold rounded-xl text-xs flex items-center gap-2 transition-all shadow-md shadow-gold-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {repIsGenerating ? (
+                      <><RefreshCw className="w-4 h-4 animate-spin" /> Generating Report PDF...</>
+                    ) : (
+                      <><Download className="w-4 h-4" /> Download Business Summary Report (PDF)</>
+                    )}
                   </button>
                 </div>
               </SectionCard>
