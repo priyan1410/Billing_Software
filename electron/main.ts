@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+app.commandLine.appendSwitch('lang', 'en-GB');
 const fs = require('fs');
 const path = require('path');
 const { initialDbStore } = require('./db');
@@ -56,6 +57,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  app.setLocale('en-GB');
   createWindow();
   // Phase 3: Start hybrid sync engine (runs silently if cloud not configured)
   startSyncEngine();

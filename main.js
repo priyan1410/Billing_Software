@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, nativeImage } = require('electron');
+app.commandLine.appendSwitch('lang', 'en-GB');
 const fs = require('fs');
 const path = require('path');
 const { query, testConnection, saveConfig, loadConfig, dbConfig, getStorageSize } = require('./db/connection');
@@ -83,6 +84,7 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   try {
+    app.setLocale('en-GB');
     const dbInit = await initializeDatabase();
     if (dbInit && dbInit.success) {
       console.log('✓ MySQL Live Database connected & initialized: kish_mandhi');

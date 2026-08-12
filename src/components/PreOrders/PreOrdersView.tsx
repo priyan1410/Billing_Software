@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { usePosStore } from '../../store/usePosStore';
 import { Dish, PreOrder, PortionVariant, OrderType } from '../../types';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
+import { DatePicker } from '../UI/DatePicker';
 
 export const PreOrdersView: React.FC = () => {
   const { setActiveSection } = useAppStore();
@@ -572,19 +573,25 @@ const CreatePreorderModal: React.FC<{
 }> = ({ dishes, onClose, onSuccess, showToast }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [pickupDate, setPickupDate] = useState('');
+  const [pickupDateStr, setPickupDateStr] = useState('');
+  const [pickupTimeStr, setPickupTimeStr] = useState('');
   const [orderType, setOrderType] = useState<OrderType>('Takeaway');
   const [advancePaid, setAdvancePaid] = useState<number>(0);
   const [notes, setNotes] = useState('');
   const [selectedItems, setSelectedItems] = useState<Array<{ itemId: number; name: string; variant: PortionVariant; unitPrice: number; quantity: number; totalPrice: number }>>([]);
   const [searchItem, setSearchItem] = useState('');
 
-  // Default pickup date to tomorrow same time
+  // Default pickup date to today same time
   useEffect(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const localIso = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    setPickupDate(localIso);
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    const timeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+    
+    setPickupDateStr(dateStr);
+    setPickupTimeStr(timeStr);
   }, []);
 
   const handleAddItem = (dish: Dish, variant: PortionVariant) => {
@@ -634,12 +641,14 @@ const CreatePreorderModal: React.FC<{
       return;
     }
 
+    const fullPickupDateTime = `${pickupDateStr}T${pickupTimeStr}`;
+
     try {
       if ((window as any).electronAPI?.createPreorder) {
         const res = await (window as any).electronAPI.createPreorder({
           customerName,
           customerPhone,
-          pickupDate,
+          pickupDate: fullPickupDateTime,
           orderType,
           items: selectedItems,
           totalAmount,
@@ -712,28 +721,37 @@ const CreatePreorderModal: React.FC<{
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-olive-300 font-semibold block mb-1">Pickup Date & Time *</label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={pickupDate}
-                  onChange={(e) => setPickupDate(e.target.value)}
-                  className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-gold-500"
+                <label className="text-xs text-olive-300 font-semibold block mb-1">Pickup Date *</label>
+                <DatePicker
+                  value={pickupDateStr}
+                  onChange={(val) => setPickupDateStr(val)}
+                  className="w-full"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-olive-300 font-semibold block mb-1">Order Type</label>
-                <select
-                  value={orderType}
-                  onChange={(e) => setOrderType(e.target.value as any)}
-                  className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-gold-500"
-                >
-                  <option value="Takeaway">Takeaway</option>
-                  <option value="Dine-In">Dine-In</option>
-                  <option value="Delivery">Delivery</option>
-                </select>
+                <label className="text-xs text-olive-300 font-semibold block mb-1">Pickup Time *</label>
+                <input
+                  type="time"
+                  required
+                  value={pickupTimeStr}
+                  onChange={(e) => setPickupTimeStr(e.target.value)}
+                  className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-500"
+                />
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-olive-300 font-semibold block mb-1">Order Type</label>
+              <select
+                value={orderType}
+                onChange={(e) => setOrderType(e.target.value as any)}
+                className="w-full bg-olive-900 border border-gold-500/20 rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-gold-500"
+              >
+                <option value="Takeaway">Takeaway</option>
+                <option value="Dine-In">Dine-In</option>
+                <option value="Delivery">Delivery</option>
+              </select>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { IndianRupee, ShoppingBag, ArrowDownRight, TrendingUp, ChevronRight, BarChart2, Maximize2, Download, Search, X, Calendar, Utensils } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useAppStore } from '../../store/useAppStore';
+import { DatePicker } from '../UI/DatePicker';
 
 export const DashboardView: React.FC = () => {
   const { setActiveSection } = useAppStore();
@@ -757,20 +758,18 @@ const FoodSalesReportModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
               <Calendar className="w-4 h-4 text-gold-400" />
               <div className="flex items-center gap-2">
                 <span className="text-olive-300">From Date:</span>
-                <input
-                  type="date"
+                <DatePicker
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-olive-950 border border-gold-500/30 text-white rounded-lg px-2.5 py-1 outline-none"
+                  onChange={(val) => setStartDate(val)}
+                  className="w-28"
                 />
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-olive-300">To Date:</span>
-                <input
-                  type="date"
+                <DatePicker
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="bg-olive-950 border border-gold-500/30 text-white rounded-lg px-2.5 py-1 outline-none"
+                  onChange={(val) => setEndDate(val)}
+                  className="w-28"
                 />
               </div>
             </div>
