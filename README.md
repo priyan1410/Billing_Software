@@ -1,14 +1,3 @@
-Listed directory kish%20mandhi
-Viewed package.json:1-68
-Viewed README.md:1-144
-Listed directory src
-Listed directory components
-Listed directory mobile-web-application
-Listed directory db
-Listed directory electron
-Listed directory types
-Viewed index.ts:1-199
-
 # Kish Billing Software 🍽️ — Comprehensive Documentation
 
 ---
