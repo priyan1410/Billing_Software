@@ -433,16 +433,18 @@ export const RestaurantSettingsView: React.FC = () => {
       const ordersBody = orders.map((o: any) => {
         let paymentModeText = o.paymentMethod || o.payment_mode || o.payment_method || '-';
         if (String(paymentModeText).toUpperCase().startsWith('DEO')) {
-          const c = Number(o.cashAmount || o.cash_amount || 0);
-          const u = Number(o.upiAmount || o.upi_amount || 0);
-          if (c === 0 && u === 0) {
-            if (paymentModeText.includes('Cash:') || paymentModeText.includes('UPI:')) {
-              paymentModeText = paymentModeText.replace(/₹/g, 'Rs. ').replace(/Cash:\s*([\d\.]+)/g, 'Cash: Rs. $1').replace(/UPI:\s*([\d\.]+)/g, 'UPI: Rs. $1');
-            } else {
-              paymentModeText = 'DEO (Dual)';
-            }
-          } else {
+          let c = Number(o.cashAmount || o.cash_amount || 0);
+          let u = Number(o.upiAmount || o.upi_amount || 0);
+          if (c === 0 && u === 0 && paymentModeText) {
+            const cashMatch = paymentModeText.match(/Cash:\s*₹?\s*([\d\.]+)/i);
+            const upiMatch = paymentModeText.match(/UPI:\s*₹?\s*([\d\.]+)/i);
+            if (cashMatch && cashMatch[1]) c = parseFloat(cashMatch[1]) || 0;
+            if (upiMatch && upiMatch[1]) u = parseFloat(upiMatch[1]) || 0;
+          }
+          if (c > 0 || u > 0) {
             paymentModeText = `DEO (Cash: Rs. ${c} + UPI: Rs. ${u})`;
+          } else {
+            paymentModeText = 'DEO (Dual)';
           }
         }
         return [

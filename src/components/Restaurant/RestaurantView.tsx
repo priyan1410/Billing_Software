@@ -204,7 +204,6 @@ export const RestaurantView: React.FC = () => {
         const res = await (window as any).electronAPI.getMenuItems('all');
         if (res && res.success && Array.isArray(res.data)) setDishes(res.data);
       } else {
-
         setDishes([
           { id: 1, categoryId: 1, name: 'Special Chicken Mandhi (ஸ்பெஷல் சிக்கன் மந்தி)', priceQuarter: 220, priceHalf: 420, priceFull: 790, isAvailable: true },
           { id: 2, categoryId: 1, name: 'Mutton Raan Mandhi (மட்டன் ரான் மந்தி)', priceQuarter: 350, priceHalf: 680, priceFull: 1290, isAvailable: true },
@@ -611,6 +610,27 @@ export const RestaurantView: React.FC = () => {
     return matchesPaymentModeFilter(mode);
   }) : [];
 
+  // Helper to extract accurate DEO Cash and UPI portions
+  const extractDeoSplit = (o: any) => {
+    let c = Number(o.cashAmount || o.cash_amount || 0);
+    let u = Number(o.upiAmount || o.upi_amount || 0);
+    const rawMode = String(o.paymentMode || o.payment_mode || '');
+
+    if (c === 0 && u === 0 && rawMode) {
+      const cashMatch = rawMode.match(/Cash:\s*₹?\s*([\d\.]+)/i);
+      const upiMatch = rawMode.match(/UPI:\s*₹?\s*([\d\.]+)/i);
+      if (cashMatch && cashMatch[1]) c = parseFloat(cashMatch[1]) || 0;
+      if (upiMatch && upiMatch[1]) u = parseFloat(upiMatch[1]) || 0;
+    }
+
+    if (c === 0 && u === 0) {
+      const total = Number(o.grandTotal || o.grand_total || o.total || 0);
+      c = Math.round(total / 2);
+      u = total - c;
+    }
+    return { cash: c, upi: u };
+  };
+
   // Combine orders (Revenue +) and expenses (Outflow -) into one unified timeline ledger sorted chronologically by date/time
   const combinedPnlTransactions = [
     ...filteredOrders.map(o => {
@@ -618,24 +638,19 @@ export const RestaurantView: React.FC = () => {
       let displayedAmt = Number(o.grandTotal || o.grand_total || o.total || 0);
       let modeLabel = o.paymentMode || o.payment_mode || 'Cash';
       if (mode.startsWith('DEO')) {
-        const c = Number(o.cashAmount || o.cash_amount || 0);
-        const u = Number(o.upiAmount || o.upi_amount || 0);
-        const rawDbMode = o.paymentMode || o.payment_mode || '';
+        const { cash: c, upi: u } = extractDeoSplit(o);
         if (filterDeo || (filterCash && filterUpi)) {
           displayedAmt = Number(o.grandTotal || o.grand_total || (c + u) || 0);
-          modeLabel = c === 0 && u === 0 
-            ? (rawDbMode.includes('Cash:') || rawDbMode.includes('UPI:') ? rawDbMode.replace(/Cash:\s*([\d\.]+)/g, 'Cash: ₹$1').replace(/UPI:\s*([\d\.]+)/g, 'UPI: ₹$1') : 'DEO (Dual)') 
-            : `DEO (Cash: ₹${c} + UPI: ₹${u})`;
+          modeLabel = `DEO (Cash: ₹${c} + UPI: ₹${u})`;
         } else if (filterCash && !filterUpi) {
-          displayedAmt = c === 0 && u === 0 ? Math.round(displayedAmt / 2) : c;
-          modeLabel = `DEO (Cash Portion)`;
+          displayedAmt = c;
+          modeLabel = `DEO (Cash Portion: ₹${c})`;
         } else if (filterUpi && !filterCash) {
-          displayedAmt = c === 0 && u === 0 ? displayedAmt - Math.round(displayedAmt / 2) : u;
-          modeLabel = `DEO (UPI Portion)`;
+          displayedAmt = u;
+          modeLabel = `DEO (UPI Portion: ₹${u})`;
         } else {
-          modeLabel = c === 0 && u === 0 
-            ? (rawDbMode.includes('Cash:') || rawDbMode.includes('UPI:') ? rawDbMode.replace(/Cash:\s*([\d\.]+)/g, 'Cash: ₹$1').replace(/UPI:\s*([\d\.]+)/g, 'UPI: ₹$1') : 'DEO (Dual)') 
-            : `DEO (Cash: ₹${c} + UPI: ₹${u})`;
+          displayedAmt = Number(o.grandTotal || o.grand_total || (c + u) || 0);
+          modeLabel = `DEO (Cash: ₹${c} + UPI: ₹${u})`;
         }
       }
       return {
@@ -672,21 +687,15 @@ export const RestaurantView: React.FC = () => {
 
   const pnlRevenue = filteredOrders.reduce((sum, o) => {
     const mode = String(o.paymentMode || o.payment_mode || '').toUpperCase();
-    if (mode === 'DEO') {
-      let c = Number(o.cashAmount || o.cash_amount || 0);
-      let u = Number(o.upiAmount || o.upi_amount || 0);
-      if (c === 0 && u === 0) {
-        const total = Number(o.grandTotal || o.grand_total || o.total || 0);
-        c = Math.round(total / 2);
-        u = total - c;
-      }
+    if (mode.startsWith('DEO')) {
+      const { cash: c, upi: u } = extractDeoSplit(o);
       if (filterDeo || (filterCash && filterUpi)) {
         return sum + Number(o.grandTotal || o.grand_total || (c + u) || 0);
       }
       let val = 0;
       if (filterCash) val += c;
       if (filterUpi) val += u;
-      if (!filterCash && !filterUpi && !filterDeo) val = Number(o.grandTotal || o.grand_total || 0);
+      if (!filterCash && !filterUpi && !filterDeo) val = Number(o.grandTotal || o.grand_total || (c + u) || 0);
       return sum + val;
     }
     return sum + Number(o.grandTotal || o.grand_total || 0);
@@ -768,7 +777,21 @@ export const RestaurantView: React.FC = () => {
       targetExpenses = [];
     }
 
-    const rev = targetOrders.reduce((sum, o) => sum + Number(o.grandTotal || o.grand_total || o.total || 0), 0);
+    const rev = targetOrders.reduce((sum, o) => {
+      const mode = String(o.paymentMode || o.payment_mode || '').toUpperCase();
+      if (mode.startsWith('DEO')) {
+        const { cash: c, upi: u } = extractDeoSplit(o);
+        if (filterDeo || (filterCash && filterUpi)) {
+          return sum + Number(o.grandTotal || o.grand_total || (c + u) || 0);
+        }
+        let val = 0;
+        if (filterCash) val += c;
+        if (filterUpi) val += u;
+        if (!filterCash && !filterUpi && !filterDeo) val = Number(o.grandTotal || o.grand_total || (c + u) || 0);
+        return sum + val;
+      }
+      return sum + Number(o.grandTotal || o.grand_total || 0);
+    }, 0);
     const exp = targetExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
     const net = rev - exp;
     const margin = rev > 0 ? ((net / rev) * 100).toFixed(1) : '0';
@@ -809,18 +832,36 @@ export const RestaurantView: React.FC = () => {
       csv += `Net Profit Margin (%),${margin}%\n\n`;
 
       csv += `--- UNIFIED CHRONOLOGICAL FINANCIAL LEDGER (${targetOrders.length + targetExpenses.length} Records) ---\n`;
-      csv += `Transaction Type,Ref # / Category,Description,Amount (INR),Payment Mode,Date\n`;
+      csv += `S.No,Transaction Type,Ref # / Category,Description,Amount (INR),Payment Mode,Date\n`;
 
       const combinedExport = [
-        ...targetOrders.map(o => ({
-          type: 'REVENUE (+)',
-          refNo: o.orderNumber || o.order_number || `KM-${o.id}`,
-          desc: 'Customer Invoice Bill',
-          amount: Number(o.grandTotal || o.grand_total || o.total || 0).toFixed(2),
-          mode: o.paymentMode || o.payment_mode || 'Cash',
-          dt: toLocalDateString(o.createdAt || o.orderDate || o.created_at),
-          timestamp: new Date(o.createdAt || o.orderDate || o.created_at || Date.now()).getTime()
-        })),
+        ...targetOrders.map(o => {
+          const mode = String(o.paymentMode || o.payment_mode || '').toUpperCase();
+          let displayedAmt = Number(o.grandTotal || o.grand_total || o.total || 0);
+          let modeLabel = o.paymentMode || o.payment_mode || 'Cash';
+          if (mode.startsWith('DEO')) {
+            const { cash: c, upi: u } = extractDeoSplit(o);
+            if (filterDeo || (filterCash && filterUpi)) {
+              displayedAmt = Number(o.grandTotal || o.grand_total || (c + u) || 0);
+              modeLabel = `DEO (Cash: ₹${c} + UPI: ₹${u})`;
+            } else if (filterCash && !filterUpi) {
+              displayedAmt = c;
+              modeLabel = `DEO (Cash Portion: ₹${c})`;
+            } else if (filterUpi && !filterCash) {
+              displayedAmt = u;
+              modeLabel = `DEO (UPI Portion: ₹${u})`;
+            }
+          }
+          return {
+            type: 'REVENUE (+)',
+            refNo: o.orderNumber || o.order_number || `KM-${o.id}`,
+            desc: 'Customer Invoice Bill',
+            amount: displayedAmt.toFixed(2),
+            mode: modeLabel,
+            dt: toLocalDateString(o.createdAt || o.orderDate || o.created_at),
+            timestamp: new Date(o.createdAt || o.orderDate || o.created_at || Date.now()).getTime()
+          };
+        }),
         ...targetExpenses.map(e => ({
           type: 'EXPENSE (-)',
           refNo: e.category || 'General Expense',
@@ -832,8 +873,8 @@ export const RestaurantView: React.FC = () => {
         }))
       ].sort((a, b) => b.timestamp - a.timestamp);
 
-      combinedExport.forEach(item => {
-        csv += `"${item.type}","${item.refNo}","${item.desc}",${item.amount},"${item.mode}","${item.dt}"\n`;
+      combinedExport.forEach((item, idx) => {
+        csv += `${idx + 1},"${item.type}","${item.refNo}","${item.desc}",${item.amount},"${item.mode}","${item.dt}"\n`;
       });
 
       downloadBlob(csv, `${baseFileName}.csv`, 'text/csv;charset=utf-8;');
@@ -1499,6 +1540,7 @@ export const RestaurantView: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <thead className="bg-olive-950 text-olive-300 font-semibold border-b border-gold-500/20 sticky top-0 z-10">
                   <tr>
+                    <th className="p-3 w-12 text-center">S.No</th>
                     <th className="p-3">Type</th>
                     <th className="p-3">Ref # / Category</th>
                     <th className="p-3">Description</th>
@@ -1511,10 +1553,10 @@ export const RestaurantView: React.FC = () => {
                 <tbody className="divide-y divide-gold-500/10">
                   {combinedPnlTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-olive-300">No transactions recorded for this period.</td>
+                      <td colSpan={8} className="py-12 text-center text-olive-300">No transactions recorded for this period.</td>
                     </tr>
                   ) : (
-                    combinedPnlTransactions.map((tx) => {
+                    combinedPnlTransactions.map((tx, idx) => {
                       const isIncome = tx.type === 'INCOME';
                       return (
                         <tr
@@ -1524,6 +1566,9 @@ export const RestaurantView: React.FC = () => {
                           }}
                           className={`transition-colors ${isIncome ? 'hover:bg-gold-500/10 cursor-pointer group' : 'hover:bg-rose-500/10'}`}
                         >
+                          <td className="p-3 text-center text-olive-400 font-mono font-medium">
+                            {idx + 1}
+                          </td>
                           <td className="p-3">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-extrabold ${isIncome
                                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
@@ -1577,7 +1622,6 @@ export const RestaurantView: React.FC = () => {
           </div>
         </div>
       )}
-
 
       {/* Add Dish Modal */}
       {showAddModal && (

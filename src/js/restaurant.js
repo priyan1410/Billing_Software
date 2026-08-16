@@ -300,18 +300,21 @@ const Restaurant = {
 
     tbody.innerHTML = `
       <tr>
+        <td style="text-align:center; font-weight:600; color:var(--text-muted);">1</td>
         <td><strong>Gross Food & Beverage Revenue</strong></td>
         <td><span class="trend positive">Income</span></td>
         <td><strong style="color:var(--accent-green);">₹${Number(sales).toFixed(2)}</strong></td>
         <td>${salesShare}%</td>
       </tr>
       <tr>
+        <td style="text-align:center; font-weight:600; color:var(--text-muted);">2</td>
         <td><strong>Total Raw Material & Operational Expenses</strong></td>
         <td><span class="trend negative">Expense</span></td>
         <td><strong style="color:var(--accent-red);">₹${Number(expenses).toFixed(2)}</strong></td>
         <td>${expShare}%</td>
       </tr>
       <tr style="background:var(--bg-card); font-size:0.95rem;">
+        <td style="text-align:center; font-weight:700; color:var(--primary-gold);">-</td>
         <td><strong>NET OPERATING PROFIT / (LOSS)</strong></td>
         <td><span class="badge" style="background:rgba(46,204,113,0.2); color:#2ecc71;">Net Earnings</span></td>
         <td><strong style="color:var(--primary-gold); font-size:1.1rem;">₹${Number(net).toFixed(2)}</strong></td>
