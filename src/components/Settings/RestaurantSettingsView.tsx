@@ -227,7 +227,7 @@ export const RestaurantSettingsView: React.FC = () => {
       const formatDateStr = (dateStr: string) => {
         const parts = dateStr.split('-');
         if (parts.length === 3) {
-          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+          return `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
         return dateStr;
       };
@@ -311,50 +311,177 @@ export const RestaurantSettingsView: React.FC = () => {
       // ─────────────────────────────────────────────────────────────
       drawHeader('I. EXECUTIVE FINANCIAL STATEMENT');
 
+      // Calculate Payment Mode Breakdown (Cash vs UPI vs Card/Other)
+      let cashRevenue = 0;
+      let upiRevenue = 0;
+      let cardRevenue = 0;
+
+      (orders || []).forEach((o: any) => {
+        const mode = String(o.paymentMethod || o.payment_mode || o.paymentMode || 'Cash').trim();
+        const total = Number(o.grandTotal || o.grand_total || o.total || 0);
+
+        if (mode.toUpperCase().startsWith('DEO')) {
+          let c = Number(o.cashAmount || o.cash_amount || 0);
+          let u = Number(o.upiAmount || o.upi_amount || 0);
+          if (c === 0 && u === 0 && mode) {
+            const cashMatch = mode.match(/Cash:\s*₹?\s*([\d\.]+)/i);
+            const upiMatch = mode.match(/UPI:\s*₹?\s*([\d\.]+)/i);
+            if (cashMatch && cashMatch[1]) c = parseFloat(cashMatch[1]) || 0;
+            if (upiMatch && upiMatch[1]) u = parseFloat(upiMatch[1]) || 0;
+          }
+          if (c === 0 && u === 0) {
+            c = Math.round(total / 2);
+            u = total - c;
+          }
+          cashRevenue += c;
+          upiRevenue += u;
+        } else if (/cash/i.test(mode)) {
+          cashRevenue += total;
+        } else if (/upi|gpay|phonepe|paytm|google|qr|online/i.test(mode)) {
+          upiRevenue += total;
+        } else if (/card|debit|credit|pos/i.test(mode)) {
+          cardRevenue += total;
+        } else {
+          cashRevenue += total;
+        }
+      });
+
+      let cashExpenses = 0;
+      let upiExpenses = 0;
+      (expenses || []).forEach((e: any) => {
+        const mode = String(e.paymentMode || e.payment_mode || 'Cash').trim();
+        const amt = Number(e.amount || 0);
+        if (/upi|gpay|online|card/i.test(mode)) {
+          upiExpenses += amt;
+        } else {
+          cashExpenses += amt;
+        }
+      });
+
+      const cashProfit = cashRevenue - cashExpenses;
+      const upiProfit = upiRevenue - upiExpenses;
+
       // Draw KPI rectangles
-      const kpiWidth = (pageWidth - 28 - 8) / 3; // split width for 3 cards
-      const kpiHeight = 22;
-      const kpiY = 38;
+      const kpiWidth = (pageWidth - 28 - 8) / 3; // 58mm per card
+      const kpiHeight = 16;
+
+      // ─── ROW 1: OVERALL TOTALS ──────────────────────────────────
+      const row1Y = 38;
 
       // 1. Total Revenue Card
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.roundedRect(14, kpiY, kpiWidth, kpiHeight, 3, 3, 'F');
+      doc.roundedRect(14, row1Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
       doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 177, 98);
+      doc.text('TOTAL REVENUE', 18, row1Y + 5.5);
+      doc.setFontSize(11);
       doc.setTextColor(255, 255, 255);
-      doc.text('TOTAL REVENUE', 18, kpiY + 6);
-      doc.setFontSize(12);
-      doc.text(`Rs. ${Number(totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18, kpiY + 14);
+      doc.text(`Rs. ${Number(totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18, row1Y + 12.5);
 
       // 2. Total Expenses Card
       doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-      doc.roundedRect(14 + kpiWidth + 4, kpiY, kpiWidth, kpiHeight, 3, 3, 'F');
+      doc.roundedRect(14 + kpiWidth + 4, row1Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
       doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 177, 98);
+      doc.text('TOTAL EXPENSES', 18 + kpiWidth + 4, row1Y + 5.5);
+      doc.setFontSize(11);
       doc.setTextColor(255, 255, 255);
-      doc.text('TOTAL EXPENSES', 18 + kpiWidth + 4, kpiY + 6);
-      doc.setFontSize(12);
-      doc.text(`Rs. ${Number(totalExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + kpiWidth + 4, kpiY + 14);
+      doc.text(`Rs. ${Number(totalExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + kpiWidth + 4, row1Y + 12.5);
 
-      // 3. Net Profit Card
-      const profitColor = netProfit >= 0 ? [39, 174, 96] : [192, 57, 43]; // green if profit, red if loss
+      // 3. Net Profit / Loss Card
+      const profitColor = netProfit >= 0 ? [39, 174, 96] : [192, 57, 43];
       doc.setFillColor(profitColor[0], profitColor[1], profitColor[2]);
-      doc.roundedRect(14 + (kpiWidth + 4) * 2, kpiY, kpiWidth, kpiHeight, 3, 3, 'F');
+      doc.roundedRect(14 + (kpiWidth + 4) * 2, row1Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
       doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       doc.setTextColor(255, 255, 255);
-      doc.text(netProfit >= 0 ? 'NET PROFIT' : 'NET LOSS', 18 + (kpiWidth + 4) * 2, kpiY + 6);
-      doc.setFontSize(12);
-      doc.text(`Rs. ${Number(netProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + (kpiWidth + 4) * 2, kpiY + 14);
+      doc.text(netProfit >= 0 ? 'NET PROFIT' : 'NET LOSS', 18 + (kpiWidth + 4) * 2, row1Y + 5.5);
+      doc.setFontSize(11);
+      doc.text(`Rs. ${Number(netProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + (kpiWidth + 4) * 2, row1Y + 12.5);
 
-      // Itemized Expenses Title
+      // ─── ROW 2: CASH FINANCIALS ─────────────────────────────────
+      const row2Y = row1Y + kpiHeight + 3;
+
+      // 4. Cash Revenue Card
+      doc.setFillColor(44, 62, 80); // Slate Navy
+      doc.roundedRect(14, row2Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 177, 98);
+      doc.text('TOTAL CASH REVENUE', 18, row2Y + 5.5);
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Rs. ${Number(cashRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18, row2Y + 12.5);
+
+      // 5. Cash Expenses Card
+      doc.setFillColor(120, 53, 36); // Rust Orange/Brown
+      doc.roundedRect(14 + kpiWidth + 4, row2Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 177, 98);
+      doc.text('TOTAL CASH EXPENSES', 18 + kpiWidth + 4, row2Y + 5.5);
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Rs. ${Number(cashExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + kpiWidth + 4, row2Y + 12.5);
+
+      // 6. Cash Profit / Loss Card
+      const cashProfitColor = cashProfit >= 0 ? [30, 130, 76] : [175, 45, 45];
+      doc.setFillColor(cashProfitColor[0], cashProfitColor[1], cashProfitColor[2]);
+      doc.roundedRect(14 + (kpiWidth + 4) * 2, row2Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text(cashProfit >= 0 ? 'CASH PROFIT' : 'CASH LOSS', 18 + (kpiWidth + 4) * 2, row2Y + 5.5);
+      doc.setFontSize(11);
+      doc.text(`Rs. ${Number(cashProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + (kpiWidth + 4) * 2, row2Y + 12.5);
+
+      // ─── ROW 3: UPI FINANCIALS ──────────────────────────────────
+      const row3Y = row2Y + kpiHeight + 3;
+
+      // 7. UPI Revenue Card
+      doc.setFillColor(15, 76, 92); // Deep Teal / Blue
+      doc.roundedRect(14, row3Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 177, 98);
+      doc.text('TOTAL UPI REVENUE', 18, row3Y + 5.5);
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Rs. ${Number(upiRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18, row3Y + 12.5);
+
+      // 8. UPI Expenses Card
+      doc.setFillColor(100, 45, 30); // Deep Taupe/Rust
+      doc.roundedRect(14 + kpiWidth + 4, row3Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 177, 98);
+      doc.text('TOTAL UPI EXPENSES', 18 + kpiWidth + 4, row3Y + 5.5);
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Rs. ${Number(upiExpenses || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + kpiWidth + 4, row3Y + 12.5);
+
+      // 9. UPI Profit / Loss Card
+      const upiProfitColor = upiProfit >= 0 ? [22, 115, 68] : [175, 45, 45];
+      doc.setFillColor(upiProfitColor[0], upiProfitColor[1], upiProfitColor[2]);
+      doc.roundedRect(14 + (kpiWidth + 4) * 2, row3Y, kpiWidth, kpiHeight, 2.5, 2.5, 'F');
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text(upiProfit >= 0 ? 'UPI PROFIT' : 'UPI LOSS', 18 + (kpiWidth + 4) * 2, row3Y + 5.5);
+      doc.setFontSize(11);
+      doc.text(`Rs. ${Number(upiProfit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 18 + (kpiWidth + 4) * 2, row3Y + 12.5);
+
+      // ─── ITEMIZED EXPENSES RECORD TABLE ─────────────────────────
+      const expensesStartY = row3Y + kpiHeight + 8;
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.text('ITEMIZED EXPENSES RECORD', 14, kpiY + kpiHeight + 10);
+      doc.text('ITEMIZED EXPENSES RECORD', 14, expensesStartY);
 
       // Draw Expenses Table
-      const expensesBody = expenses.map((e: any) => [
+      const expensesBody = (expenses || []).map((e: any) => [
         e.expenseDate || e.expense_date || '-',
         e.category || '-',
         e.description || '-',
@@ -364,7 +491,7 @@ export const RestaurantSettingsView: React.FC = () => {
       ]);
 
       autoTable(doc, {
-        startY: kpiY + kpiHeight + 14,
+        startY: expensesStartY + 4,
         head: [['Date', 'Category', 'Description', 'Paid To', 'Mode', 'Amount']],
         body: expensesBody.length > 0 ? expensesBody : [['No expenses recorded for this period', '', '', '', '', '']],
         headStyles: { fillColor: accentColor, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
