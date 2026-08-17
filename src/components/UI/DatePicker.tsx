@@ -5,9 +5,11 @@ interface DatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (val: string) => void;
   className?: string;
+  inputClassName?: string;
+  placeholder?: string;
 }
 
-export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, className = '' }) => {
+export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, className = '', inputClassName = '', placeholder = 'DD-MM-YYYY' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -27,12 +29,12 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, classNa
     setCurrentMonth(dateVal.getMonth());
   }, [dateVal]);
 
-  // Format YYYY-MM-DD to DD/MM/YYYY for display
+  // Format YYYY-MM-DD to DD-MM-YYYY for display
   const displayValue = useMemo(() => {
     if (!value) return '';
     const parts = value.split('-');
     if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
     return value;
   }, [value]);
@@ -135,8 +137,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, classNa
           type="text"
           readOnly
           value={displayValue}
-          placeholder="DD/MM/YYYY"
-          className="w-full bg-olive-950 border border-gold-500/30 text-white rounded-lg pl-3 pr-9 py-1.5 outline-none focus:border-gold-500 text-xs cursor-pointer select-none"
+          placeholder={placeholder}
+          className={`w-full bg-olive-950 border border-gold-500/30 text-white rounded-lg pl-3 pr-9 py-1.5 outline-none focus:border-gold-500 text-xs cursor-pointer select-none ${inputClassName}`}
         />
         <CalendarIcon className="w-4 h-4 text-olive-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
       </div>

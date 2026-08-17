@@ -192,7 +192,7 @@ export const RestaurantSettingsView: React.FC = () => {
       printShowRoundOff: form.printShowRoundOff ?? true,
       printShowFooterNote: form.printShowFooterNote ?? true,
       printWithToken: form.printWithToken ?? true,
-      printOption: form.printOption || 'both',
+      printOption: form.printWithToken === false ? 'bill' : (form.printOption || 'both'),
       printer1Name: form.printer1Name || '',
       printer1Target: form.printer1Target || 'both',
       printer2Name: form.printer2Name || '',
@@ -945,7 +945,15 @@ export const RestaurantSettingsView: React.FC = () => {
                 <SectionCard title="Bill Print Customization" icon={<Printer className="w-5 h-5" />} subtitle="Select which fields to include or hide on printed thermal bills">
                   <div className="space-y-4">
                     <div
-                      onClick={() => update('printWithToken' as any, !(form.printWithToken ?? true))}
+                      onClick={() => {
+                        const nextVal = !(form.printWithToken ?? true);
+                        setForm(prev => ({
+                          ...prev,
+                          printWithToken: nextVal,
+                          printOption: nextVal ? 'both' : 'bill'
+                        }));
+                        setIsDirty(true);
+                      }}
                       className="flex items-center justify-between p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl cursor-pointer hover:bg-amber-500/15 transition-colors select-none"
                     >
                       <div className="flex items-center gap-3">

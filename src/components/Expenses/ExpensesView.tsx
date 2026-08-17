@@ -3,6 +3,7 @@ import { Wallet, Plus, Trash2 } from 'lucide-react';
 import { Expense } from '../../types';
 import { formatDateDDMMYYYY, formatDateTimeDDMMYYYY } from '../../utils/dateUtils';
 import { ConfirmDialog } from '../UI/ConfirmDialog';
+import { DatePicker } from '../UI/DatePicker';
 
 const getTodayString = () => {
   const d = new Date();
@@ -203,12 +204,11 @@ export const ExpensesView: React.FC = () => {
             {/* Expense Date */}
             <div>
               <label className="text-xs text-olive-300 block mb-1 font-medium">Expense Date</label>
-              <input
-                type="date"
+              <DatePicker
                 value={expenseDate}
-                onChange={(e) => setExpenseDate(e.target.value)}
-                className="w-full px-3 py-2 bg-olive-950 border border-gold-500/20 rounded-xl text-xs text-white outline-none focus:border-gold-500"
-                required
+                onChange={(val) => setExpenseDate(val)}
+                className="w-full"
+                inputClassName="py-2 rounded-xl border-gold-500/20"
               />
             </div>
           </div>
@@ -302,7 +302,7 @@ export const ExpensesView: React.FC = () => {
                     <td className="p-3 text-olive-300">{exp.paidTo || (exp as any).paid_to || '-'}</td>
                     <td className="p-3 text-olive-300 font-medium">{(exp as any).payment_mode || exp.paymentMode || 'Cash'}</td>
                     <td className="p-3 text-olive-300 font-mono">
-                      {formatDateTimeDDMMYYYY(exp.createdAt || (exp as any).created_at || exp.expenseDate || (exp as any).expense_date)}
+                      {formatDateTimeDDMMYYYY(exp.expenseDate || (exp as any).expense_date || exp.createdAt || (exp as any).created_at)}
                     </td>
                     <td className="p-3 font-bold text-rose-400 text-sm">₹{Number(exp.amount).toFixed(2)}</td>
                     <td className="p-3 text-right">

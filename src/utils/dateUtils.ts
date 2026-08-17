@@ -49,23 +49,24 @@ export const formatDateTimeDDMMYYYY = (val: any): string => {
   return `${day}/${month}/${year}, ${hoursStr}:${minutes} ${ampm}`;
 };
 
-// Converts YYYY-MM-DD (from input state) to DD/MM/YYYY string for input display
+// Converts YYYY-MM-DD (from input state) to DD-MM-YYYY string for input display
 export const isoToDDMMYYYY = (isoStr: string): string => {
   if (!isoStr) return '';
   const parts = isoStr.split('T')[0].split(' ')[0].split('-');
   if (parts.length === 3) {
     const [y, m, d] = parts;
-    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+    return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
   }
   return isoStr;
 };
 
-// Converts DD/MM/YYYY string back to YYYY-MM-DD for date filtering
+// Converts DD-MM-YYYY or DD/MM/YYYY string back to YYYY-MM-DD for date filtering
 export const ddmmyyyyToIso = (dStr: string): string => {
   if (!dStr) return '';
   const clean = dStr.trim();
-  if (clean.includes('/')) {
-    const parts = clean.split('/');
+  const sep = clean.includes('/') ? '/' : clean.includes('-') ? '-' : null;
+  if (sep) {
+    const parts = clean.split(sep);
     if (parts.length === 3) {
       const [d, m, y] = parts;
       if (y.length === 4) {

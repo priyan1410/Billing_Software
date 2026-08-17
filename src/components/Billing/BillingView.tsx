@@ -608,7 +608,7 @@ export const BillingView: React.FC = () => {
 
   const triggerPrintDirect = async (data: any, isKot = false) => {
     if (!data) return;
-    const rd = restaurantDetails;
+    const rd = useAuthStore.getState().restaurantDetails || restaurantDetails;
     await dispatchOrderPrintJobs(data, rd, { isKotOnly: isKot });
   };
 
@@ -997,13 +997,15 @@ export const BillingView: React.FC = () => {
 
           {/* Quick Toggle: Print Token (KOT) with Bill */}
           <div
-            onClick={() => {
+            onClick={async () => {
               const currentVal = restaurantDetails?.printWithToken ?? true;
               const nextVal = !currentVal;
-              updateRestaurantDetails({
-                printWithToken: nextVal,
-                printOption: nextVal ? 'both' : 'bill'
-              });
+              if (updateRestaurantDetails) {
+                await updateRestaurantDetails({
+                  printWithToken: nextVal,
+                  printOption: nextVal ? 'both' : 'bill'
+                });
+              }
             }}
             className="flex items-center justify-between px-3 py-2 bg-olive-900 border border-gold-500/20 rounded-xl cursor-pointer hover:border-gold-500/50 transition-all select-none"
           >

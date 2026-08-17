@@ -24,10 +24,13 @@ export const dispatchPrintJob = async (
     }
 
     const p1Name = (restaurantDetails?.printer1Name || '').trim();
-    const p1Target = restaurantDetails?.printer1Target || 'both';
+    const rawP1Target = restaurantDetails?.printer1Target || 'both';
 
     const p2Name = (restaurantDetails?.printer2Name || '').trim();
     const p2Target = restaurantDetails?.printer2Target || (p2Name ? 'token' : 'none');
+
+    // If only 1 printer is configured (no separate Printer 2), Printer 1 prints both bills & tokens unless explicitly disabled
+    const p1Target = (!p2Name && (p2Target === 'none' || !p2Target) && rawP1Target !== 'none') ? 'both' : rawP1Target;
 
     let dispatchedCount = 0;
     const errorMessages: string[] = [];
@@ -143,14 +146,8 @@ export const dispatchOrderPrintJobs = async (
   let totalDispatched = 0;
   const errorMessages: string[] = [];
 
-  const orderType = data.orderType || data.order_type || 'Dine-In';
   const shouldPrintBill = mode === 'both' || mode === 'bill';
-  let shouldPrintToken = mode === 'both' || mode === 'token';
-
-  // Only print KOT for Takeaway and Delivery orders, bypass for Dine-In
-  if (orderType === 'Dine-In') {
-    shouldPrintToken = false;
-  }
+  const shouldPrintToken = mode === 'both' || mode === 'token';
 
   // 1. Print Bill Receipt
   if (shouldPrintBill) {
